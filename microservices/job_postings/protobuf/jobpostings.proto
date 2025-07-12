@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package jobpostings;
+
+// Represents a job posting.
+message Job {
+  string id = 1;
+  string title = 2;
+  string company_name = 3;
+  string description = 4;
+  string location = 5;
+  int32 views = 6; // Defaults to 0 if not provided.
+  int32 salary = 7; // Defaults to 0 if not provided.
+}
+
+message JobForRemote {
+  string id = 1;
+  string title = 2;
+  string company = 3;
+  string description = 4;
+  string location = 5;
+  bool remote_allowed = 6;
+}
+
+
+message JobWithRating {
+  int32 rating = 1;
+  Job job = 2;
+}
+
+message JobForLargestCompany {
+  string company = 1;
+  string title = 2;
+  string description = 3;
+  string location = 4;
+  float company_id = 5; 
+  double med_salary = 6;
+}
+
+message JobPostingsForLargestCompaniesRequest {
+  int32 company_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message JobPostingsForLargestCompaniesResponse {
+  repeated JobForLargestCompany job = 1;
+}
+
+message BestCompany{
+  float average_salary = 1;
+  string company_name = 2;
+}
+
+// -----------------------------
+// Average Salary Messages
+// -----------------------------
+message AverageSalaryRequest {
+  string title = 1;
+}
+
+message AverageSalaryResponse {
+  float averageSalary = 1;
+}
+
+// -----------------------------
+// Jobs With Rating Messages
+// -----------------------------
+message JobsWithRatingRequest {
+  string title = 1;
+  string city = 2;
+}
+
+message JobsWithRatingResponse {
+  repeated JobWithRating jobs = 1;
+}
+// -----------------------------
+// Job Posting Messages
+// -----------------------------
+
+message JobAddRequest {
+    string title = 1;
+    float normalized_salary =2;
+    string company_name = 3;
+    string description = 4;
+    string location = 5;
+}
+
+message JobAddResponse {
+    string message = 1;
+    int32 status = 2;
+}
+
+
+// -----------------------------
+// Remote Jobs Message
+// -----------------------------
+
+message RemoteJobSearchRequest {
+  string city = 1;
+  string keyword = 2;
+  string company = 3;
+}
+
+message RemoteJobSearchResponse {
+  repeated JobForRemote jobs = 1;
+}
+
+// -----------------------------
+// Best Paying Companies Message
+// -----------------------------
+
+message BestPayingCompaniesRequest{
+  string title = 1;
+}
+
+message BestPayingCompaniesResponse{
+  repeated BestCompany companies = 1;
+}
+
+// -----------------------------
+// Service Definition
+// -----------------------------
+
+// Service handling job posting functionalities.
+service JobPostingService {
+  rpc AverageSalary(AverageSalaryRequest) returns (AverageSalaryResponse);
+  rpc JobsWithRating(JobsWithRatingRequest) returns (JobsWithRatingResponse);
+  rpc GetJobPostingsForLargestCompanies (JobPostingsForLargestCompaniesRequest) returns (JobPostingsForLargestCompaniesResponse);
+  rpc AddJob(JobAddRequest) returns (JobAddResponse);
+  rpc GetRemoteJobs(RemoteJobSearchRequest) returns (RemoteJobSearchResponse);
+  rpc GetBestPayingCompanies(BestPayingCompaniesRequest) returns (BestPayingCompaniesResponse);
+}
