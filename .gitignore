@@ -1,1 +1,4 @@
 *.csv
+.env
+.env.local
+.env.production

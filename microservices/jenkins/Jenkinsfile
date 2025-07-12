@@ -1,0 +1,206 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Docker Hub credentials (configure in Jenkins)
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
+        // GitHub credentials
+        GITHUB_CREDENTIALS = credentials('github-credentials')
+        
+        // Image tags
+        API_INTERFACE_IMAGE = "your-dockerhub-username/api-interface"
+        JOB_POSTINGS_IMAGE = "your-dockerhub-username/job-postings"
+        JOB_REVIEWS_IMAGE = "your-dockerhub-username/job-reviews"
+        DATA_ACCESS_IMAGE = "your-dockerhub-username/data-access"
+        
+        // Build number for tagging
+        BUILD_TAG = "${env.BUILD_NUMBER}"
+    }
+    
+    triggers {
+        // Poll SCM every 5 minutes for changes
+        pollSCM('H/5 * * * *')
+        
+        // GitHub webhook trigger
+        githubPush()
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    // Get the current commit hash
+                    env.GIT_COMMIT_HASH = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+                }
+            }
+        }
+        
+        stage('Build and Test') {
+            parallel {
+                stage('Build API Interface') {
+                    steps {
+                        dir('microservices') {
+                            script {
+                                sh """
+                                    docker build -t ${API_INTERFACE_IMAGE}:${BUILD_TAG} \
+                                    -t ${API_INTERFACE_IMAGE}:latest \
+                                    -f api_interface/Dockerfile .
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build Job Postings') {
+                    steps {
+                        dir('microservices') {
+                            script {
+                                sh """
+                                    docker build -t ${JOB_POSTINGS_IMAGE}:${BUILD_TAG} \
+                                    -t ${JOB_POSTINGS_IMAGE}:latest \
+                                    -f job_postings/Dockerfile .
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build Job Reviews') {
+                    steps {
+                        dir('microservices') {
+                            script {
+                                sh """
+                                    docker build -t ${JOB_REVIEWS_IMAGE}:${BUILD_TAG} \
+                                    -t ${JOB_REVIEWS_IMAGE}:latest \
+                                    -f job_reviews/Dockerfile .
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build Data Access') {
+                    steps {
+                        dir('microservices') {
+                            script {
+                                sh """
+                                    docker build -t ${DATA_ACCESS_IMAGE}:${BUILD_TAG} \
+                                    -t ${DATA_ACCESS_IMAGE}:latest \
+                                    -f data_access/Dockerfile .
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Start services for testing
+                    sh 'docker-compose -f docker-compose.yml up -d db'
+                    
+                    // Wait for database to be ready
+                    sh 'sleep 30'
+                    
+                    // Run integration tests
+                    sh """
+                        docker-compose -f docker-compose.yml up -d
+                        sleep 60
+                        
+                        # Test API endpoints
+                        curl -f http://localhost:8082/jobs/search/best-companies || exit 1
+                        curl -f http://localhost:8082/jobs/search/best-cities || exit 1
+                        
+                        # Clean up
+                        docker-compose -f docker-compose.yml down
+                    """
+                }
+            }
+        }
+        
+        stage('Push to Registry') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                        sh """
+                            docker push ${API_INTERFACE_IMAGE}:${BUILD_TAG}
+                            docker push ${API_INTERFACE_IMAGE}:latest
+                            docker push ${JOB_POSTINGS_IMAGE}:${BUILD_TAG}
+                            docker push ${JOB_POSTINGS_IMAGE}:latest
+                            docker push ${JOB_REVIEWS_IMAGE}:${BUILD_TAG}
+                            docker push ${JOB_REVIEWS_IMAGE}:latest
+                            docker push ${DATA_ACCESS_IMAGE}:${BUILD_TAG}
+                            docker push ${DATA_ACCESS_IMAGE}:latest
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    // Update docker-compose.yml with new image tags
+                    sh """
+                        sed -i 's|build:|# build:|g' docker-compose.yml
+                        sed -i 's|context: ./microservices|# context: ./microservices|g' docker-compose.yml
+                        sed -i 's|dockerfile: |# dockerfile: |g' docker-compose.yml
+                        
+                        # Add image references
+                        sed -i '/api-interface:/a\\    image: ${API_INTERFACE_IMAGE}:${BUILD_TAG}' docker-compose.yml
+                        sed -i '/job-postings:/a\\    image: ${JOB_POSTINGS_IMAGE}:${BUILD_TAG}' docker-compose.yml
+                        sed -i '/job-reviews:/a\\    image: ${JOB_REVIEWS_IMAGE}:${BUILD_TAG}' docker-compose.yml
+                        sed -i '/data-access:/a\\    image: ${DATA_ACCESS_IMAGE}:${BUILD_TAG}' docker-compose.yml
+                    """
+                    
+                    // Deploy with Docker Compose
+                    sh """
+                        docker-compose down
+                        docker-compose up -d
+                    """
+                    
+                    // Wait for services to be ready
+                    sh 'sleep 60'
+                    
+                    // Health check
+                    sh """
+                        curl -f http://localhost:8082/jobs/search/best-companies || exit 1
+                        echo "Deployment successful!"
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up Docker images
+            sh """
+                docker image prune -f
+                docker system prune -f
+            """
+        }
+        
+        success {
+            echo 'Pipeline completed successfully!'
+            // Send notification (configure email/Slack)
+        }
+        
+        failure {
+            echo 'Pipeline failed!'
+            // Send failure notification
+        }
+    }
+}
