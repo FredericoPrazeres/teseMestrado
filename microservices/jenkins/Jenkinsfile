@@ -8,18 +8,18 @@ pipeline {
         GITHUB_CREDENTIALS = credentials('github-credentials')
         
         // Image tags
-        API_INTERFACE_IMAGE = "your-dockerhub-username/api-interface"
-        JOB_POSTINGS_IMAGE = "your-dockerhub-username/job-postings"
-        JOB_REVIEWS_IMAGE = "your-dockerhub-username/job-reviews"
-        DATA_ACCESS_IMAGE = "your-dockerhub-username/data-access"
+        API_INTERFACE_IMAGE = "fredprazeres/api-interface"
+        JOB_POSTINGS_IMAGE = "fredprazeres/job-postings"
+        JOB_REVIEWS_IMAGE = "fredprazeres/job-reviews"
+        DATA_ACCESS_IMAGE = "fredprazeres/data-access"
         
         // Build number for tagging
-        BUILD_TAG = "${env.BUILD_NUMBER}"
+        BUILD_TAG = 1
     }
-    
+
     triggers {
-        // Poll SCM every 5 minutes for changes
-        pollSCM('H/5 * * * *')
+        // Poll SCM every 1 minute for changes
+        pollSCM('H/1 * * * *')
         
         // GitHub webhook trigger
         githubPush()
