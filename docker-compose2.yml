@@ -12,8 +12,6 @@ services:
       - jenkins_home:/var/jenkins_home
       - .:/var/jenkins_home/project
       - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - microservices
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -27,3 +25,6 @@ services:
         -Dhttps.protocols=TLSv1.2
         -Djava.awt.headless=true
     user: root
+
+volumes:
+  jenkins_home:
