@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: mydatabase
     volumes:
-      - ./datasets:/docker-entrypoint-initdb.d
+      - /var/jenkins_home/project/datasets:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     networks:
