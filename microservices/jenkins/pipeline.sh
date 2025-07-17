@@ -41,7 +41,7 @@ docker image prune -f || true
 log "=== BUILDING AND DEPLOYING SERVICES ==="
 log "Running docker-compose up --build for all services..."
 
-docker compose up --build
+docker-compose up --build
 
 if [ $? -eq 0 ]; then
     log "Services built and started successfully"
