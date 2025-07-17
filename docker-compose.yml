@@ -64,6 +64,7 @@ services:
     environment:
       DATA_ACCESS_HOST: data-access
 
+
 networks:
   microservices:
     driver: bridge
