@@ -92,7 +92,6 @@ services:
     user: root
 
 
-
 networks:
   microservices:
     driver: bridge
