@@ -93,7 +93,6 @@ services:
         -Djava.awt.headless=true
     user: root
 
-
 networks:
   microservices:
     driver: bridge
