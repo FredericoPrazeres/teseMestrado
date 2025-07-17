@@ -65,7 +65,7 @@ services:
       DATA_ACCESS_HOST: data-access
 
   jenkins:
-    image: jenkins/jenkins:lts
+    image: jenkins/jenkins
     container_name: jenkins_service
     restart: always
     ports:
@@ -73,12 +73,23 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - ./microservices/jenkins:/var/jenkins_home/workspace
+      - .:/var/jenkins_home/project  # Mount entire project
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - microservices
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
-      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.model.UpdateCenter.connectionCheckTimeoutMillis=60000
+        -Dhudson.model.UpdateCenter.downloadTimeoutMillis=120000
+        -Dhudson.model.DownloadService.connectionTimeout=60000
+        -Dhudson.model.DownloadService.readTimeout=120000
+        -Dhttps.protocols=TLSv1.2
+        -Djava.awt.headless=true
+    user: root
 
 
 networks:
