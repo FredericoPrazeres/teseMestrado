@@ -1,5 +1,9 @@
 pipeline {
     agent any
+
+    trigger {
+        githubPush()
+    }
     
     environment {
         MICROSERVICES = "db api-interface job-postings job-reviews data-access"
