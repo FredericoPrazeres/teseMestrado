@@ -20,35 +20,51 @@ pipeline {
             }
         }
         
-        stage('Stop Current Microservices') {
+        stage('Stopping Microservices') {
             steps {
                 script {
                     sh '''
                         echo "=== STOPPING CURRENT MICROSERVICES ==="
-                        echo "Stopping microservices: $MICROSERVICES"
                         
                         for service in $MICROSERVICES; do
                             docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
                         done
                         
-                        echo "Removing microservice containers: $MICROSERVICES"
+                    '''
+                }
+            }
+        }
+
+        stage('Removing Microservices Containers') {
+            steps {
+                script {
+                    sh '''
+                        echo "=== REMOVING MICROSERVICES CONTAINERS ==="       
+
                         for service in $MICROSERVICES; do
                             docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
                         done
-                        
+                    '''
+                }
+            }
+        }
+        
+        stage('Cleaning Up Docker Images') {
+            steps {
+                script {
+                    sh '''
                         echo "Cleaning up unused Docker images..."
                         docker image prune -f || true
                     '''
                 }
             }
         }
-        
+
         stage('Building and Deploying Services') {
             steps {
                 script {
                     sh '''
                         echo "=== BUILDING AND DEPLOYING SERVICES ==="
-                        echo "Running docker-compose up --build for all services..."
                         
                         docker-compose up --build -d
                         
