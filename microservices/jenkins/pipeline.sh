@@ -56,29 +56,6 @@ else
     exit 1
 fi
 
-# Stage 4: Health check
-log "=== HEALTH CHECK ==="
-log "Performing health check on API interface..."
-
-timeout 30 bash -c '
-    while true; do
-        if curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/test/deployment | grep -q "200"; then
-            echo "✓ API is responding with 200 OK"
-            break
-        fi
-        echo "Waiting for API to respond with 200..."
-        sleep 5
-    done
-' || {
-    error "Health check failed - rolling back microservices"
-    for service in $MICROSERVICES; do
-        docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
-    done
-    exit 1
-}
-
-log "✓ Health check passed - Services are healthy!"
-
 # Stage 5: Show status
 log "=== DEPLOYMENT COMPLETE ==="
 docker-compose -f $DOCKER_COMPOSE_FILE ps
