@@ -25,7 +25,7 @@ COPY reviews(id, firm, job_title, current, location, overall_rating,
              work_life_balance, culture_values, diversity_inclusion, 
              career_opp, comp_benefits, senior_mgmt, recommend, 
              ceo_approv, outlook, headline, pros, cons)
-FROM '/docker-entrypoint-initdb.d/job_reviews.csv'
+FROM '/tmp/datasets/job_reviews.csv'
 DELIMITER ',' CSV HEADER;
 
 -- Create jobs table
@@ -83,7 +83,7 @@ COPY jobs(
     normalized_salary,
     zip_code
 )
-FROM '/docker-entrypoint-initdb.d/job_postings.csv'
+FROM '/tmp/datasets/job_postings.csv'
 DELIMITER ',' CSV HEADER;
 
 -- Create employee table
@@ -99,7 +99,7 @@ COPY employee(
     employee_count,
     follower_count
 )
-FROM '/docker-entrypoint-initdb.d/employee_counts.csv'
+FROM '/tmp/datasets/employee_counts.csv'
 DELIMITER ',' CSV HEADER;
 
 
