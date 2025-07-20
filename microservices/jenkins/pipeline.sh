@@ -47,7 +47,7 @@ docker-compose up --build -d
 if [ $? -eq 0 ]; then
     log "Services built and started successfully"
     log "Waiting for services to initialize..."
-    sleep 60
+    sleep 15
 else
     error "Failed to build and start services"
     exit 1
@@ -57,7 +57,7 @@ fi
 log "=== HEALTH CHECK ==="
 log "Performing health check on API interface..."
 
-timeout 300 bash -c '
+timeout 30 bash -c '
     while ! curl -f http://localhost:8082/jobs/search/best-companies >/dev/null 2>&1; do
         echo "Waiting for API to be ready..."
         sleep 5
