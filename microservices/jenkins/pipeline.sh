@@ -16,6 +16,7 @@ error() {
 }
 
 MICROSERVICES="db api-interface job-postings job-reviews data-access"
+DOCKER_COMPOSE_FILE="docker-compose.yml"
 
 # Stage 1: Checkout info
 log "=== CHECKOUT STAGE ==="
