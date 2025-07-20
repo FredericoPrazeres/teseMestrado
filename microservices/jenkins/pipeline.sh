@@ -61,8 +61,12 @@ log "=== HEALTH CHECK ==="
 log "Performing health check on API interface..."
 
 timeout 30 bash -c '
-    while ! curl -f http://localhost:8082/jobs/search/best-companies >/dev/null 2>&1; do
-        echo "Waiting for API to be ready..."
+    while true; do
+        if curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/test/deployment | grep -q "200"; then
+            echo "✓ API is responding with 200 OK"
+            break
+        fi
+        echo "Waiting for API to respond with 200..."
         sleep 5
     done
 ' || {
