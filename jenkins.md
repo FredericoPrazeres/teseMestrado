@@ -6,7 +6,8 @@ Correr o ngrok para criar um novo ip exposto: ngrok http http://localhost:8080
 
 # Passos para criar a pipeline
 
-    Entrar no jenkins e instalar os seguintes plugins:
+    Entrar no jenkins e instalar os seguintes plugins. Instalar os plugins pode ser problemática.
+    Por vezes é necessário repetir as instalações várias vezes:
 
         - GitHub Integration Plugin
         - GitHub Plugin
