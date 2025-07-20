@@ -27,7 +27,7 @@ job_reviews_client = JobReviewServiceStub(jobreviews_channel)
 @app.route("/testDeployment", methods=["GET"])
 def render_test():
 
-    return jsonify({"TEST": "OK"}), 200
+    return jsonify({"TEST2": "OK"}), 200
 
 @app.route("/jobs/search/average-salary", methods=["GET"])
 def render_homepage():
