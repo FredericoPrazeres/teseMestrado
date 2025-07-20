@@ -15,6 +15,8 @@ error() {
     echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1"
 }
 
+MICROSERVICES="db api-interface job-postings job-reviews data-access"
+
 # Stage 1: Checkout info
 log "=== CHECKOUT STAGE ==="
 GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
