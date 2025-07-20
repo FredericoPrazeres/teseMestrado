@@ -24,6 +24,11 @@ jobreviews_channel = grpc.insecure_channel(f"{jobreviews_host}:50051", options=[
 ])
 job_reviews_client = JobReviewServiceStub(jobreviews_channel)
 
+@app.route("/testDeployment", methods=["GET"])
+def render_homepage():
+
+    return jsonify({"TEST": "OK"}), 200
+
 @app.route("/jobs/search/average-salary", methods=["GET"])
 def render_homepage():
     title = request.args.get("title", "")
