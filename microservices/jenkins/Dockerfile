@@ -9,4 +9,7 @@ RUN apt-get update && \
     chmod +x /usr/local/bin/docker-compose && \
     usermod -aG docker jenkins
 
+RUN mkdir -p /var/jenkins_home/workspace/datasets && \
+    chown -R jenkins:jenkins /var/jenkins_home/workspace
+
 USER jenkins
