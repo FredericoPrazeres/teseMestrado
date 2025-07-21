@@ -15,14 +15,14 @@ error() {
     echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1"
 }
 
-MICROSERVICES="db api-interface job-postings job-reviews data-access"
-DOCKER_COMPOSE_FILE="docker-compose.yml"
-
 # Stage 1: Checkout info
 log "=== CHECKOUT STAGE ==="
 GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
 log "Building commit: $GIT_COMMIT_HASH"
 log "Working directory: $(pwd)"
+
+MICROSERVICES="db api-interface job-postings job-reviews data-access"
+DOCKER_COMPOSE_FILE="docker-compose.yml"
 
 # Stage 2: Stop current microservices (keep db running)
 log "=== STOPPING CURRENT MICROSERVICES ==="
