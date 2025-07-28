@@ -67,20 +67,3 @@ log "- Job Postings: http://localhost:8081"
 log "- Job Reviews: http://localhost:8084"
 log "- Data Access: http://localhost:8083"
 log "- Jenkins: http://localhost:8080"
-
-log "=== TESTING API ENDPOINTS ==="
-log "Testing API availability..."
-sleep 5
-
-# Test API endpoint if available
-if command -v curl &> /dev/null; then
-    if curl -f -s http://localhost:8082/health > /dev/null 2>&1; then
-        log "✅ API Interface is responding"
-    else
-        log "⚠️ API Interface health check not available or not responding"
-    fi
-else
-    log "⚠️ curl not available for API testing"
-fi
-
-log "=== PIPELINE COMPLETED SUCCESSFULLY ==="
