@@ -16,7 +16,8 @@ services:
 
   data-access:
     build:
-      dockerfile: data_access/Dockerfile
+      context: ./data-access
+      dockerfile: Dockerfile
     container_name: data_access_service
     networks:
       - microservices
@@ -30,8 +31,8 @@ services:
 
   api-interface:
     build: 
-      context: ./microservices
-      dockerfile: api_interface/Dockerfile
+      context: ./api-interface
+      dockerfile: Dockerfile
     networks:
       - microservices
     ports:
@@ -42,7 +43,8 @@ services:
 
   job-postings:
     build:
-      dockerfile: job_postings/Dockerfile
+      context: ./job-postings
+      dockerfile: Dockerfile
     networks:
       - microservices
     ports:
@@ -53,7 +55,8 @@ services:
 
   job-reviews:
     build:
-      dockerfile: job_reviews/Dockerfile
+      context: ./job-reviews
+      dockerfile: Dockerfile
     networks:
       - microservices
     ports:

@@ -22,9 +22,9 @@ log "Building commit: $GIT_COMMIT_HASH"
 log "Working directory: $(pwd)"
 
 MICROSERVICES="db api-interface job-postings job-reviews data-access"
-DOCKER_COMPOSE_FILE="docker-compose.yml"
+DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
 
-# Stage 2: Stop current microservices (keep db running)
+# Stage 2: Stop current microservices
 log "=== STOPPING CURRENT MICROSERVICES ==="
 log "Stopping microservices: $MICROSERVICES"
 for service in $MICROSERVICES; do
@@ -44,8 +44,8 @@ docker image prune -f || true
 log "=== BUILDING AND DEPLOYING SERVICES ==="
 log "Running docker-compose up --build for all services..."
 
-#Compose with detach
-docker-compose up --build -d
+# Use the correct docker-compose file from microservices directory
+docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
 
 if [ $? -eq 0 ]; then
     log "Services built and started successfully"
@@ -56,7 +56,7 @@ else
     exit 1
 fi
 
-# Stage 5: Show status
+# Stage 4: Show status
 log "=== DEPLOYMENT COMPLETE ==="
 docker-compose -f $DOCKER_COMPOSE_FILE ps
 log "🎉 Deployment successful!"
@@ -67,3 +67,20 @@ log "- Job Postings: http://localhost:8081"
 log "- Job Reviews: http://localhost:8084"
 log "- Data Access: http://localhost:8083"
 log "- Jenkins: http://localhost:8080"
+
+log "=== TESTING API ENDPOINTS ==="
+log "Testing API availability..."
+sleep 5
+
+# Test API endpoint if available
+if command -v curl &> /dev/null; then
+    if curl -f -s http://localhost:8082/health > /dev/null 2>&1; then
+        log "✅ API Interface is responding"
+    else
+        log "⚠️ API Interface health check not available or not responding"
+    fi
+else
+    log "⚠️ curl not available for API testing"
+fi
+
+log "=== PIPELINE COMPLETED SUCCESSFULLY ==="
