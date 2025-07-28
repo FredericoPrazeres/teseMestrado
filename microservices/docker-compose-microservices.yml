@@ -16,7 +16,6 @@ services:
 
   data-access:
     build:
-      context: ./microservices
       dockerfile: data_access/Dockerfile
     container_name: data_access_service
     networks:
@@ -43,7 +42,6 @@ services:
 
   job-postings:
     build:
-      context: ./microservices
       dockerfile: job_postings/Dockerfile
     networks:
       - microservices
@@ -55,7 +53,6 @@ services:
 
   job-reviews:
     build:
-      context: ./microservices
       dockerfile: job_reviews/Dockerfile
     networks:
       - microservices

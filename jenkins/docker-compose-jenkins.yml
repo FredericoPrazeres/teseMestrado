@@ -1,7 +1,6 @@
 services:
   jenkins:
     build:
-      context: ./microservices/jenkins
       dockerfile: Dockerfile
     container_name: jenkins_service
     restart: always
@@ -25,6 +24,12 @@ services:
         -Dhttps.protocols=TLSv1.2
         -Djava.awt.headless=true
     user: root
+    networks:
+      - monitoring
 
 volumes:
   jenkins_home:
+
+
+networks:
+  monitoring:

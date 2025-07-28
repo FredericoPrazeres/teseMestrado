@@ -1,6 +1,6 @@
 # Passos para correr o Jenkins.
 
-Correr o serviço docker-compose2 individualmente
+Correr o serviço docker-compose-jenkins individualmente
 
 Correr o ngrok para criar um novo ip exposto: ngrok http http://localhost:8080
 
