@@ -7,4 +7,3 @@
     Verificar ligação: docker exec -it grafana ping prometheus
 
     Importar a dashboard do jenkins com o id 9964
-    
