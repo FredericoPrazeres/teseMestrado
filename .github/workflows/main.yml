@@ -9,5 +9,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run Docker Containers after push
         run: |
+          ls -l
           chmod +x ./pipeline.sh
           ./pipeline.sh
