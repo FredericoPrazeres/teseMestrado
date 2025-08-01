@@ -12,4 +12,4 @@ services:
     restart: always
 
 volumes:
-  runner-data:  
+  runner-data:
