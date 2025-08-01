@@ -24,12 +24,13 @@ RUN curl -o actions-runner-linux-arm64-2.327.1.tar.gz -L https://github.com/acti
 
 RUN chown -R runner:runner /home/runner
 
+COPY start.sh /home/runner/start.sh
+RUN chmod +x /home/runner/start.sh
+
 USER runner
 
 RUN sudo ./bin/installdependencies.sh
 
-RUN ./config.sh --url https://github.com/FredericoPrazeres/teseMestrado --token AZOWM2NCEEIEOK7GXUFQVJDIRTO24
-
-RUN ./run.sh
+ENTRYPOINT ["/home/runner/start.sh"]
 
 # Install runner dependencies
