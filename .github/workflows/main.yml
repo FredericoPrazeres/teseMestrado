@@ -8,4 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Docker Containers after push
-        run: ls -l
+        run: |
+          cd .github/workflows
+          chmod +x ./pipeline.sh 
+          ./pipeline.sh
