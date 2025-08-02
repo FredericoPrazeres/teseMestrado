@@ -10,6 +10,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - runner-data:/home/runner/_work
     restart: always
+    ports:
+      - "9102:9100"  # Expose node exporter on a unique port
 
 volumes:
   runner-data:
+
+networks:
+  monitoring:
