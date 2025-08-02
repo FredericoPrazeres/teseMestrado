@@ -11,8 +11,7 @@ RUN apt-get update && \
 RUN apt-get update && \
     apt-get install -y docker.io curl && \
     curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && \
-    chmod +x /usr/local/bin/docker-compose && \
-    usermod -aG docker runner
+    chmod +x /usr/local/bin/docker-compose
 
 WORKDIR /home/runner
 
@@ -27,10 +26,13 @@ RUN chown -R runner:runner /home/runner
 COPY start.sh /home/runner/start.sh
 RUN chmod +x /home/runner/start.sh
 
+# Add runner to docker group
+RUN usermod -aG docker runner
+
+# Install runner dependencies as root first
+RUN ./bin/installdependencies.sh
+
+# Switch to runner user
 USER runner
 
-RUN sudo ./bin/installdependencies.sh
-
 ENTRYPOINT ["/home/runner/start.sh"]
-
-# Install runner dependencies
