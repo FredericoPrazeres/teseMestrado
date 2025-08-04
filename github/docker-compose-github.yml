@@ -11,8 +11,15 @@ services:
       - runner-data:/home/runner/_work
     restart: always
     ports:
-      - "9102:9100"  # Expose node exporter on a unique port
-
+      - "9102:8080"  # Expose cAdvisor on a unique port
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512MB
+          
 volumes:
   runner-data:
 

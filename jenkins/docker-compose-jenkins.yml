@@ -5,12 +5,13 @@ services:
     container_name: jenkins_service
     restart: always
     ports:
-      - "8080:8080"
+      - "8080:8080" # Jenkins web interface
       - "50000:50000"
+      - "9103:8081"  # cAdvisor EXPOSED port
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-      - .:/workspace:ro 
+      - .:/workspace:ro
+      - /sys:/sys:ro  # For cAdvisor system metrics
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -26,6 +27,11 @@ services:
     user: root
     networks:
       - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512MB
 
 volumes:
   jenkins_home:
