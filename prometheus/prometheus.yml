@@ -1,5 +1,5 @@
 global:
-  scrape_interval: 10s
+  scrape_interval: 1s
 
 scrape_configs:
   - job_name: 'jenkins_service'
@@ -10,11 +10,11 @@ scrape_configs:
   - job_name: 'github-runner-node-exporter'
     static_configs:
       - targets: ['host.docker.internal:9102']
-    scrape_interval: 5s
+    scrape_interval: 1s
     metrics_path: /metrics
     
   - job_name: 'jenkins-cadvisor'
     metrics_path: /metrics
-    scrape_interval: 5s
+    scrape_interval: 1s
     static_configs:
       - targets: ['host.docker.internal:9103']

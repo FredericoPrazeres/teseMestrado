@@ -14,7 +14,7 @@ services:
       - /sys:/sys:ro  # For cAdvisor system metrics
     dns:
       - 8.8.8.8
-      - 8.8.4.4
+      - 8.8.4.4 
     environment:
       JAVA_OPTS: >-
         -Djenkins.install.runSetupWizard=false
