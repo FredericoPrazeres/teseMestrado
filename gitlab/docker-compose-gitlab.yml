@@ -1,45 +1,28 @@
-version: '3.8'
-
 services:
-  gitlab:
-    image: gitlab/gitlab-ce:latest
-    container_name: gitlab_server
-    restart: always
-    hostname: 'localhost'
-    environment:
-      GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://localhost:8090'
-        gitlab_rails['gitlab_shell_ssh_port'] = 2224
-    ports:
-      - '8090:80'
-      - '2224:22'
-    volumes:
-      - gitlab_config:/etc/gitlab
-      - gitlab_logs:/var/log/gitlab
-      - gitlab_data:/var/opt/gitlab
-    networks:
-      - gitlab_network
-    shm_size: '256m'
-
   gitlab-runner:
-    image: gitlab/gitlab-runner:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: gitlab_runner
     restart: always
     volumes:
-      - gitlab_runner_config:/etc/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock
+      - gitlab-runner-config:/home/gitlab-runner/.gitlab-runner
+      - runner-data:/home/gitlab-runner
+      - ..:/workspace:ro
+    privileged: true
+    ports:
+      - "9104:8080" #cAdvisor port
+    env_file:
+      - .env
+    environment:
+      - HOME=/home/gitlab-runner
     networks:
-      - gitlab_network
-    depends_on:
-      - gitlab
+      - monitoring
 
 volumes:
-  gitlab_config:
-  gitlab_logs:
-  gitlab_data:
-  gitlab_runner_config:
+  gitlab-runner-config:
+  runner-data:
 
 networks:
-  gitlab_network:
-    driver: bridge
   monitoring:

@@ -1,3 +1,4 @@
+# Pipeline stages
 stages:
   - checkout
   - stop-services
@@ -5,14 +6,25 @@ stages:
   - deploy
   - status
 
+
+# Global variables
 variables:
-  DOCKER_COMPOSE_FILE: "docker-compose.yml"
+  DOCKER_COMPOSE_FILE: "microservices/docker-compose-microservices.yml"
   MICROSERVICES: "db api-interface job-postings job-reviews data-access"
 
+# Use your local runner with the tags you set
+default:
+  tags:
+    - docker
+    - linux
+    
+# Before each job
 before_script:
   - echo "Starting CI/CD pipeline for commit $CI_COMMIT_SHORT_SHA"
   - echo "Working directory $(pwd)"
+  - ls -la
 
+# Job 1: Show checkout information
 checkout-info:
   stage: checkout
   script:
@@ -20,28 +32,36 @@ checkout-info:
     - echo "Building commit $CI_COMMIT_SHORT_SHA"
     - echo "Branch $CI_COMMIT_REF_NAME"
     - echo "Working directory $(pwd)"
+    - echo "Repository contents:"
+    - ls -la
   only:
     - main
     - develop
+    - master
 
+# Job 2: Stop current microservices
 stop-microservices:
   stage: stop-services
   script:
     - echo "=== STOPPING CURRENT MICROSERVICES ==="
     - |
       for service in $MICROSERVICES; do
+        echo "Stopping $service..."
         docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
       done
   only:
     - main
     - develop
+    - master
 
+# Job 3: Remove containers and cleanup
 remove-containers:
   stage: cleanup
   script:
     - echo "=== REMOVING MICROSERVICES CONTAINERS ==="
     - |
       for service in $MICROSERVICES; do
+        echo "Removing $service container..."
         docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
       done
     - echo "Cleaning unused Docker images..."
@@ -49,38 +69,38 @@ remove-containers:
   only:
     - main
     - develop
+    - master
 
+# Job 4: Deploy services
 deploy-services:
   stage: deploy
   script:
     - echo "=== BUILDING AND DEPLOYING SERVICES ==="
-    - docker-compose up --build -d
+    - docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
     - |
       if [ $? -eq 0 ]; then
         echo "Services built and started successfully"
         echo "Waiting for services to initialize..."
         sleep 15
       else
-        echo "ERROR Failed to build and start services"
+        echo "ERROR: Failed to build and start services"
         exit 1
       fi
   only:
     - main
     - develop
+    - master
 
+# Job 5: Show deployment status
 show-status:
   stage: status
   script:
     - echo "=== DEPLOYMENT COMPLETE ==="
+    - cd /workspace
     - docker-compose -f $DOCKER_COMPOSE_FILE ps
     - echo "🎉 Deployment successful!"
     - echo "Services status:"
-    - echo "- Database http://localhost:5432"
-    - echo "- API Interface http://localhost:8082"
-    - echo "- Job Postings http://localhost:8081"
-    - echo "- Job Reviews http://localhost:8084"
-    - echo "- Data Access http://localhost:8083"
-    - echo "- GitLab http://localhost:8090"
   only:
     - main
     - develop
+    - master
