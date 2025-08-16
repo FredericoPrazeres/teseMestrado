@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Start cAdvisor
+/usr/local/bin/cadvisor \
+  --port=8080 \
+  --prometheus_endpoint="/metrics" \
+  --docker_only=true \
+  --housekeeping_interval=30s &
+
 # Very important! Otherwise the runner will not be able to connect to the Docker daemon.
 chown root:docker /var/run/docker.sock
 chmod 777 /var/run/docker.sock

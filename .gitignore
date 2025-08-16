@@ -2,3 +2,5 @@
 .env
 .env.local
 .env.production
+.png
+.DS_Store

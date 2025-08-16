@@ -9,6 +9,10 @@ RUN apt-get update && \
     useradd -m gitlab-runner && \
     echo "gitlab-runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+# Install cAdvisor
+RUN curl -L https://github.com/google/cadvisor/releases/download/v0.47.0/cadvisor-v0.47.0-linux-amd64 -o /usr/local/bin/cadvisor && \
+    chmod +x /usr/local/bin/cadvisor
+
 # Install Docker and Docker Compose
 RUN apt-get update && \
     apt-get install -y docker.io curl && \
