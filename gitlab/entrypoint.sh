@@ -14,10 +14,9 @@ chmod 777 /var/run/docker.sock
 echo "Starting GitLab Runner Container with cAdvisor"
 echo "=============================================="
 
-# Ensure config directory exists
 mkdir -p /home/gitlab-runner/.gitlab-runner
 
-# Check if runner is already registered
+# Runner registration check
 if [ ! -f /home/gitlab-runner/.gitlab-runner/config.toml ] || [ ! -s /home/gitlab-runner/.gitlab-runner/config.toml ]; then
     echo "No existing runner configuration found. Registering new runner..."
     
@@ -37,11 +36,10 @@ fi
 echo "Configuration file contents:"
 cat /home/gitlab-runner/.gitlab-runner/config.toml
 
-# Start the GitLab Runner service
 echo "Starting GitLab Runner service..."
 
+# Remove bash logout to prevent issues with bash shell
 rm /home/gitlab-runner/.bash_logout
-
 
 
 # Specifying the config file is essential, otherwise the runner will be offline.

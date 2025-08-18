@@ -4,20 +4,6 @@ set -e  # Exit on any error
 # Navigate to the root directory
 cd ../..
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-log() {
-    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')]${NC} $1"
-}
-
-error() {
-    echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1"
-}
-
 # Stage 1: Checkout info
 log "=== CHECKOUT STAGE ==="
 GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -47,7 +33,6 @@ docker image prune -f || true
 log "=== BUILDING AND DEPLOYING SERVICES ==="
 log "Running docker-compose up --build for all services..."
 
-# Use the correct docker-compose file from microservices directory
 docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
 
 if [ $? -eq 0 ]; then

@@ -12,17 +12,14 @@ RUN apt-get update && \
     useradd -m -d ${JENKINS_HOME} -u 1000 -g ${JENKINS_GROUP} ${JENKINS_USER} && \
     echo "${JENKINS_USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Install Docker and Docker Compose
 RUN apt-get update && \
     apt-get install -y docker.io curl && \
     curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && \
     chmod +x /usr/local/bin/docker-compose
 
-# Install cAdvisor
 RUN curl -L https://github.com/google/cadvisor/releases/download/v0.47.0/cadvisor-v0.47.0-linux-amd64 -o /usr/local/bin/cadvisor && \
     chmod +x /usr/local/bin/cadvisor
 
-# Download Jenkins WAR
 RUN curl -L https://get.jenkins.io/war-stable/${JENKINS_VERSION}/jenkins.war -o /usr/share/jenkins.war
 
 # Set permissions
