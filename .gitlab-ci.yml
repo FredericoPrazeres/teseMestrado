@@ -17,7 +17,7 @@ default:
   tags:
     - docker
     - linux
-    
+
 # Before each job
 before_script:
   - echo "Starting CI/CD pipeline for commit $CI_COMMIT_SHORT_SHA"
