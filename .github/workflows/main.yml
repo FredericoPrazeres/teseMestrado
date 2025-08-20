@@ -49,6 +49,7 @@ jobs:
   
   test:
     runs-on: self-hosted
+    needs: deploy
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
