@@ -4,6 +4,7 @@ stages:
   - stop-services
   - cleanup
   - deploy
+  - test
   - status
 
 
@@ -17,7 +18,7 @@ default:
   tags:
     - docker
     - linux
-
+    
 # Before each job
 before_script:
   - echo "Starting CI/CD pipeline for commit $CI_COMMIT_SHORT_SHA"
@@ -94,24 +95,20 @@ deploy-services:
 # Job 5: Run unit tests
 job_postings_unit_tests:
   stage: test
-  needs: ["deploy"]
   script:
     - docker exec job-postings bash -c "pytest test_job_postings.py"
 
 job_reviews_unit_tests:
   stage: test
-  needs: ["deploy"]
   script:
     - docker exec job-reviews bash -c "pytest test_job_reviews.py"
 
 api_interface_unit_tests:
   stage: test
-  needs: ["deploy"]
   script:
     - docker exec api-interface bash -c "pytest test_api_interface.py"
-  stage: test
 
-# Job 5: Show deployment status
+# Job 6: Show deployment status
 show-status:
   stage: status
   script:

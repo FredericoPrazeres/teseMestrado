@@ -56,7 +56,18 @@ else
     exit 1
 fi
 
-# Stage 4: Show status
+#Stage 4: Run Unit Tests
+
+log "=== RUNNING UNIT TESTS ==="
+
+log "Running Job Postings Unit Tests"
+docker exec job-postings bash -c "pytest test_job_postings.py"
+log "Running Job Reviews Unit Tests"
+docker exec job-reviews bash -c "pytest test_job_reviews.py"
+log "Running API Interface Unit Tests"
+docker exec api-interface bash -c "pytest test_api_interface.py"
+
+# Stage 5: Show status
 log "=== DEPLOYMENT COMPLETE ==="
 docker-compose -f $DOCKER_COMPOSE_FILE ps
 log "🎉 Deployment successful!"
