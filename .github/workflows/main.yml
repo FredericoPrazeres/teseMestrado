@@ -38,3 +38,8 @@ jobs:
         run: |
           DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
           docker-compose -f $DOCKER_COMPOSE_FILE ps
+
+      - name: Run Unit Tests
+        run: |
+          docker exec job-postings bash -c "pytest /app/job_postings/tests"
+      
