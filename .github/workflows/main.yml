@@ -56,4 +56,5 @@ jobs:
 
       - name: Run Unit Tests
         run: |
+          docker exec db bash -c "ls"
           docker exec job-postings bash -c "pytest microservices/job_postings/tests"
