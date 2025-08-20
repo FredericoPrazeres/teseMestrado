@@ -6,6 +6,7 @@ COPY job_reviews/requirements.txt /app/job_reviews/
 COPY job_reviews/job_reviews.py /app/job_reviews/
 COPY job_reviews/protobuf /app/protobuf
 COPY data_access/protobuf /app/protobuf
+COPY job_reviews/tests/test_job_reviews.py /app/job_reviews/
 
 WORKDIR /app/job_reviews
 RUN pip install --no-cache-dir -r requirements.txt

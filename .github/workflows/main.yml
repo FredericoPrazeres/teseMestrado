@@ -54,7 +54,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Unit Tests
+      - name: Run Job Postings Unit Tests
         run: |
-          docker exec job-postings bash -c "ls"
           docker exec job-postings bash -c "pytest test_job_postings.py"
+      
+      - name: Run Job Reviews Unit Tests
+        run: |
+          docker exec job-reviews bash -c "pytest test_job_reviews.py"
