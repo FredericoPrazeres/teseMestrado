@@ -1,14 +1,46 @@
-name: CI
+name: Microservices CI/CD Pipeline
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
 
 jobs:
-  build:
+  deploy:
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - name: Run Docker Containers after push
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Docker Compose
+        uses: docker/setup-docker-compose@v3
+
+      - name: Stop and remove existing microservices
         run: |
-          cd github/actions
-          chmod +x ./pipeline.sh 
-          ./pipeline.sh
+          MICROSERVICES="db api-interface job-postings job-reviews data-access"
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          for service in $MICROSERVICES; do
+            docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
+            docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
+          done
+
+      - name: Prune unused Docker images
+        run: docker image prune -f || true
+
+      - name: Build and deploy services
+        run: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
+
+      - name: Wait for services to initialize
+        run: sleep 15
+
+      - name: Show deployment status
+        run: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE ps
