@@ -8,43 +8,43 @@ on:
       - develop
 
 jobs:
-#  remove-containers:
-#    runs-on: self-hosted
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v4
-#
-#      - name: Stop and remove existing microservices
-#        run: |
-#          MICROSERVICES="db api-interface job-postings job-reviews data-access"
-#          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
-#          for service in $MICROSERVICES; do
-#            docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
-#            docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
-#          done
-#
-#      - name: Prune unused Docker images
-#        run: docker image prune -f || true
-#
-#  deploy:
-#    runs-on: self-hosted
-#    needs: remove-containers
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v4
-#
-#      - name: Build and deploy services
-#        run: |
-#          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
-#          docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
-#
-#      - name: Wait for services to initialize
-#        run: sleep 15
-#
-#      - name: Show deployment status
-#        run: |
-#          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
-#          docker-compose -f $DOCKER_COMPOSE_FILE ps
+  remove-containers:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Stop and remove existing microservices
+        run: |
+          MICROSERVICES="db api-interface job-postings job-reviews data-access"
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          for service in $MICROSERVICES; do
+            docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
+            docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
+          done
+
+      - name: Prune unused Docker images
+        run: docker image prune -f || true
+
+  deploy:
+    runs-on: self-hosted
+    needs: remove-containers
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and deploy services
+        run: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
+
+      - name: Wait for services to initialize
+        run: sleep 15
+
+      - name: Show deployment status
+        run: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE ps
 
   
   test:
