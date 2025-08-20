@@ -32,7 +32,7 @@ def test_jobs_with_rating(mock_review, mock_data_access, service):
     mock_data_access.GetJobPostingsWithTitleAndCity.return_value = MagicMock(job=[job])
     # Mock review response
     rating_job = MagicMock(
-        rating=4.5,
+        rating=4,
         job=MagicMock(
             id=1, title="Dev", company_name="A", description="desc", location="loc", views=10, salary=1000
         )
@@ -41,15 +41,15 @@ def test_jobs_with_rating(mock_review, mock_data_access, service):
     req = DummyRequest(title="Dev", city="City")
     resp = service.JobsWithRating(req, DummyContext())
     assert len(resp.jobs) == 1
-    assert resp.jobs[0].rating == 4.5
+    assert resp.jobs[0].rating == 4
 
 @patch("job_postings.data_access_client")
 def test_get_job_postings_for_largest_companies(mock_data_access, service):
     # Mock companies
-    company = MagicMock(company_id="1", employee_count=100, company="A")
+    company = MagicMock(company_id=1, employee_count=100, company="A")
     mock_data_access.GetCompaniesWithEmployees.return_value = MagicMock(company=[company])
     # Mock job postings
-    job = MagicMock(company="A", title="Dev", description="desc", location="loc", company_id="1", med_salary=1000)
+    job = MagicMock(company="A", title="Dev", description="desc", location="loc", company_id=1, med_salary=1000)
     mock_data_access.GetJobPostingsForLargestCompanies.return_value = MagicMock(job=[job])
     req = DummyRequest()
     resp = service.GetJobPostingsForLargestCompanies(req, DummyContext())
@@ -89,4 +89,4 @@ def test_get_best_paying_companies(mock_data_access, service):
     req = DummyRequest(title="Dev")
     resp = service.GetBestPayingCompanies(req, DummyContext())
     assert len(resp.companies) == 1
-    assert resp.companies[0]["company_name"] == "A"
+    assert resp.companies[0].company_name == "A"
