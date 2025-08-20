@@ -61,3 +61,7 @@ jobs:
       - name: Run Job Reviews Unit Tests
         run: |
           docker exec job-reviews bash -c "pytest test_job_reviews.py"
+
+      - name: Run API Interface Unit Tests
+        run: |
+          docker exec api-interface bash -c "pytest test_api_interface.py"
