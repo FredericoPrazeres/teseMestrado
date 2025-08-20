@@ -7,7 +7,7 @@ on:
       - master
       - develop
 
-#jobs:
+jobs:
 #  remove-containers:
 #    runs-on: self-hosted
 #    steps:
