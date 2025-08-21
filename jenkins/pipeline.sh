@@ -44,7 +44,6 @@ docker image prune -f || true
 log "=== BUILDING AND DEPLOYING SERVICES ==="
 log "Running docker-compose up --build for all services..."
 
-# Use the correct docker-compose file from microservices directory
 docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
 
 if [ $? -eq 0 ]; then
