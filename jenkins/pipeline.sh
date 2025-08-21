@@ -67,6 +67,11 @@ docker exec job-reviews bash -c "pytest test_job_reviews.py"
 log "Running API Interface Unit Tests"
 docker exec api-interface bash -c "pytest test_api_interface.py"
 
+log "=== RUNNING INTEGRATION TESTS ==="
+
+log "Running API Interface Unit Tests"
+docker exec api-interface bash -c "pytest test_api_interface_integration.py"
+
 # Stage 5: Show status
 log "=== DEPLOYMENT COMPLETE ==="
 docker-compose -f $DOCKER_COMPOSE_FILE ps

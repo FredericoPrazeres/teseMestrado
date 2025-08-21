@@ -108,6 +108,11 @@ api_interface_unit_tests:
   script:
     - docker exec api-interface bash -c "pytest test_api_interface.py"
 
+api_interface_integration_tests:
+  stage: test
+  script:
+    - docker exec api-interface bash -c "pytest test_api_interface_integration.py"
+
 # Job 6: Show deployment status
 show-status:
   stage: status
