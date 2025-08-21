@@ -65,3 +65,7 @@ jobs:
       - name: Run API Interface Unit Tests
         run: |
           docker exec api-interface bash -c "pytest test_api_interface.py"
+
+      - name: Run API Interface Integration Tests
+        run: |
+          docker exec api-interface bash -c "pytest test_api_interface_integration.py"
