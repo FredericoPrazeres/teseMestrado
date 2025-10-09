@@ -17,11 +17,6 @@ RUN apt-get update && \
 RUN curl -L https://github.com/google/cadvisor/releases/download/v0.47.0/cadvisor-v0.47.0-linux-amd64 -o /usr/local/bin/cadvisor && \
     chmod +x /usr/local/bin/cadvisor
 
-RUN apt-get update && \
-    apt-get install -y docker.io curl && \
-    curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && \
-    chmod +x /usr/local/bin/docker-compose
-
 WORKDIR /home/runner
 
 RUN curl -o actions-runner-linux-arm64-2.327.1.tar.gz -L https://github.com/actions/runner/releases/download/v2.327.1/actions-runner-linux-arm64-2.327.1.tar.gz && \
@@ -33,9 +28,6 @@ RUN chown -R runner:runner /home/runner
 
 COPY start.sh /home/runner/start.sh
 RUN chmod +x /home/runner/start.sh
-
-# Add runner to docker group
-RUN usermod -aG docker runner
 
 # Install runner dependencies as root first
 RUN ./bin/installdependencies.sh

@@ -22,9 +22,6 @@ RUN curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runne
 RUN mkdir -p /home/gitlab-runner/.gitlab-runner && \
     chown -R gitlab-runner:gitlab-runner /home/gitlab-runner
 
-RUN usermod -aG docker root
-RUN usermod -aG docker gitlab-runner
-
 COPY register-runner.sh /usr/local/bin/register-runner.sh
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /usr/local/bin/register-runner.sh /entrypoint.sh

@@ -14,11 +14,6 @@ services:
       - "9102:8080"  # Expose cAdvisor on a unique port
     networks:
       - monitoring
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512MB
           
 volumes:
   runner-data:
