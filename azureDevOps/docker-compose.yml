@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  azure-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: azure_devops_agent
+    restart: always
+    environment:
+      - AZP_URL=${AZP_URL}
+      - AZP_TOKEN=${AZP_TOKEN}
+      - AZP_POOL=${AZP_POOL}
+      - AZP_AGENT_NAME=${AZP_AGENT_NAME:-azure-agent}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - agent-data:/home/azureagent/_work
+      - ..:/workspace:ro
+    privileged: true
+    ports:
+      - "9105:8080"  # cAdvisor port
+    networks:
+      - monitoring
+
+volumes:
+  agent-data:
+
+networks:
+  monitoring:
