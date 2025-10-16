@@ -7,12 +7,65 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: BuildAndTest
-    displayName: 'Test Pipeline in different branch'
+  - job: RemoveContainers
+    displayName: 'Remove existing containers'
     steps:
       - checkout: self
-        displayName: 'Checkout code'
+        displayName: 'Checkout repository'
 
       - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+          MICROSERVICES="db api-interface job-postings job-reviews data-access"
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          for service in $MICROSERVICES; do
+            docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
+            docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
+          done
+        displayName: 'Stop and remove existing microservices'
+
+      - script: |
+          docker image prune -f || true
+        displayName: 'Prune unused Docker images'
+
+  - job: Deploy
+    displayName: 'Deploy services'
+    dependsOn: RemoveContainers
+    steps:
+      - checkout: self
+        displayName: 'Checkout repository'
+
+      - script: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
+        displayName: 'Build and deploy services'
+
+      - script: |
+          sleep 15
+        displayName: 'Wait for services to initialize'
+
+      - script: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE ps
+        displayName: 'Show deployment status'
+
+  - job: Test
+    displayName: 'Run tests'
+    dependsOn: Deploy
+    steps:
+      - checkout: self
+        displayName: 'Checkout repository'
+
+      - script: |
+          docker exec job-postings bash -c "pytest test_job_postings.py"
+        displayName: 'Run Job Postings Unit Tests'
+
+      - script: |
+          docker exec job-reviews bash -c "pytest test_job_reviews.py"
+        displayName: 'Run Job Reviews Unit Tests'
+
+      - script: |
+          docker exec api-interface bash -c "pytest test_api_interface.py"
+        displayName: 'Run API Interface Unit Tests'
+
+      - script: |
+          docker exec api-interface bash -c "pytest test_api_interface_integration.py"
+        displayName: 'Run API Interface Integration Tests'
