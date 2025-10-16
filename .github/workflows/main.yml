@@ -3,15 +3,67 @@ name: Microservices CI/CD Pipeline
 on:
   push:
     branches:
-      - master
+      - cloudMicroservices
 
 jobs:
   remove-containers:
     runs-on: self-hosted
     steps:
-      - name: Hello World
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Stop and remove existing microservices
         run: |
-          echo "Hello, World!"
+          MICROSERVICES="db api-interface job-postings job-reviews data-access"
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          for service in $MICROSERVICES; do
+            docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
+            docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
+          done
+
+      - name: Prune unused Docker images
+        run: docker image prune -f || true
+
+  deploy:
+    runs-on: self-hosted
+    needs: remove-containers
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and deploy services
+        run: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
+
+      - name: Wait for services to initialize
+        run: sleep 15
+
+      - name: Show deployment status
+        run: |
+          DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
+          docker-compose -f $DOCKER_COMPOSE_FILE ps
+
+  
+  test:
+    runs-on: self-hosted
+    needs: deploy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Job Postings Unit Tests
+        run: |
+          docker exec job-postings bash -c "pytest test_job_postings.py"
+      
+      - name: Run Job Reviews Unit Tests
+        run: |
+          docker exec job-reviews bash -c "pytest test_job_reviews.py"
+
+      - name: Run API Interface Unit Tests
+        run: |
+          docker exec api-interface bash -c "pytest test_api_interface.py"
+
+      - name: Run API Interface Integration Tests
+        run: |
+          docker exec api-interface bash -c "pytest test_api_interface_integration.py"
