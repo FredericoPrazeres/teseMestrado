@@ -33,3 +33,4 @@ Correr o ngrok para criar um novo ip exposto: ngrok http http://localhost:8080
 
     Após realizar as configurações, não apagar os volumes do jenkins e da base de dados, pois isso fará perder todas as configurações do Jenkins e a base de dados.
     
+    
