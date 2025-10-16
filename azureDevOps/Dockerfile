@@ -14,6 +14,12 @@ RUN useradd -m azureagent && \
 RUN apt-get install -y docker.io && \
     usermod -aG docker azureagent
 
+# Install Docker Compose
+RUN apt-get update && \
+    apt-get install -y docker.io curl && \
+    curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose && \
+    chmod +x /usr/local/bin/docker-compose
+
 # Install cAdvisor for monitoring
 RUN curl -L https://github.com/google/cadvisor/releases/download/v0.47.0/cadvisor-v0.47.0-linux-amd64 -o /usr/local/bin/cadvisor && \
     chmod +x /usr/local/bin/cadvisor
