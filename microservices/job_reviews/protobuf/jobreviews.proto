@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package jobreviews;
+
+// Represents a job posting.
+message JobReview {
+  string id = 1;
+  string title = 2;
+  string company_name = 3;
+  string description = 4;
+  string location = 5;
+  int32 views = 6; // Defaults to 0 if not provided.
+  int32 salary = 7; // Defaults to 0 if not provided.
+}
+
+// Represents a company and its reviews.
+message CompanyReview {
+  string firm = 1;
+  int32 overall_rating = 2;
+  float work_life_balance = 3;
+  float culture_values = 4;
+  float diversity_inclusion = 5;
+  float career_opp = 6; // Defaults to 0 if not provided.
+}
+
+message UpdateJobReviewRequest {
+  int64 id = 1;
+  string current_status = 2;
+  float rating = 3;
+  string headline = 4;
+}
+
+message UpdateJobReviewResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Message representing a review record.
+message ReviewinJob {
+  int32 id = 1;
+  string firm = 2;
+  string job_title = 3;
+  string current = 4;
+  string location = 5;
+  int32 overall_rating = 6;
+  float work_life_balance = 7;
+  float culture_values = 8;
+  float diversity_inclusion = 9;
+  float career_opp = 10;
+  float comp_benefits = 11;
+  float senior_mgmt = 12;
+  string recommend = 13;
+  string ceo_approv = 14;
+  string outlook = 15;
+  string headline = 16;
+  string pros = 17;
+  string cons = 18;
+}
+
+message JobWithRating {
+  int32 rating = 1;
+  JobReview job = 2;
+}
+
+// -----------------------------
+// Best Company Messages
+// -----------------------------
+message BestCompaniesRequest {
+}
+
+message BestCompaniesResponse {
+  repeated CompanyReview companyReview = 1;
+}
+
+message CalculateRatingRequest {
+  repeated JobReview jobs = 1;
+}
+
+message CalculateRatingResponse {
+  repeated JobWithRating rating = 1; 
+}
+
+// -----------------------------
+// Best rating Cities
+// -----------------------------
+
+message BestRatingCity {
+  string city = 1;
+  float average_rating = 2;
+}
+
+message BestCityRequest {
+}
+
+message BestCityResponse {
+  repeated BestRatingCity city = 1;
+}
+
+message CreateReviewRequest {
+  ReviewinJob review = 1;
+}
+
+message CreateReviewResponse {
+  string success = 1;
+}
+
+// -----------------------------
+// Delete Review
+// -----------------------------
+
+message DeleteReviewRequest {
+  string review_id = 1;
+}
+
+message DeleteReviewResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// -----------------------------
+// Service Definition
+// -----------------------------
+
+service JobReviewService {
+  rpc CalculateRating(CalculateRatingRequest) returns (CalculateRatingResponse);
+  rpc CreateReview(CreateReviewRequest) returns (CreateReviewResponse);
+  rpc GetBestCompanies(BestCompaniesRequest) returns (BestCompaniesResponse);
+  rpc UpdateJobReview(UpdateJobReviewRequest) returns (UpdateJobReviewResponse);
+  rpc BestCity(BestCityRequest) returns (BestCityResponse);
+  rpc DeleteReview(DeleteReviewRequest) returns(DeleteReviewResponse);
+}

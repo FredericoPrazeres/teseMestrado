@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package dataaccess;
+
+// Message representing a job record.
+message Job {
+  int64 job_id = 1;
+  string company = 2;
+  string title = 3;
+  string description = 4;
+  double max_salary = 5;         // Using double for NUMERIC fields.
+  string pay_period = 6;
+  string location = 7;
+  float company_id = 8;          // Matches the table's FLOAT type.
+  float views = 9;
+  double med_salary = 10;
+  double min_salary = 11;
+  string formatted_work_type = 12;
+  bool remote_allowed = 13;
+  string job_posting_url = 14;
+  string aplication_url = 15;
+  string application_type = 16;
+  string formatted_experience_level = 17;
+  string skills_desc = 18;
+  string posting_domain = 19;
+  bool sponsored = 20;
+  string work_type = 21;
+  string currency = 22;
+  double normalized_salary = 23;
+  float zip_code = 24;           // Although zip codes are usually strings, this matches your table.
+}
+
+message JobForLargestCompany {
+  string company = 1;
+  string title = 2;
+  string description = 3;
+  string location = 4;
+  float company_id = 5; 
+  double med_salary = 6;
+}
+
+message JobForRemote {
+  int64 id = 1;
+  string title = 2;
+  string company = 3;
+  string description = 4;
+  string location = 5;
+  bool remote_allowed = 6;
+}
+
+// Message representing a review record.
+message Review {
+  int32 id = 1;
+  string firm = 2;
+  string job_title = 3;
+  string current = 4;
+  string location = 5;
+  int32 overall_rating = 6;
+  float work_life_balance = 7;
+  float culture_values = 8;
+  float diversity_inclusion = 9;
+  float career_opp = 10;
+  float comp_benefits = 11;
+  float senior_mgmt = 12;
+  string recommend = 13;
+  string ceo_approv = 14;
+  string outlook = 15;
+  string headline = 16;
+  string pros = 17;
+  string cons = 18;
+}
+
+message Company {
+  int32 company_id = 1;
+  int32 employee_count = 2;
+  int32 follower_count = 3;
+}
+
+message BestCompany{
+  float average_salary = 1;
+  string company_name = 2;
+}
+
+// -----------------------------
+// Requests and Responses
+// -----------------------------
+message UpdateJobReviewRequest {
+  int64 id = 1;
+  string current_status = 2;
+  float rating = 3;
+  string headline = 4;
+}
+
+message UpdateJobReviewResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message JobPostingsRequestWithTitle {
+  string title = 1;
+  string city = 2;
+}
+
+message JobReviewsResponse {
+ repeated Review review = 1;
+}
+
+message JobPostingsRequestWithTitleAndCity {
+  string title = 1;
+  string city = 2;
+}
+
+message CompaniesRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message CompaniesResponse {
+  repeated Company company = 1;
+}
+
+message JobPostingsRequest {
+  int32 company_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message JobReviewsRequest{
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message JobPostingsForLargestCompaniesResponse{
+  repeated JobForLargestCompany job = 1;
+}
+
+message JobReviewRequestWithTitleAndCity {
+  string title = 1;
+  string city = 2;
+}
+
+message JobPostingsResponse {
+ repeated Job job = 1;
+}
+
+message CreateReviewRequest {
+  Review review = 1;
+}
+
+message CreateReviewResponse {
+  string success = 1;
+}
+
+message PostJobResponse {
+  string message = 1;
+  int32 status = 2;
+}
+
+message PostJobRequest {
+  string title = 1;
+  float normalized_salary =2;
+  string company_name = 3;
+  string description = 4;
+  string location = 5;
+}
+
+message RemoteJobSearchRequest {
+  string city = 1;
+  string keyword = 2;
+  string company = 3;
+}
+
+message RemoteJobSearchResponse {
+  repeated JobForRemote jobs = 1;
+}
+
+message BestPayingCompaniesRequest{
+  string title = 1;
+}
+
+message BestPayingCompaniesResponse{
+  repeated BestCompany companies = 1;
+}
+
+message DeleteReviewRequest {
+  string review_id = 1;
+}
+
+message DeleteReviewResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Service definition exposing the data access methods.
+service DataAccessService {
+  rpc GetJobPostingsWithTitle (JobPostingsRequestWithTitle) returns (JobPostingsResponse);
+  rpc GetJobPostingsWithTitleAndCity (JobPostingsRequestWithTitleAndCity) returns (JobPostingsResponse);
+  rpc GetJobReviewsWithTitleAndCity (JobReviewRequestWithTitleAndCity) returns (JobReviewsResponse);
+  rpc CreateReview (CreateReviewRequest) returns (CreateReviewResponse);
+  rpc GetJobReviewsForCompanyReview (JobReviewsRequest) returns (JobReviewsResponse);
+  rpc GetJobReviewsForLocationReview (JobReviewsRequest) returns (JobReviewsResponse);
+  rpc GetJobPostingsForLargestCompanies (JobPostingsRequest) returns (JobPostingsForLargestCompaniesResponse);
+  rpc GetCompaniesWithEmployees (CompaniesRequest) returns (CompaniesResponse);
+  rpc UpdateJobReview (UpdateJobReviewRequest) returns (UpdateJobReviewResponse);
+  rpc PostJobInDB (PostJobRequest) returns (PostJobResponse);
+  rpc GetRemoteJobs(RemoteJobSearchRequest) returns (RemoteJobSearchResponse);
+  rpc GetBestPayingCompanies(BestPayingCompaniesRequest) returns (BestPayingCompaniesResponse);
+  rpc DeleteReview(DeleteReviewRequest) returns(DeleteReviewResponse);
+}
