@@ -18,43 +18,84 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0  # Fetch full history for better change detection
 
       - name: Detect changes
         id: changes
         run: |
           echo "Detecting changes in microservices..."
           
-          # Check for changes in each microservice directory
-          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/microservice-ui/"; then
+          # Show what files changed for debugging
+          echo "Changed files:"
+          git diff --name-only HEAD~1 HEAD || git diff --name-only HEAD
+          
+          # Check for changes in each microservice directory (more flexible patterns)
+          if git diff --name-only HEAD~1 HEAD | grep -E "(microservice-ui|complete-microservice-application/microservice-ui)" || \
+             git diff --name-only HEAD | grep -E "(microservice-ui|complete-microservice-application/microservice-ui)"; then
             echo "microservice-ui=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected changes in microservice-ui"
           else
             echo "microservice-ui=false" >> $GITHUB_OUTPUT
+            echo "❌ No changes in microservice-ui"
           fi
           
-          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/service-registry/"; then
+          if git diff --name-only HEAD~1 HEAD | grep -E "(service-registry|complete-microservice-application/service-registry)" || \
+             git diff --name-only HEAD | grep -E "(service-registry|complete-microservice-application/service-registry)"; then
             echo "service-registry=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected changes in service-registry"
           else
             echo "service-registry=false" >> $GITHUB_OUTPUT
+            echo "❌ No changes in service-registry"
           fi
           
-          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/api-gateway/"; then
+          if git diff --name-only HEAD~1 HEAD | grep -E "(api-gateway|complete-microservice-application/api-gateway)" || \
+             git diff --name-only HEAD | grep -E "(api-gateway|complete-microservice-application/api-gateway)"; then
             echo "api-gateway=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected changes in api-gateway"
           else
             echo "api-gateway=false" >> $GITHUB_OUTPUT
+            echo "❌ No changes in api-gateway"
           fi
           
-          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/product-service/"; then
+          if git diff --name-only HEAD~1 HEAD | grep -E "(product-service|complete-microservice-application/product-service)" || \
+             git diff --name-only HEAD | grep -E "(product-service|complete-microservice-application/product-service)"; then
             echo "product-service=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected changes in product-service"
           else
             echo "product-service=false" >> $GITHUB_OUTPUT
+            echo "❌ No changes in product-service"
           fi
           
-          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/offer-service/"; then
+          if git diff --name-only HEAD~1 HEAD | grep -E "(offer-service|complete-microservice-application/offer-service)" || \
+             git diff --name-only HEAD | grep -E "(offer-service|complete-microservice-application/offer-service)"; then
             echo "offer-service=true" >> $GITHUB_OUTPUT
+            echo "✅ Detected changes in offer-service"
           else
             echo "offer-service=false" >> $GITHUB_OUTPUT
+            echo "❌ No changes in offer-service"
           fi
+          
+          # Show final outputs for debugging
+          echo "=== FINAL OUTPUTS ==="
+          echo "microservice-ui: $(grep microservice-ui <<< '$GITHUB_OUTPUT' | cut -d= -f2)"
+          echo "service-registry: $(grep service-registry <<< '$GITHUB_OUTPUT' | cut -d= -f2)"
+          echo "api-gateway: $(grep api-gateway <<< '$GITHUB_OUTPUT' | cut -d= -f2)"
+          echo "product-service: $(grep product-service <<< '$GITHUB_OUTPUT' | cut -d= -f2)"
+          echo "offer-service: $(grep offer-service <<< '$GITHUB_OUTPUT' | cut -d= -f2)"
+
+  # Add a debug job to see what changes were detected
+  debug-changes:
+    runs-on: self-hosted
+    needs: detect-changes
+    steps:
+      - name: Show detected changes
+        run: |
+          echo "=== DETECTED CHANGES DEBUG ==="
+          echo "microservice-ui: ${{ needs.detect-changes.outputs.microservice-ui }}"
+          echo "service-registry: ${{ needs.detect-changes.outputs.service-registry }}"
+          echo "api-gateway: ${{ needs.detect-changes.outputs.api-gateway }}"
+          echo "product-service: ${{ needs.detect-changes.outputs.product-service }}"
+          echo "offer-service: ${{ needs.detect-changes.outputs.offer-service }}"
 
   setup-infrastructure:
     runs-on: self-hosted
@@ -200,23 +241,26 @@ jobs:
 
       - name: Build and restart offer-service
         run: |
-          echo "Building and restarting offer-service..."
+          echo "🔄 Building and restarting offer-service..."
           cd complete-microservice-application/offer-service
           
           # Stop existing service
+          echo "Stopping existing offer-service processes..."
           pkill -f "offer-service" || true
           
           # Build the service with Java compatibility flags
+          echo "Building offer-service with Maven..."
           export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           mvn clean install -DskipTests
           
           # Start the service in background
-          nohup mvn spring-boot:run > offer-service.log 2>&1 &
+          echo "Starting offer-service on port 8082..."
+          nohup mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" > offer-service.log 2>&1 &
           
           # Wait for service to start
           sleep 30
           
-          echo "Offer service started successfully"
+          echo "✅ Offer service started successfully on port 8082"
 
   build-microservice-ui:
     runs-on: self-hosted
@@ -294,20 +338,3 @@ jobs:
           else
             echo "❌ Microservice UI is not responding"
           fi
-
-  deployment-status:
-    runs-on: self-hosted
-    needs: [health-check]
-    if: always()
-    steps:
-      - name: Show deployment summary
-        run: |
-          echo "=== DEPLOYMENT SUMMARY ==="
-          echo "🚀 Microservices deployment completed!"
-          echo "📊 Service endpoints:"
-          echo "  - Service Registry: http://localhost:8761"
-          echo "  - API Gateway: http://localhost:8000"  
-          echo "  - Product Service: http://localhost:8081, http://localhost:8180"
-          echo "  - Offer Service: http://localhost:8082"
-          echo "  - Microservice UI: http://localhost:3000"
-          echo "  - RabbitMQ Management: http://localhost:15672 (guest/guest)"
