@@ -202,11 +202,25 @@ jobs:
 
       - name: Set Java environment
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
+          # Find and set JAVA_HOME
+          if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
+            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          elif [ -d "/usr/lib/jvm/java-11-openjdk-amd64" ]; then
+            export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          else
+            # Find any available Java installation
+            export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          fi
+          
           echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
-
+          
+          # Verify Java installation
+          echo "Java version:"
+          $JAVA_HOME/bin/java -version
+          echo "Maven version:"
+          mvn -version
+          
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
         run: |
