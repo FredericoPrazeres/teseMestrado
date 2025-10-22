@@ -246,10 +246,24 @@ jobs:
 
       - name: Set Java environment
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
+          # Find and set JAVA_HOME
+          if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
+            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          elif [ -d "/usr/lib/jvm/java-11-openjdk-amd64" ]; then
+            export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          else
+            # Find any available Java installation
+            export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          fi
+          
           echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+          
+          # Verify Java installation
+          echo "Java version:"
+          $JAVA_HOME/bin/java -version
+          echo "Maven version:"
+          mvn -version
 
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
@@ -258,8 +272,12 @@ jobs:
           sleep 45  # Wait for service registry to fully start
 
       - name: Build and restart offer-service
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
           echo "🔄 Building and restarting offer-service..."
+          echo "Using JAVA_HOME: $JAVA_HOME"
+          
           cd complete-microservice-application/offer-service
           
           # Stop existing service
@@ -269,6 +287,13 @@ jobs:
           # Build the service with Java compatibility flags
           echo "Building offer-service with Maven..."
           export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          
+          # Verify environment before building
+          echo "Current JAVA_HOME: $JAVA_HOME"
+          echo "Java executable: $(which java)"
+          java -version
+          
           mvn clean install -DskipTests
           
           # Start the service in background
@@ -279,7 +304,7 @@ jobs:
           sleep 30
           
           echo "✅ Offer service started successfully on port 8082"
-
+          
   build-microservice-ui:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure]
