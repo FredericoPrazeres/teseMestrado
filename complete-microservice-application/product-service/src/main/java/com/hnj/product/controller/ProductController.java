@@ -38,6 +38,4 @@ public class ProductController {
 	public Product getProduct(@PathVariable Integer id){
 		return productService.getProductById(id).isPresent() ? productService.getProductById(id).get() : null;
 	}
-	
-
 }

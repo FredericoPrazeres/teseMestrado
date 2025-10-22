@@ -11,4 +11,3 @@ public class ServiceRegistryApplication {
         SpringApplication.run(ServiceRegistryApplication.class, args);
     }
 }
-
