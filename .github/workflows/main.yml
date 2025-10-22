@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - applications/complete-microservices
-      - main
       
 jobs:
   detect-changes:
@@ -84,6 +83,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set Java environment
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
       - name: Build and restart service-registry
         run: |
           echo "Building and restarting service-registry..."
@@ -92,7 +98,8 @@ jobs:
           # Stop existing service
           pkill -f "service-registry" || true
           
-          # Build the service
+          # Build the service with Java compatibility flags
+          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           mvn clean install -DskipTests
           
           # Start the service in background
@@ -111,6 +118,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set Java environment
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
       - name: Build and restart api-gateway
         run: |
           echo "Building and restarting api-gateway..."
@@ -119,7 +133,8 @@ jobs:
           # Stop existing service
           pkill -f "api-gateway" || true
           
-          # Build the service
+          # Build the service with Java compatibility flags
+          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           mvn clean install -DskipTests
           
           # Start the service in background
@@ -138,6 +153,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set Java environment
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
       - name: Build and restart product-service
         run: |
           echo "Building and restarting product-service..."
@@ -146,13 +168,15 @@ jobs:
           # Stop existing instances
           pkill -f "product-service" || true
           
-          # Build the service
+          # Build the service with Java compatibility flags
+          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           mvn clean install -DskipTests
           
-          # Start multiple instances
+          # Start multiple instances with Java compatibility flags
           cd target
-          nohup java -jar product-service-*.jar --server.port=8081 > product-service-8081.log 2>&1 &
-          nohup java -jar product-service-*.jar --server.port=8180 > product-service-8180.log 2>&1 &
+          export JAVA_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+          nohup java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 > product-service-8081.log 2>&1 &
+          nohup java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 > product-service-8180.log 2>&1 &
           
           # Wait for services to start
           sleep 30
@@ -167,6 +191,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set Java environment
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
       - name: Build and restart offer-service
         run: |
           echo "Building and restarting offer-service..."
@@ -175,7 +206,8 @@ jobs:
           # Stop existing service
           pkill -f "offer-service" || true
           
-          # Build the service
+          # Build the service with Java compatibility flags
+          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           mvn clean install -DskipTests
           
           # Start the service in background
