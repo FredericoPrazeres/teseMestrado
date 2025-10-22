@@ -29,5 +29,4 @@ public class OfferController {
 		return offerService.getOffers();
 	}
 
-	
 }
