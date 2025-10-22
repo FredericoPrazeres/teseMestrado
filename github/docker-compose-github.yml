@@ -11,6 +11,13 @@ services:
       - runner-data:/home/runner/_work
     restart: always
     ports:
+      - "5672:5672"  # Expose RabbitMQ port
+      - "15672:15672"  # Expose RabbitMQ management UI
+      - "8761:8761" # Expose Eureka server port
+      - "8000:8000" # Product Service instances
+      - "8081:8081" # Product Service instances
+      - "8082:8082" # Offer Service
+      - "4200:3000" # Microservice UI (Angular)
       - "9102:8080"  # Expose cAdvisor on a unique port
     networks:
       - monitoring
