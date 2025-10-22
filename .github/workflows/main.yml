@@ -4,13 +4,6 @@ on:
   push:
     branches:
       - applications/complete-microservices
-  workflow_dispatch:  # Add this to allow manual triggers
-    inputs:
-      run_all:
-        description: 'Run all services regardless of changes'
-        required: false
-        default: 'true'
-        type: boolean      
       
 jobs:
   detect-changes:
