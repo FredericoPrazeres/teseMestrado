@@ -27,5 +27,6 @@ public class OfferController {
 	@GetMapping("/offer")
 	public List<Offer> getOffers(){
 		return offerService.getOffers();
-	}	
+	}
+	
 }

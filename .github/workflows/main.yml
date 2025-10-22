@@ -153,7 +153,7 @@ jobs:
 
   build-api-gateway:
     runs-on: self-hosted
-    needs: [detect-changes, build-service-registry]
+    needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.api-gateway == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
       - name: Checkout code
@@ -165,6 +165,12 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
+      - name: Wait for service registry if needed
+        if: needs.detect-changes.outputs.service-registry == 'true'
+        run: |
+          echo "Waiting for service registry to be ready..."
+          sleep 45  # Wait for service registry to fully start
 
       - name: Build and restart api-gateway
         run: |
@@ -188,7 +194,7 @@ jobs:
 
   build-product-service:
     runs-on: self-hosted
-    needs: [detect-changes, build-service-registry]
+    needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.product-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
       - name: Checkout code
@@ -200,6 +206,12 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
+      - name: Wait for service registry if needed
+        if: needs.detect-changes.outputs.service-registry == 'true'
+        run: |
+          echo "Waiting for service registry to be ready..."
+          sleep 45  # Wait for service registry to fully start
 
       - name: Build and restart product-service
         run: |
@@ -226,7 +238,7 @@ jobs:
 
   build-offer-service:
     runs-on: self-hosted
-    needs: [detect-changes, build-service-registry]
+    needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.offer-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
       - name: Checkout code
@@ -238,6 +250,12 @@ jobs:
           export PATH=$JAVA_HOME/bin:$PATH
           echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
           echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+
+      - name: Wait for service registry if needed
+        if: needs.detect-changes.outputs.service-registry == 'true'
+        run: |
+          echo "Waiting for service registry to be ready..."
+          sleep 45  # Wait for service registry to fully start
 
       - name: Build and restart offer-service
         run: |
@@ -264,11 +282,17 @@ jobs:
 
   build-microservice-ui:
     runs-on: self-hosted
-    needs: [detect-changes, build-api-gateway]
+    needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.microservice-ui == 'true' || needs.detect-changes.outputs.api-gateway == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Wait for api-gateway if needed
+        if: needs.detect-changes.outputs.api-gateway == 'true'
+        run: |
+          echo "Waiting for API Gateway to be ready..."
+          sleep 75  # Wait for API Gateway to fully start
 
       - name: Build and restart microservice-ui
         run: |
@@ -338,3 +362,20 @@ jobs:
           else
             echo "❌ Microservice UI is not responding"
           fi
+
+  deployment-status:
+    runs-on: self-hosted
+    needs: [health-check]
+    if: always()
+    steps:
+      - name: Show deployment summary
+        run: |
+          echo "=== DEPLOYMENT SUMMARY ==="
+          echo "🚀 Microservices deployment completed!"
+          echo "📊 Service endpoints:"
+          echo "  - Service Registry: http://localhost:8761"
+          echo "  - API Gateway: http://localhost:8000"  
+          echo "  - Product Service: http://localhost:8081, http://localhost:8180"
+          echo "  - Offer Service: http://localhost:8082"
+          echo "  - Microservice UI: http://localhost:3000"
+          echo "  - RabbitMQ Management: http://localhost:15672 (guest/guest)"
