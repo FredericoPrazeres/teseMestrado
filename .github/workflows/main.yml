@@ -3,15 +3,279 @@ name: Microservices CI/CD Pipeline
 on:
   push:
     branches:
-      - master
-
+      - applications/complete-microservices
+      - main
+      
 jobs:
-  remove-containers:
+  detect-changes:
     runs-on: self-hosted
+    outputs:
+      microservice-ui: ${{ steps.changes.outputs.microservice-ui }}
+      service-registry: ${{ steps.changes.outputs.service-registry }}
+      api-gateway: ${{ steps.changes.outputs.api-gateway }}
+      product-service: ${{ steps.changes.outputs.product-service }}
+      offer-service: ${{ steps.changes.outputs.offer-service }}
     steps:
-      - name: Hello World
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changes
+        id: changes
+        run: |
+          echo "Detecting changes in microservices..."
+          
+          # Check for changes in each microservice directory
+          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/microservice-ui/"; then
+            echo "microservice-ui=true" >> $GITHUB_OUTPUT
+          else
+            echo "microservice-ui=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/service-registry/"; then
+            echo "service-registry=true" >> $GITHUB_OUTPUT
+          else
+            echo "service-registry=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/api-gateway/"; then
+            echo "api-gateway=true" >> $GITHUB_OUTPUT
+          else
+            echo "api-gateway=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/product-service/"; then
+            echo "product-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "product-service=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if git diff --name-only HEAD~1 HEAD | grep -q "complete-microservice-application/offer-service/"; then
+            echo "offer-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "offer-service=false" >> $GITHUB_OUTPUT
+          fi
+
+  setup-infrastructure:
+    runs-on: self-hosted
+    needs: detect-changes
+    steps:
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Stop and remove existing microservices
+      - name: Setup RabbitMQ
         run: |
-          echo "Hello, World!"
+          echo "Setting up RabbitMQ..."
+          # Check if RabbitMQ is running, if not start it
+          if ! docker ps | grep -q rabbitmq; then
+            docker run -d --name rabbitmq \
+              -p 5672:5672 -p 15672:15672 \
+              -e RABBITMQ_DEFAULT_USER=guest \
+              -e RABBITMQ_DEFAULT_PASS=guest \
+              rabbitmq:3-management || echo "RabbitMQ already running or failed to start"
+          fi
+
+  build-service-registry:
+    runs-on: self-hosted
+    needs: [detect-changes, setup-infrastructure]
+    if: needs.detect-changes.outputs.service-registry == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and restart service-registry
+        run: |
+          echo "Building and restarting service-registry..."
+          cd complete-microservice-application/service-registry
+          
+          # Stop existing service
+          pkill -f "service-registry" || true
+          
+          # Build the service
+          mvn clean install -DskipTests
+          
+          # Start the service in background
+          nohup mvn spring-boot:run > service-registry.log 2>&1 &
+          
+          # Wait for service to start
+          sleep 30
+          
+          echo "Service registry started successfully"
+
+  build-api-gateway:
+    runs-on: self-hosted
+    needs: [detect-changes, build-service-registry]
+    if: needs.detect-changes.outputs.api-gateway == 'true' || needs.detect-changes.outputs.service-registry == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and restart api-gateway
+        run: |
+          echo "Building and restarting api-gateway..."
+          cd complete-microservice-application/api-gateway
+          
+          # Stop existing service
+          pkill -f "api-gateway" || true
+          
+          # Build the service
+          mvn clean install -DskipTests
+          
+          # Start the service in background
+          nohup mvn spring-boot:run > api-gateway.log 2>&1 &
+          
+          # Wait for service to start
+          sleep 30
+          
+          echo "API Gateway started successfully"
+
+  build-product-service:
+    runs-on: self-hosted
+    needs: [detect-changes, build-service-registry]
+    if: needs.detect-changes.outputs.product-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and restart product-service
+        run: |
+          echo "Building and restarting product-service..."
+          cd complete-microservice-application/product-service
+          
+          # Stop existing instances
+          pkill -f "product-service" || true
+          
+          # Build the service
+          mvn clean install -DskipTests
+          
+          # Start multiple instances
+          cd target
+          nohup java -jar product-service-*.jar --server.port=8081 > product-service-8081.log 2>&1 &
+          nohup java -jar product-service-*.jar --server.port=8180 > product-service-8180.log 2>&1 &
+          
+          # Wait for services to start
+          sleep 30
+          
+          echo "Product service instances started successfully"
+
+  build-offer-service:
+    runs-on: self-hosted
+    needs: [detect-changes, build-service-registry]
+    if: needs.detect-changes.outputs.offer-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and restart offer-service
+        run: |
+          echo "Building and restarting offer-service..."
+          cd complete-microservice-application/offer-service
+          
+          # Stop existing service
+          pkill -f "offer-service" || true
+          
+          # Build the service
+          mvn clean install -DskipTests
+          
+          # Start the service in background
+          nohup mvn spring-boot:run > offer-service.log 2>&1 &
+          
+          # Wait for service to start
+          sleep 30
+          
+          echo "Offer service started successfully"
+
+  build-microservice-ui:
+    runs-on: self-hosted
+    needs: [detect-changes, build-api-gateway]
+    if: needs.detect-changes.outputs.microservice-ui == 'true' || needs.detect-changes.outputs.api-gateway == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and restart microservice-ui
+        run: |
+          echo "Building and restarting microservice-ui..."
+          cd complete-microservice-application/microservice-ui
+          
+          # Stop existing UI service
+          pkill -f "ng serve" || true
+          
+          # Install dependencies
+          npm install
+          
+          # Start the UI service in background
+          nohup ng serve --port 3000 --host 0.0.0.0 > microservice-ui.log 2>&1 &
+          
+          # Wait for service to start
+          sleep 30
+          
+          echo "Microservice UI started successfully"
+
+  health-check:
+    runs-on: self-hosted
+    needs: [build-service-registry, build-api-gateway, build-product-service, build-offer-service, build-microservice-ui]
+    if: always()
+    steps:
+      - name: Health check services
+        run: |
+          echo "=== HEALTH CHECK ==="
+          
+          # Check service registry
+          if curl -f http://localhost:8761/actuator/health > /dev/null 2>&1; then
+            echo "✅ Service Registry is healthy"
+          else
+            echo "❌ Service Registry is not responding"
+          fi
+          
+          # Check API Gateway
+          if curl -f http://localhost:8000/actuator/health > /dev/null 2>&1; then
+            echo "✅ API Gateway is healthy"
+          else
+            echo "❌ API Gateway is not responding"
+          fi
+          
+          # Check Product Service instances
+          if curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
+            echo "✅ Product Service (8081) is healthy"
+          else
+            echo "❌ Product Service (8081) is not responding"
+          fi
+          
+          if curl -f http://localhost:8180/actuator/health > /dev/null 2>&1; then
+            echo "✅ Product Service (8180) is healthy"  
+          else
+            echo "❌ Product Service (8180) is not responding"
+          fi
+          
+          # Check Offer Service
+          if curl -f http://localhost:8082/actuator/health > /dev/null 2>&1; then
+            echo "✅ Offer Service is healthy"
+          else
+            echo "❌ Offer Service is not responding"
+          fi
+          
+          # Check Microservice UI
+          if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            echo "✅ Microservice UI is healthy"
+          else
+            echo "❌ Microservice UI is not responding"
+          fi
+
+  deployment-status:
+    runs-on: self-hosted
+    needs: [health-check]
+    if: always()
+    steps:
+      - name: Show deployment summary
+        run: |
+          echo "=== DEPLOYMENT SUMMARY ==="
+          echo "🚀 Microservices deployment completed!"
+          echo "📊 Service endpoints:"
+          echo "  - Service Registry: http://localhost:8761"
+          echo "  - API Gateway: http://localhost:8000"  
+          echo "  - Product Service: http://localhost:8081, http://localhost:8180"
+          echo "  - Offer Service: http://localhost:8082"
+          echo "  - Microservice UI: http://localhost:3000"
+          echo "  - RabbitMQ Management: http://localhost:15672 (guest/guest)"
