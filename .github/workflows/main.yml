@@ -331,11 +331,19 @@ jobs:
           export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           export PATH="$JAVA_HOME/bin:$PATH"
           
+          # Verify environment before building
+          echo "Current JAVA_HOME: $JAVA_HOME"
+          echo "Java executable: $(which java)"
+          java -version
+          
           mvn clean install -DskipTests
           
+          # Start the service in background
+          echo "Starting offer-service on port 8082..."
+
           # Start the service with Java 17 compatibility flags
           echo "Starting offer-service on port 8082..."
-          export JAVA_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED \
+          export MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED \
             --add-opens java.base/java.util=ALL-UNNAMED \
             --add-opens java.base/java.io=ALL-UNNAMED \
             --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
@@ -343,14 +351,14 @@ jobs:
             --add-opens java.base/java.net=ALL-UNNAMED \
             --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
             --add-opens jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          
-          mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.text=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED" -Dspring-boot.run.arguments="--server.port=8082" > offer-service.log 2>&1 &
 
+          mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"&
+          
           # Wait for service to start
           sleep 30
-
+          
           echo "✅ Offer service started successfully on port 8082"
-
+          
   build-microservice-ui:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure]
