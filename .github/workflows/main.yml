@@ -269,9 +269,17 @@ jobs:
           
           # Start multiple instances with Java compatibility flags
           cd target
-          export JAVA_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
-          java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 &
+          export JAVA_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED \
+            --add-opens java.base/java.util=ALL-UNNAMED \
+            --add-opens java.base/java.io=ALL-UNNAMED \
+            --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
+            --add-opens java.base/java.text=ALL-UNNAMED \
+            --add-opens java.base/java.net=ALL-UNNAMED \
+            --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
+            --add-opens jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+          
+          java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 > product-service-8081.log 2>&1 &
+          java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 > product-service-8180.log 2>&1 &
           
           # Wait for services to start
           sleep 30
@@ -331,22 +339,26 @@ jobs:
           export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           export PATH="$JAVA_HOME/bin:$PATH"
           
-          # Verify environment before building
-          echo "Current JAVA_HOME: $JAVA_HOME"
-          echo "Java executable: $(which java)"
-          java -version
-          
           mvn clean install -DskipTests
           
-          # Start the service in background
+          # Start the service with Java 17 compatibility flags
           echo "Starting offer-service on port 8082..."
-          mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"&
+          export JAVA_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED \
+            --add-opens java.base/java.util=ALL-UNNAMED \
+            --add-opens java.base/java.io=ALL-UNNAMED \
+            --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
+            --add-opens java.base/java.text=ALL-UNNAMED \
+            --add-opens java.base/java.net=ALL-UNNAMED \
+            --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
+            --add-opens jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+          
+          nohup java $JAVA_OPTS -jar target/offer-service-*.jar --server.port=8082 > offer-service.log 2>&1 &
           
           # Wait for service to start
           sleep 30
-          
+
           echo "✅ Offer service started successfully on port 8082"
-          
+
   build-microservice-ui:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure]
