@@ -269,17 +269,9 @@ jobs:
           
           # Start multiple instances with Java compatibility flags
           cd target
-          export JAVA_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED \
-            --add-opens java.base/java.util=ALL-UNNAMED \
-            --add-opens java.base/java.io=ALL-UNNAMED \
-            --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
-            --add-opens java.base/java.text=ALL-UNNAMED \
-            --add-opens java.base/java.net=ALL-UNNAMED \
-            --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
-            --add-opens jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          
-          java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 > product-service-8081.log 2>&1 &
-          java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 > product-service-8180.log 2>&1 &
+          export JAVA_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
+          java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
+          java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 &
           
           # Wait for services to start
           sleep 30
@@ -352,8 +344,8 @@ jobs:
             --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
             --add-opens jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
           
-          nohup java $JAVA_OPTS -jar target/offer-service-*.jar --server.port=8082 > offer-service.log 2>&1 &
-          
+          mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.text=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED" -Dspring-boot.run.arguments="--server.port=8082" > offer-service.log 2>&1 &
+
           # Wait for service to start
           sleep 30
 

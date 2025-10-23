@@ -9,6 +9,5 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 public class OfferServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(OfferServiceApplication.class, args);
-    }
-    
+    }   
 }
