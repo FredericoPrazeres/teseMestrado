@@ -13,4 +13,3 @@ public interface ProductService {
     void addProductOffer(Integer productId, Double discountOffer);
     Product addPrice(Integer id, Double price);
 }
-
