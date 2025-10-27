@@ -24,7 +24,7 @@ RUN curl -o actions-runner-linux-arm64-2.327.1.tar.gz -L https://github.com/acti
     tar xzf actions-runner-linux-arm64-2.327.1.tar.gz && \
     rm actions-runner-linux-arm64-2.327.1.tar.gz
 
-RUN chown -R runner:runner /home/runner
+RUN chown -R runner:runner /home/
 
 COPY start.sh /home/runner/start.sh
 RUN chmod +x /home/runner/start.sh
