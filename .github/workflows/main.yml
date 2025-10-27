@@ -109,6 +109,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Setup RabbitMQ
         run: |
@@ -127,6 +129,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Build and restart service-registry
         run: |
@@ -163,6 +167,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
@@ -205,6 +211,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
@@ -249,6 +257,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
@@ -289,6 +299,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: false
 
       - name: Wait for api-gateway if needed
         if: needs.detect-changes.outputs.api-gateway == 'true'
