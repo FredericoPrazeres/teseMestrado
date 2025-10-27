@@ -1,9 +1,10 @@
 FROM ubuntu:22.04
 
 ARG RUNNER_VERSION="2.327.1"
+ARG MAVEN_VERSION="3.6.0"
 
 RUN apt-get update && \
-    apt-get install -y curl git sudo openjdk-17-jdk maven nodejs npm && \
+    apt-get install -y curl git sudo openjdk-11-jdk maven nodejs npm wget && \
     useradd -m runner && \
     echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 

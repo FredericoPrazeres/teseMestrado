@@ -106,15 +106,7 @@ jobs:
 
       - name: Setup RabbitMQ
         run: |
-          echo "Setting up RabbitMQ..."
-          # Check if RabbitMQ is running, if not start it
-          if ! docker ps | grep -q rabbitmq; then
-            docker run -d --name rabbitmq \
-              -p 5672:5672 -p 15672:15672 \
-              -e RABBITMQ_DEFAULT_USER=guest \
-              -e RABBITMQ_DEFAULT_PASS=guest \
-              rabbitmq:3-management || echo "RabbitMQ already running or failed to start"
-          fi
+          sudo bash complete-microservice-application/install-rabbitmq-ubuntu.sh
 
   build-service-registry:
     runs-on: self-hosted
@@ -124,46 +116,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set Java environment
-        run: |
-          # Find and set JAVA_HOME
-          if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          elif [ -d "/usr/lib/jvm/java-11-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          else
-            # Find any available Java installation
-            export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-          fi
-          
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
-          
-          # Verify Java installation
-          echo "Java version:"
-          $JAVA_HOME/bin/java -version
-          echo "Maven version:"
-          mvn -version
-
       - name: Build and restart service-registry
         run: |
-          echo "Building and restarting service-registry..."
+          echo "🔄 Building and restarting service-registry..."
           cd complete-microservice-application/service-registry
           
           # Stop existing service
+          echo "Stopping existing service-registry processes..."
           pkill -f "service-registry" || true
+          sleep 5
           
           # Build the service with Java compatibility flags
-          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          mvn clean install -DskipTests
+          echo "Building service-registry with Maven..."
+          sudo mvn clean install -DskipTests
           
           # Start the service in background
-          mvn spring-boot:run &
+          echo "Starting service-registry on port 8761..."
+          sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
           
-          # Wait for service to start
-          sleep 30
-          
-          echo "Service registry started successfully"
+          # Wait for service to start and verify
+          echo "Waiting for service-registry to be ready..."
+          sleep 20
 
   build-api-gateway:
     runs-on: self-hosted
@@ -173,27 +146,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set Java environment
-        run: |
-          # Find and set JAVA_HOME
-          if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          elif [ -d "/usr/lib/jvm/java-11-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          else
-            # Find any available Java installation
-            export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-          fi
-          
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
-          
-          # Verify Java installation
-          echo "Java version:"
-          $JAVA_HOME/bin/java -version
-          echo "Maven version:"
-          mvn -version
-
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
         run: |
@@ -202,23 +154,25 @@ jobs:
 
       - name: Build and restart api-gateway
         run: |
-          echo "Building and restarting api-gateway..."
+          echo "🔄 Building and restarting api-gateway..."
           cd complete-microservice-application/api-gateway
           
           # Stop existing service
+          echo "Stopping existing api-gateway processes..."
           pkill -f "api-gateway" || true
+          sleep 5
           
           # Build the service with Java compatibility flags
-          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          mvn clean install -DskipTests
-          
+          echo "Building api-gateway with Maven..."
+          sudo mvn clean install -DskipTests
+
           # Start the service in background
-          mvn spring-boot:run &
+          echo "Starting api-gateway on port 8000..."
+          sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
           
-          # Wait for service to start
-          sleep 30
-          
-          echo "API Gateway started successfully"
+          # Wait for service to start and verify
+          echo "Waiting for api-gateway to be ready..."
+          sleep 10
 
   build-product-service:
     runs-on: self-hosted
@@ -228,27 +182,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set Java environment
-        run: |
-          # Find and set JAVA_HOME
-          if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          elif [ -d "/usr/lib/jvm/java-11-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          else
-            # Find any available Java installation
-            export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-          fi
-          
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
-          
-          # Verify Java installation
-          echo "Java version:"
-          $JAVA_HOME/bin/java -version
-          echo "Maven version:"
-          mvn -version
-
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
         run: |
@@ -257,27 +190,28 @@ jobs:
 
       - name: Build and restart product-service
         run: |
-          echo "Building and restarting product-service..."
+          echo "🔄 Building and restarting product-service..."
           cd complete-microservice-application/product-service
           
           # Stop existing instances
+          echo "Stopping existing product-service processes..."
           pkill -f "product-service" || true
+          sleep 5
           
-          # Build the service with Java compatibility flags
-          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          mvn clean install -DskipTests
+          echo "Building product-service with Maven..."
+          sudo mvn clean install -DskipTests
           
-          # Start multiple instances with Java compatibility flags
+          # Start multiple instances with Java compatibility flags (as per README)
           cd target
-          export JAVA_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
-          java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 &
+          echo "Starting product-service instance 1 on port 8081..."
+          sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8081
           
-          # Wait for services to start
-          sleep 30
-          
-          echo "Product service instances started successfully"
+          echo "Starting product-service instance 2 on port 8180..."
+          sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8180
 
+          echo "Waiting for product-service instances to be ready..."
+          sleep 10
+        
   build-offer-service:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure]
@@ -285,27 +219,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set Java environment
-        run: |
-          # Find and set JAVA_HOME
-          if [ -d "/usr/lib/jvm/java-17-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          elif [ -d "/usr/lib/jvm/java-11-openjdk-amd64" ]; then
-            export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          else
-            # Find any available Java installation
-            export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-          fi
-          
-          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
-          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
-          
-          # Verify Java installation
-          echo "Java version:"
-          $JAVA_HOME/bin/java -version
-          echo "Maven version:"
-          mvn -version
 
       - name: Wait for service registry if needed
         if: needs.detect-changes.outputs.service-registry == 'true'
@@ -317,47 +230,23 @@ jobs:
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
-          echo "🔄 Building and restarting offer-service..."
-          echo "Using JAVA_HOME: $JAVA_HOME"
           
           cd complete-microservice-application/offer-service
           
           # Stop existing service
           echo "Stopping existing offer-service processes..."
           pkill -f "offer-service" || true
-          
-          # Build the service with Java compatibility flags
-          echo "Building offer-service with Maven..."
-          export MAVEN_OPTS="--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          
-          # Verify environment before building
-          echo "Current JAVA_HOME: $JAVA_HOME"
-          echo "Java executable: $(which java)"
-          java -version
-          
-          mvn clean install -DskipTests
-          
+          sleep 5
+
+          sudo mvn clean install -DskipTests
+
           # Start the service in background
           echo "Starting offer-service on port 8082..."
+          sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
 
-          # Start the service with Java 17 compatibility flags
-          echo "Starting offer-service on port 8082..."
-          export MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED \
-            --add-opens java.base/java.util=ALL-UNNAMED \
-            --add-opens java.base/java.io=ALL-UNNAMED \
-            --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
-            --add-opens java.base/java.text=ALL-UNNAMED \
-            --add-opens java.base/java.net=ALL-UNNAMED \
-            --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
-            --add-opens jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED"
-
-          mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"&
-          
-          # Wait for service to start
+          # Wait for service to start and verify
+          echo "Waiting for offer-service to be ready..."
           sleep 30
-          
-          echo "✅ Offer service started successfully on port 8082"
           
   build-microservice-ui:
     runs-on: self-hosted
@@ -371,27 +260,38 @@ jobs:
         if: needs.detect-changes.outputs.api-gateway == 'true'
         run: |
           echo "Waiting for API Gateway to be ready..."
-          sleep 75  # Wait for API Gateway to fully start
+          sleep 25  # Wait for API Gateway to fully start
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '12'
 
       - name: Build and restart microservice-ui
         run: |
-          echo "Building and restarting microservice-ui..."
+          echo "🔄 Building and restarting microservice-ui..."
           cd complete-microservice-application/microservice-ui
           
           # Stop existing UI service
+          echo "Stopping existing microservice-ui processes..."
           pkill -f "ng serve" || true
+          sleep 5
           
           # Install dependencies
-          npm install
+          echo "Installing npm dependencies..."
+          sudo npm install
+          
+          echo "Installing Angular CLI..."
+          sudo npm install -g @angular/cli@8.3.25
           
           # Start the UI service in background
-          nohup ng serve --port 3000 --host 0.0.0.0 > microservice-ui.log 2>&1 &
+          echo "Starting microservice-ui on port 3000..."
+          npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose          
           
-          # Wait for service to start
-          sleep 30
+          # Wait for service to start and verify
+          echo "Waiting for microservice-ui to be ready..."
+          sleep 10
           
-          echo "Microservice UI started successfully"
-
   health-check:
     runs-on: self-hosted
     needs: [build-service-registry, build-api-gateway, build-product-service, build-offer-service, build-microservice-ui]
@@ -400,22 +300,37 @@ jobs:
       - name: Health check services
         run: |
           echo "=== HEALTH CHECK ==="
+          echo ""
+          
+          # Check RabbitMQ
+          echo "Checking RabbitMQ..."
+          if curl -f http://localhost:15672 > /dev/null 2>&1; then
+            echo "✅ RabbitMQ Management Console is healthy at http://localhost:15672"
+          else
+            echo "❌ RabbitMQ is not responding"
+          fi
+          echo ""
           
           # Check service registry
-          if curl -f http://localhost:8761/actuator/health > /dev/null 2>&1; then
-            echo "✅ Service Registry is healthy"
+          echo "Checking Service Registry..."
+          if curl -f http://localhost:8761 > /dev/null 2>&1; then
+            echo "✅ Service Registry is healthy at http://localhost:8761"
           else
             echo "❌ Service Registry is not responding"
           fi
+          echo ""
           
           # Check API Gateway
+          echo "Checking API Gateway..."
           if curl -f http://localhost:8000/actuator/health > /dev/null 2>&1; then
-            echo "✅ API Gateway is healthy"
+            echo "✅ API Gateway is healthy at http://localhost:8000"
           else
             echo "❌ API Gateway is not responding"
           fi
+          echo ""
           
           # Check Product Service instances
+          echo "Checking Product Service instances..."
           if curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
             echo "✅ Product Service (8081) is healthy"
           else
@@ -427,20 +342,26 @@ jobs:
           else
             echo "❌ Product Service (8180) is not responding"
           fi
+          echo ""
           
           # Check Offer Service
+          echo "Checking Offer Service..."
           if curl -f http://localhost:8082/actuator/health > /dev/null 2>&1; then
-            echo "✅ Offer Service is healthy"
+            echo "✅ Offer Service is healthy at http://localhost:8082"
           else
             echo "❌ Offer Service is not responding"
           fi
+          echo ""
           
           # Check Microservice UI
+          echo "Checking Microservice UI..."
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Microservice UI is healthy"
+            echo "✅ Microservice UI is healthy at http://localhost:3000/store"
           else
             echo "❌ Microservice UI is not responding"
           fi
+          echo ""
+          echo "=== HEALTH CHECK COMPLETE ==="
 
   deployment-status:
     runs-on: self-hosted
@@ -449,12 +370,53 @@ jobs:
     steps:
       - name: Show deployment summary
         run: |
-          echo "=== DEPLOYMENT SUMMARY ==="
-          echo "🚀 Microservices deployment completed!"
-          echo "📊 Service endpoints:"
-          echo "  - Service Registry: http://localhost:8761"
-          echo "  - API Gateway: http://localhost:8000"  
-          echo "  - Product Service: http://localhost:8081, http://localhost:8180"
-          echo "  - Offer Service: http://localhost:8082"
-          echo "  - Microservice UI: http://localhost:3000"
-          echo "  - RabbitMQ Management: http://localhost:15672 (guest/guest)"
+          echo ""
+          echo "════════════════════════════════════════════════════════════════"
+          echo "           MICROSERVICES DEPLOYMENT SUMMARY"
+          echo "════════════════════════════════════════════════════════════════"
+          echo ""
+          echo "🚀 Deployment completed!"
+          echo "" 
+          echo "📊 Service Endpoints:"
+          echo "  ┌─────────────────────────────────────────────────────────────"
+          echo "  │ Service Registry (Eureka):  http://localhost:8761"
+          echo "  │ API Gateway (Zuul):          http://localhost:8000"
+          echo "  │ Product Service (Instance 1): http://localhost:8081"
+          echo "  │ Product Service (Instance 2): http://localhost:8180"
+          echo "  │ Offer Service:               http://localhost:8082"
+          echo "  │ Microservice UI (Angular):   http://localhost:3000/store"
+          echo "  │ RabbitMQ Management:         http://localhost:15672"
+          echo "  └─────────────────────────────────────────────────────────────"
+          echo ""
+          echo "🔐 Database Credentials:"
+          echo "  ┌─────────────────────────────────────────────────────────────"
+          echo "  │ Product H2 Console:  http://localhost:8081/h2"
+          echo "  │   JDBC URL:  jdbc:h2:~/product"
+          echo "  │   Username:  root"
+          echo "  │   Password:  root"
+          echo "  │"
+          echo "  │ Offer H2 Console:    http://localhost:8082/h2"
+          echo "  │   JDBC URL:  jdbc:h2:~/offer"
+          echo "  │   Username:  root"  
+          echo "  │   Password:  root"
+          echo "  │"
+          echo "  │ RabbitMQ Credentials:"
+          echo "  │   Username:  guest"
+          echo "  │   Password:  guest"
+          echo "  └─────────────────────────────────────────────────────────────"
+          echo ""
+          echo "📋 API Endpoints (via API Gateway):"
+          echo "  ┌─────────────────────────────────────────────────────────────"
+          echo "  │ GET    http://localhost:8000/product-service/products"
+          echo "  │ POST   http://localhost:8000/product-service/products"
+          echo "  │ PUT    http://localhost:8000/product-service/products/addPrice"
+          echo "  │ POST   http://localhost:8000/offer-service/offer"
+          echo "  └─────────────────────────────────────────────────────────────"
+          echo ""
+          echo "🔄 Load Balancing: API Gateway handles round-robin distribution"
+          echo "   between Product Service instances (8081, 8180)"
+          echo ""
+          echo "📨 Event-Driven: RabbitMQ manages async communication between"
+          echo "   Offer Service and Product Service"
+          echo ""
+          echo "════════════════════════════════════════════════════════════════"

@@ -60,13 +60,16 @@ I have prepared a bash file **install-rabbitmq-macOS.sh** to install RabbitMQ in
 your system terminal and after installation completed run `rabbitmq-server` command to start RabbitMQ.
 
 ##### [Ubuntu OS]
-Check this for [Installing on Debian and Ubuntu](https://www.rabbitmq.com/install-debian.html)  
+I have prepared a bash file **install-rabbitmq-ubuntu.sh** to install RabbitMQ in Ubuntu (including ARM64 containers). 
+Run `bash install-rabbitmq-ubuntu.sh` in your system terminal to automatically install and configure RabbitMQ.
 
-RabbitMQ commands for ubuntu  
---to start `sudo service rabbitmq-server start`  
---to restart `sudo service rabbitmq-server restart`  
---to stop `sudo service rabbitmq-server stop`  
---to check status `sudo service rabbitmq-server status`
+Alternatively, check the official documentation: [Installing on Debian and Ubuntu](https://www.rabbitmq.com/install-debian.html)  
+
+RabbitMQ commands for ubuntu:  
+--to start `sudo systemctl start rabbitmq-server` or `sudo service rabbitmq-server start`  
+--to restart `sudo systemctl restart rabbitmq-server` or `sudo service rabbitmq-server restart`  
+--to stop `sudo systemctl stop rabbitmq-server` or `sudo service rabbitmq-server stop`  
+--to check status `sudo systemctl status rabbitmq-server` or `sudo service rabbitmq-server status`
 
 
 ##### [Windows]  
