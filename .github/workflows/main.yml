@@ -101,9 +101,10 @@ jobs:
     runs-on: self-hosted
     needs: detect-changes
     steps:
-
       - name: Clean workspace
         run: |
+          echo "Cleaning workspace with proper permissions..."
+          sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
           sudo chown -R runner:runner $GITHUB_WORKSPACE || true
 
       - name: Checkout code
@@ -118,6 +119,12 @@ jobs:
     needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.service-registry == 'true'
     steps:
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace with proper permissions..."
+          sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
+          sudo chown -R runner:runner $GITHUB_WORKSPACE || true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -128,7 +135,7 @@ jobs:
           
           # Stop existing service
           echo "Stopping existing service-registry processes..."
-          pkill -f "service-registry" || true
+          sudo pkill -f "service-registry" || true
           sleep 5
           
           # Build the service with Java compatibility flags
@@ -148,6 +155,12 @@ jobs:
     needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.api-gateway == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace with proper permissions..."
+          sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
+          sudo chown -R runner:runner $GITHUB_WORKSPACE || true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -164,7 +177,7 @@ jobs:
           
           # Stop existing service
           echo "Stopping existing api-gateway processes..."
-          pkill -f "api-gateway" || true
+          sudo pkill -f "api-gateway" || true
           sleep 5
           
           # Build the service with Java compatibility flags
@@ -184,6 +197,12 @@ jobs:
     needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.product-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace with proper permissions..."
+          sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
+          sudo chown -R runner:runner $GITHUB_WORKSPACE || true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -200,7 +219,7 @@ jobs:
           
           # Stop existing instances
           echo "Stopping existing product-service processes..."
-          pkill -f "product-service" || true
+          sudo pkill -f "product-service" || true
           sleep 5
           
           echo "Building product-service with Maven..."
@@ -222,6 +241,12 @@ jobs:
     needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.offer-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace with proper permissions..."
+          sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
+          sudo chown -R runner:runner $GITHUB_WORKSPACE || true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -232,15 +257,13 @@ jobs:
           sleep 45  # Wait for service registry to fully start
 
       - name: Build and restart offer-service
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
-          
+          echo "🔄 Building and restarting offer-service..."
           cd complete-microservice-application/offer-service
           
           # Stop existing service
           echo "Stopping existing offer-service processes..."
-          pkill -f "offer-service" || true
+          sudo pkill -f "offer-service" || true
           sleep 5
 
           sudo mvn clean install -DskipTests
@@ -258,6 +281,12 @@ jobs:
     needs: [detect-changes, setup-infrastructure]
     if: needs.detect-changes.outputs.microservice-ui == 'true' || needs.detect-changes.outputs.api-gateway == 'true'
     steps:
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace with proper permissions..."
+          sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
+          sudo chown -R runner:runner $GITHUB_WORKSPACE || true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -279,7 +308,7 @@ jobs:
           
           # Stop existing UI service
           echo "Stopping existing microservice-ui processes..."
-          pkill -f "ng serve" || true
+          sudo pkill -f "ng serve" || true
           sleep 5
           
           # Install dependencies
