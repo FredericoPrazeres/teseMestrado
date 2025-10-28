@@ -1,18 +1,517 @@
 trigger:
   branches:
     include:
-      - master
+      - applications/complete-microservices
 
 pool:
   name: TeseMestradoPool
 
-jobs:
-  - job: BuildAndTest
-    displayName: 'Test Pipeline'
-    steps:
-      - checkout: self
-        displayName: 'Checkout code'
+variables:
+  JAVA_OPTS: '--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED'
 
-      - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+stages:
+  - stage: DetectChanges
+    displayName: 'Detect Changes'
+    jobs:
+      - job: DetectChanges
+        displayName: 'Detect changes in microservices'
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            clean: false
+
+          - bash: |
+              echo "Detecting changes in microservices..."
+              
+              # Show what files changed for debugging
+              echo "Changed files:"
+              git diff --name-only HEAD~1 HEAD || git diff --name-only HEAD
+              
+              # Check for changes in each microservice directory
+              if git diff --name-only HEAD~1 HEAD | grep -E "(microservice-ui|complete-microservice-application/microservice-ui)" || \
+                 git diff --name-only HEAD | grep -E "(microservice-ui|complete-microservice-application/microservice-ui)"; then
+                echo "##vso[task.setvariable variable=microserviceUiChanged;isOutput=true]true"
+                echo "✅ Detected changes in microservice-ui"
+              else
+                echo "##vso[task.setvariable variable=microserviceUiChanged;isOutput=true]false"
+                echo "❌ No changes in microservice-ui"
+              fi
+              
+              if git diff --name-only HEAD~1 HEAD | grep -E "(service-registry|complete-microservice-application/service-registry)" || \
+                 git diff --name-only HEAD | grep -E "(service-registry|complete-microservice-application/service-registry)"; then
+                echo "##vso[task.setvariable variable=serviceRegistryChanged;isOutput=true]true"
+                echo "✅ Detected changes in service-registry"
+              else
+                echo "##vso[task.setvariable variable=serviceRegistryChanged;isOutput=true]false"
+                echo "❌ No changes in service-registry"
+              fi
+              
+              if git diff --name-only HEAD~1 HEAD | grep -E "(api-gateway|complete-microservice-application/api-gateway)" || \
+                 git diff --name-only HEAD | grep -E "(api-gateway|complete-microservice-application/api-gateway)"; then
+                echo "##vso[task.setvariable variable=apiGatewayChanged;isOutput=true]true"
+                echo "✅ Detected changes in api-gateway"
+              else
+                echo "##vso[task.setvariable variable=apiGatewayChanged;isOutput=true]false"
+                echo "❌ No changes in api-gateway"
+              fi
+              
+              if git diff --name-only HEAD~1 HEAD | grep -E "(product-service|complete-microservice-application/product-service)" || \
+                 git diff --name-only HEAD | grep -E "(product-service|complete-microservice-application/product-service)"; then
+                echo "##vso[task.setvariable variable=productServiceChanged;isOutput=true]true"
+                echo "✅ Detected changes in product-service"
+              else
+                echo "##vso[task.setvariable variable=productServiceChanged;isOutput=true]false"
+                echo "❌ No changes in product-service"
+              fi
+              
+              if git diff --name-only HEAD~1 HEAD | grep -E "(offer-service|complete-microservice-application/offer-service)" || \
+                 git diff --name-only HEAD | grep -E "(offer-service|complete-microservice-application/offer-service)"; then
+                echo "##vso[task.setvariable variable=offerServiceChanged;isOutput=true]true"
+                echo "✅ Detected changes in offer-service"
+              else
+                echo "##vso[task.setvariable variable=offerServiceChanged;isOutput=true]false"
+                echo "❌ No changes in offer-service"
+              fi
+            displayName: 'Detect changes'
+            name: changes
+
+  - stage: SetupInfrastructure
+    displayName: 'Setup Infrastructure'
+    dependsOn: DetectChanges
+    jobs:
+      - job: SetupInfrastructure
+        displayName: 'Setup RabbitMQ'
+        steps:
+          - checkout: self
+            clean: false
+
+          - bash: |
+              echo "Fixing workspace permissions..."
+              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) 2>/dev/null || true
+              sudo chmod -R u+w $(Build.SourcesDirectory) 2>/dev/null || true
+            displayName: 'Fix workspace permissions'
+
+          - bash: |
+              echo "Cleaning workspace with proper permissions..."
+              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
+              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
+            displayName: 'Clean workspace'
+
+          - bash: |
+              sudo bash complete-microservice-application/install-rabbitmq-ubuntu.sh
+            displayName: 'Setup RabbitMQ'
+
+  - stage: BuildServiceRegistry
+    displayName: 'Build Service Registry'
+    dependsOn: 
+      - DetectChanges
+      - SetupInfrastructure
+    condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+    jobs:
+      - job: BuildServiceRegistry
+        displayName: 'Build and restart service-registry'
+        steps:
+          - checkout: self
+            clean: false
+
+          - bash: |
+              echo "Cleaning workspace with proper permissions..."
+              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
+              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
+            displayName: 'Clean workspace'
+
+          - bash: |
+              cd complete-microservice-application/service-registry
+              
+              sudo pkill -f "service-registry" || true
+              sleep 5
+              
+              sudo mvn clean install -DskipTests
+
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" > /tmp/service-registry.log 2>&1 &
+              
+              for i in {1..180}; do
+                if curl -s http://localhost:8761/actuator/health > /dev/null 2>&1; then
+                  break
+                fi
+                if [ $i -eq 60 ]; then
+                  cat /tmp/service-registry.log
+                  exit 1
+                fi
+                sleep 2
+              done
+            displayName: 'Build and restart service-registry'
+
+  - stage: BuildApiGateway
+    displayName: 'Build API Gateway'
+    dependsOn:
+      - DetectChanges
+      - SetupInfrastructure
+      - BuildServiceRegistry
+    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
+    jobs:
+      - job: BuildApiGateway
+        displayName: 'Build and restart api-gateway'
+        steps:
+          - checkout: self
+            clean: false
+
+          - bash: |
+              echo "Cleaning workspace with proper permissions..."
+              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
+              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
+            displayName: 'Clean workspace'
+
+          - bash: |
+              echo "Waiting for service registry to be ready..."
+              sleep 45
+            displayName: 'Wait for service registry'
+            condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+
+          - bash: |
+              cd complete-microservice-application/api-gateway
+              
+              sudo pkill -f "api-gateway" || true
+              sleep 5
+              
+              echo "Building api-gateway with Maven..."
+              sudo mvn clean install -DskipTests
+
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" &
+              
+              for i in {1..90}; do
+                if curl -s http://localhost:8000/actuator/health > /dev/null 2>&1; then
+                  echo "✅ API Gateway is ready after $((i*2)) seconds!"
+                  break
+                fi
+                if [ $i -eq 90 ]; then
+                  echo "❌ API Gateway failed to start within 3 minutes"
+                  echo "=== Last 50 lines of api-gateway.log ==="
+                  tail -50 /tmp/api-gateway.log
+                  exit 1
+                fi
+                if [ $((i % 15)) -eq 0 ]; then
+                  echo "Still waiting... ($((i*2))/180 seconds)"
+                fi
+                sleep 2
+              done
+              
+              sleep 10
+            displayName: 'Build and restart api-gateway'
+
+  - stage: BuildProductService
+    displayName: 'Build Product Service'
+    dependsOn:
+      - DetectChanges
+      - SetupInfrastructure
+      - BuildServiceRegistry
+    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.productServiceChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
+    jobs:
+      - job: BuildProductService
+        displayName: 'Build and restart product-service'
+        steps:
+          - checkout: self
+            clean: false
+
+          - bash: |
+              echo "Cleaning workspace with proper permissions..."
+              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
+              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
+            displayName: 'Clean workspace'
+
+          - bash: |
+              echo "Waiting for service registry to be ready..."
+              sleep 45
+            displayName: 'Wait for service registry'
+            condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+
+          - bash: |
+              cd complete-microservice-application/product-service
+              
+              sudo pkill -f "product-service" || true
+              sleep 5
+              
+              sudo mvn clean install -DskipTests
+              
+              cd target
+              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8081 &
+
+              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8180 &
+
+              # Check instance on port 8081
+              for i in {1..90}; do
+                if curl -s http://localhost:8081/actuator/health > /dev/null 2>&1; then
+                  echo "✅ Product Service (8081) is ready after $((i*2)) seconds!"
+                  break
+                fi
+                if [ $i -eq 90 ]; then
+                  echo "❌ Product Service (8081) failed to start"
+                  echo "=== Last 50 lines of product-service-8081.log ==="
+                  tail -50 /tmp/product-service-8081.log
+                  exit 1
+                fi
+                if [ $((i % 15)) -eq 0 ]; then
+                  echo "Still waiting for 8081... ($((i*2))/180 seconds)"
+                fi
+                sleep 2
+              done
+              
+              # Check instance on port 8180
+              for i in {1..90}; do
+                if curl -s http://localhost:8180/actuator/health > /dev/null 2>&1; then
+                  echo "✅ Product Service (8180) is ready after $((i*2)) seconds!"
+                  break
+                fi
+                if [ $i -eq 90 ]; then
+                  echo "❌ Product Service (8180) failed to start"
+                  echo "=== Last 50 lines of product-service-8180.log ==="
+                  tail -50 /tmp/product-service-8180.log
+                  exit 1
+                fi
+                if [ $((i % 15)) -eq 0 ]; then
+                  echo "Still waiting for 8180... ($((i*2))/180 seconds)"
+                fi
+                sleep 2
+              done
+
+              sleep 10
+            displayName: 'Build and restart product-service'
+
+  - stage: BuildOfferService
+    displayName: 'Build Offer Service'
+    dependsOn:
+      - DetectChanges
+      - SetupInfrastructure
+      - BuildServiceRegistry
+    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.offerServiceChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
+    jobs:
+      - job: BuildOfferService
+        displayName: 'Build and restart offer-service'
+        steps:
+          - checkout: self
+            clean: false
+
+          - bash: |
+              echo "Cleaning workspace with proper permissions..."
+              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
+              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
+            displayName: 'Clean workspace'
+
+          - bash: |
+              echo "Waiting for service registry to be ready..."
+              sleep 45
+            displayName: 'Wait for service registry'
+            condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+
+          - bash: |
+              cd complete-microservice-application/offer-service
+              
+              sudo pkill -f "offer-service" || true
+              sleep 5
+
+              sudo mvn clean install -DskipTests
+
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
+
+              for i in {1..90}; do
+                if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
+                  echo "✅ Offer Service is ready after $((i*2)) seconds!"
+                  break
+                fi
+                if [ $i -eq 90 ]; then
+                  echo "❌ Offer Service failed to start within 3 minutes"
+                  echo "=== Last 50 lines of offer-service.log ==="
+                  tail -50 /tmp/offer-service.log
+                  exit 1
+                fi
+                if [ $((i % 15)) -eq 0 ]; then
+                  echo "Still waiting... ($((i*2))/180 seconds)"
+                fi
+                sleep 2
+              done
+
+              sleep 30
+            displayName: 'Build and restart offer-service'
+
+  - stage: BuildMicroserviceUI
+    displayName: 'Build Microservice UI'
+    dependsOn:
+      - DetectChanges
+      - SetupInfrastructure
+      - BuildServiceRegistry
+      - BuildApiGateway
+      - BuildProductService
+      - BuildOfferService
+    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.microserviceUiChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true'))
+    jobs:
+      - job: BuildMicroserviceUI
+        displayName: 'Build and restart microservice-ui'
+        steps:
+          - checkout: self
+            clean: false
+
+          - bash: |
+              echo "Cleaning workspace with proper permissions..."
+              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
+              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
+            displayName: 'Clean workspace'
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '12.x'
+            displayName: 'Setup Node.js'
+
+          - bash: |
+              cd complete-microservice-application/microservice-ui
+              
+              sudo pkill -f "ng serve" || true
+              sleep 5
+              
+              sudo npm install
+              
+              sudo npm install -g @angular/cli@8.3.25
+
+              nohup sudo npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose &
+
+              sleep 10
+            displayName: 'Build and restart microservice-ui'
+
+  - stage: HealthCheck
+    displayName: 'Health Check'
+    dependsOn:
+      - BuildServiceRegistry
+      - BuildApiGateway
+      - BuildProductService
+      - BuildOfferService
+      - BuildMicroserviceUI
+    condition: always()
+    jobs:
+      - job: HealthCheck
+        displayName: 'Health check services'
+        steps:
+          - bash: |
+              echo "=== HEALTH CHECK ==="
+              echo ""
+              
+              # Check RabbitMQ
+              echo "Checking RabbitMQ..."
+              if curl -f http://localhost:15672 > /dev/null 2>&1; then
+                echo "✅ RabbitMQ Management Console is healthy at http://localhost:15672"
+              else
+                echo "❌ RabbitMQ is not responding"
+              fi
+              echo ""
+              
+              # Check service registry
+              echo "Checking Service Registry..."
+              if curl -f http://localhost:8761 > /dev/null 2>&1; then
+                echo "✅ Service Registry is healthy at http://localhost:8761"
+              else
+                echo "❌ Service Registry is not responding"
+              fi
+              echo ""
+              
+              # Check API Gateway
+              echo "Checking API Gateway..."
+              if curl -f http://localhost:8000/actuator/health > /dev/null 2>&1; then
+                echo "✅ API Gateway is healthy at http://localhost:8000"
+              else
+                echo "❌ API Gateway is not responding"
+              fi
+              echo ""
+              
+              # Check Product Service instances
+              echo "Checking Product Service instances..."
+              if curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
+                echo "✅ Product Service (8081) is healthy"
+              else
+                echo "❌ Product Service (8081) is not responding"
+              fi
+              
+              if curl -f http://localhost:8180/actuator/health > /dev/null 2>&1; then
+                echo "✅ Product Service (8180) is healthy"  
+              else
+                echo "❌ Product Service (8180) is not responding"
+              fi
+              echo ""
+              
+              # Check Offer Service
+              echo "Checking Offer Service..."
+              if curl -f http://localhost:8082/actuator/health > /dev/null 2>&1; then
+                echo "✅ Offer Service is healthy at http://localhost:8082"
+              else
+                echo "❌ Offer Service is not responding"
+              fi
+              echo ""
+              
+              # Check Microservice UI
+              echo "Checking Microservice UI..."
+              if curl -f http://localhost:3000 > /dev/null 2>&1; then
+                echo "✅ Microservice UI is healthy at http://localhost:3000/store"
+              else
+                echo "❌ Microservice UI is not responding"
+              fi
+              echo ""
+              echo "=== HEALTH CHECK COMPLETE ==="
+            displayName: 'Health check services'
+
+  - stage: DeploymentStatus
+    displayName: 'Deployment Status'
+    dependsOn: HealthCheck
+    condition: always()
+    jobs:
+      - job: DeploymentStatus
+        displayName: 'Show deployment summary'
+        steps:
+          - bash: |
+              echo ""
+              echo "════════════════════════════════════════════════════════════════"
+              echo "           MICROSERVICES DEPLOYMENT SUMMARY"
+              echo "════════════════════════════════════════════════════════════════"
+              echo ""
+              echo "🚀 Deployment completed!"
+              echo "" 
+              echo "📊 Service Endpoints:"
+              echo "  ┌─────────────────────────────────────────────────────────────"
+              echo "  │ Service Registry (Eureka):  http://localhost:8761"
+              echo "  │ API Gateway (Zuul):          http://localhost:8000"
+              echo "  │ Product Service (Instance 1): http://localhost:8081"
+              echo "  │ Product Service (Instance 2): http://localhost:8180"
+              echo "  │ Offer Service:               http://localhost:8082"
+              echo "  │ Microservice UI (Angular):   http://localhost:3000/store"
+              echo "  │ RabbitMQ Management:         http://localhost:15672"
+              echo "  └─────────────────────────────────────────────────────────────"
+              echo ""
+              echo "🔐 Database Credentials:"
+              echo "  ┌─────────────────────────────────────────────────────────────"
+              echo "  │ Product H2 Console:  http://localhost:8081/h2"
+              echo "  │   JDBC URL:  jdbc:h2:~/product"
+              echo "  │   Username:  root"
+              echo "  │   Password:  root"
+              echo "  │"
+              echo "  │ Offer H2 Console:    http://localhost:8082/h2"
+              echo "  │   JDBC URL:  jdbc:h2:~/offer"
+              echo "  │   Username:  root"  
+              echo "  │   Password:  root"
+              echo "  │"
+              echo "  │ RabbitMQ Credentials:"
+              echo "  │   Username:  guest"
+              echo "  │   Password:  guest"
+              echo "  └─────────────────────────────────────────────────────────────"
+              echo ""
+              echo "📋 API Endpoints (via API Gateway):"
+              echo "  ┌─────────────────────────────────────────────────────────────"
+              echo "  │ GET    http://localhost:8000/product-service/products"
+              echo "  │ POST   http://localhost:8000/product-service/products"
+              echo "  │ PUT    http://localhost:8000/product-service/products/addPrice"
+              echo "  │ POST   http://localhost:8000/offer-service/offer"
+              echo "  └─────────────────────────────────────────────────────────────"
+              echo ""
+              echo "🔄 Load Balancing: API Gateway handles round-robin distribution"
+              echo "   between Product Service instances (8081, 8180)"
+              echo ""
+              echo "📨 Event-Driven: RabbitMQ manages async communication between"
+              echo "   Offer Service and Product Service"
+              echo ""
+              echo "════════════════════════════════════════════════════════════════"
+            displayName: 'Show deployment summary'

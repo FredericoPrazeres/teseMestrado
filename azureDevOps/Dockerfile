@@ -1,10 +1,11 @@
 FROM ubuntu:22.04
 
 ARG AGENT_VERSION=4.261.0
+ARG MAVEN_VERSION="3.6.0"
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y curl git sudo jq libicu-dev
+    apt-get install -y curl git sudo jq libicu-dev openjdk-11-jdk maven nodejs npm wget
 
 # Create azureagent user
 RUN useradd -m azureagent && \
