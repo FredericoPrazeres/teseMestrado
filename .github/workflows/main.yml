@@ -101,6 +101,12 @@ jobs:
     runs-on: self-hosted
     needs: detect-changes
     steps:
+      - name: Fix workspace permissions
+        run: |
+          echo "Fixing workspace permissions..."
+          sudo chown -R runner:runner $GITHUB_WORKSPACE 2>/dev/null || true
+          sudo chmod -R u+w $GITHUB_WORKSPACE 2>/dev/null || true
+
       - name: Clean workspace
         run: |
           echo "Cleaning workspace with proper permissions..."
