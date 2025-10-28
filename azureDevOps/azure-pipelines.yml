@@ -108,7 +108,7 @@ stages:
       - SetupInfrastructure
     condition: |
       and(
-        succeededOrFailed(),
+        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
         eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
       )
     jobs:
@@ -154,10 +154,16 @@ stages:
       - BuildServiceRegistry
     condition: |
       and(
-        succeededOrFailed(),
+        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
         or(
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true'),
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+          and(
+            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true')
+          ),
+          and(
+            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+          )
         )
       )
     jobs:
@@ -218,10 +224,16 @@ stages:
       - BuildServiceRegistry
     condition: |
       and(
-        succeededOrFailed(),
+        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
         or(
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.productServiceChanged'], 'true'),
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+          and(
+            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.productServiceChanged'], 'true')
+          ),
+          and(
+            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+          )
         )
       )
     jobs:
@@ -303,10 +315,16 @@ stages:
       - BuildServiceRegistry
     condition: |
       and(
-        succeededOrFailed(),
+        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
         or(
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.offerServiceChanged'], 'true'),
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+          and(
+            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.offerServiceChanged'], 'true')
+          ),
+          and(
+            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+          )
         )
       )
     jobs:
@@ -369,10 +387,16 @@ stages:
       - BuildOfferService
     condition: |
       and(
-        succeededOrFailed(),
+        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
         or(
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.microserviceUiChanged'], 'true'),
-          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true')
+          and(
+            in(dependencies.BuildApiGateway.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.microserviceUiChanged'], 'true')
+          ),
+          and(
+            in(dependencies.BuildApiGateway.result, 'Succeeded', 'SucceededWithIssues'),
+            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true')
+          )
         )
       )
     jobs:
