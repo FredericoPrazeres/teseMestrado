@@ -15,6 +15,15 @@ jobs:
       product-service: ${{ steps.changes.outputs.product-service }}
       offer-service: ${{ steps.changes.outputs.offer-service }}
     steps:
+
+      - name: Fix workspace permissions before checkout
+        run: |
+          echo "Fixing workspace permissions..."
+          sudo chown -R runner:runner $GITHUB_WORKSPACE 2>/dev/null || true
+          sudo chmod -R u+w $GITHUB_WORKSPACE 2>/dev/null || true
+          # Force remove target directories if they exist
+          sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
+          
       - name: Checkout code
         uses: actions/checkout@v4
         with:
