@@ -106,7 +106,11 @@ stages:
     dependsOn: 
       - DetectChanges
       - SetupInfrastructure
-    condition: and(succeeded(), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
+    condition: |
+      and(
+        succeededOrFailed(),
+        eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+      )
     jobs:
       - job: BuildServiceRegistry
         displayName: 'Build and restart service-registry'
@@ -150,7 +154,7 @@ stages:
       - BuildServiceRegistry
     condition: |
       and(
-        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        succeededOrFailed(),
         or(
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true'),
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
@@ -214,7 +218,7 @@ stages:
       - BuildServiceRegistry
     condition: |
       and(
-        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        succeededOrFailed(),
         or(
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.productServiceChanged'], 'true'),
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
@@ -299,7 +303,7 @@ stages:
       - BuildServiceRegistry
     condition: |
       and(
-        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        succeededOrFailed(),
         or(
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.offerServiceChanged'], 'true'),
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
@@ -365,10 +369,7 @@ stages:
       - BuildOfferService
     condition: |
       and(
-        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
-        in(dependencies.BuildApiGateway.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
-        in(dependencies.BuildProductService.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
-        in(dependencies.BuildOfferService.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        succeededOrFailed(),
         or(
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.microserviceUiChanged'], 'true'),
           eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true')
@@ -415,17 +416,7 @@ stages:
       - BuildProductService
       - BuildOfferService
       - BuildMicroserviceUI
-    condition: |
-      and(
-        always(),
-        or(
-          eq(dependencies.BuildServiceRegistry.result, 'Succeeded'),
-          eq(dependencies.BuildApiGateway.result, 'Succeeded'),
-          eq(dependencies.BuildProductService.result, 'Succeeded'),
-          eq(dependencies.BuildOfferService.result, 'Succeeded'),
-          eq(dependencies.BuildMicroserviceUI.result, 'Succeeded')
-        )
-      )
+    condition: always()
     jobs:
       - job: HealthCheck
         displayName: 'Health check services'
