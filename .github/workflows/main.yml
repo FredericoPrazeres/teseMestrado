@@ -204,7 +204,7 @@ jobs:
 
           # Start the service in background
           echo "Starting api-gateway on port 8000..."
-          sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
+          nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
           
           # Wait for service to start and verify
           echo "Waiting for api-gateway to be ready..."
@@ -248,10 +248,10 @@ jobs:
           # Start multiple instances with Java compatibility flags (as per README)
           cd target
           echo "Starting product-service instance 1 on port 8081..."
-          sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8081
+          nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8081
           
           echo "Starting product-service instance 2 on port 8180..."
-          sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8180
+          nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8180
 
           echo "Waiting for product-service instances to be ready..."
           sleep 10
@@ -292,7 +292,7 @@ jobs:
 
           # Start the service in background
           echo "Starting offer-service on port 8082..."
-          sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
+          nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
 
           # Wait for service to start and verify
           echo "Waiting for offer-service to be ready..."
@@ -344,7 +344,7 @@ jobs:
           
           # Start the UI service in background
           echo "Starting microservice-ui on port 3000..."
-          npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose          
+          nohup npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose          
           
           # Wait for service to start and verify
           echo "Waiting for microservice-ui to be ready..."
