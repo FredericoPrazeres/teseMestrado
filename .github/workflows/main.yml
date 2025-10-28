@@ -140,35 +140,24 @@ jobs:
 
       - name: Build and restart service-registry
         run: |
-          echo "🔄 Building and restarting service-registry..."
+
           cd complete-microservice-application/service-registry
           
-          # Stop existing service
-          echo "Stopping existing service-registry processes..."
           sudo pkill -f "service-registry" || true
           sleep 5
           
-          # Build the service with Java compatibility flags
-          echo "Building service-registry with Maven..."
           sudo mvn clean install -DskipTests
           
-          # Start the service in background
-          echo "Starting service-registry on port 8761..."
           nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &
           
-          # Wait for service to be ready (health check)
-          echo "Waiting for service-registry to be ready..."
           for i in {1..180}; do
             if curl -s http://localhost:8761/actuator/health > /dev/null 2>&1; then
-              echo "✅ Service-registry is ready!"
               break
             fi
             if [ $i -eq 60 ]; then
-              echo "❌ Service-registry failed to start"
               cat /tmp/service-registry.log
               exit 1
             fi
-            echo "Waiting... ($i/60)"
             sleep 2
           done
 
@@ -196,24 +185,34 @@ jobs:
 
       - name: Build and restart api-gateway
         run: |
-          echo "🔄 Building and restarting api-gateway..."
+
           cd complete-microservice-application/api-gateway
           
-          # Stop existing service
-          echo "Stopping existing api-gateway processes..."
           sudo pkill -f "api-gateway" || true
           sleep 5
           
-          # Build the service with Java compatibility flags
           echo "Building api-gateway with Maven..."
           sudo mvn clean install -DskipTests
 
-          # Start the service in background
-          echo "Starting api-gateway on port 8000..."
           nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
           
-          # Wait for service to start and verify
-          echo "Waiting for api-gateway to be ready..."
+          for i in {1..90}; do
+            if curl -s http://localhost:8000/actuator/health > /dev/null 2>&1; then
+              echo "✅ API Gateway is ready after $((i*2)) seconds!"
+              break
+            fi
+            if [ $i -eq 90 ]; then
+              echo "❌ API Gateway failed to start within 3 minutes"
+              echo "=== Last 50 lines of api-gateway.log ==="
+              tail -50 /tmp/api-gateway.log
+              exit 1
+            fi
+            if [ $((i % 15)) -eq 0 ]; then
+              echo "Still waiting... ($((i*2))/180 seconds)"
+            fi
+            sleep 2
+          done
+          
           sleep 10
 
   build-product-service:
@@ -240,26 +239,55 @@ jobs:
 
       - name: Build and restart product-service
         run: |
-          echo "🔄 Building and restarting product-service..."
+          
           cd complete-microservice-application/product-service
           
-          # Stop existing instances
-          echo "Stopping existing product-service processes..."
           sudo pkill -f "product-service" || true
           sleep 5
           
-          echo "Building product-service with Maven..."
           sudo mvn clean install -DskipTests
           
-          # Start multiple instances with Java compatibility flags (as per README)
           cd target
-          echo "Starting product-service instance 1 on port 8081..."
-          nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8081
-          
-          echo "Starting product-service instance 2 on port 8180..."
-          nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8180
+          nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
 
-          echo "Waiting for product-service instances to be ready..."
+          nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 &
+
+          # Check instance on port 8081
+          for i in {1..90}; do
+            if curl -s http://localhost:8081/actuator/health > /dev/null 2>&1; then
+              echo "✅ Product Service (8081) is ready after $((i*2)) seconds!"
+              break
+            fi
+            if [ $i -eq 90 ]; then
+              echo "❌ Product Service (8081) failed to start"
+              echo "=== Last 50 lines of product-service-8081.log ==="
+              tail -50 /tmp/product-service-8081.log
+              exit 1
+            fi
+            if [ $((i % 15)) -eq 0 ]; then
+              echo "Still waiting for 8081... ($((i*2))/180 seconds)"
+            fi
+            sleep 2
+          done
+          
+          # Check instance on port 8180
+          for i in {1..90}; do
+            if curl -s http://localhost:8180/actuator/health > /dev/null 2>&1; then
+              echo "✅ Product Service (8180) is ready after $((i*2)) seconds!"
+              break
+            fi
+            if [ $i -eq 90 ]; then
+              echo "❌ Product Service (8180) failed to start"
+              echo "=== Last 50 lines of product-service-8180.log ==="
+              tail -50 /tmp/product-service-8180.log
+              exit 1
+            fi
+            if [ $((i % 15)) -eq 0 ]; then
+              echo "Still waiting for 8180... ($((i*2))/180 seconds)"
+            fi
+            sleep 2
+          done
+
           sleep 10
         
   build-offer-service:
@@ -286,22 +314,33 @@ jobs:
 
       - name: Build and restart offer-service
         run: |
-          echo "🔄 Building and restarting offer-service..."
+
           cd complete-microservice-application/offer-service
           
-          # Stop existing service
-          echo "Stopping existing offer-service processes..."
           sudo pkill -f "offer-service" || true
           sleep 5
 
           sudo mvn clean install -DskipTests
 
-          # Start the service in background
-          echo "Starting offer-service on port 8082..."
           nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
 
-          # Wait for service to start and verify
-          echo "Waiting for offer-service to be ready..."
+          for i in {1..90}; do
+            if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
+              echo "✅ Offer Service is ready after $((i*2)) seconds!"
+              break
+            fi
+            if [ $i -eq 90 ]; then
+              echo "❌ Offer Service failed to start within 3 minutes"
+              echo "=== Last 50 lines of offer-service.log ==="
+              tail -50 /tmp/offer-service.log
+              exit 1
+            fi
+            if [ $((i % 15)) -eq 0 ]; then
+              echo "Still waiting... ($((i*2))/180 seconds)"
+            fi
+            sleep 2
+          done
+
           sleep 30
           
   build-microservice-ui:
@@ -333,27 +372,36 @@ jobs:
 
       - name: Build and restart microservice-ui
         run: |
-          echo "🔄 Building and restarting microservice-ui..."
+
           cd complete-microservice-application/microservice-ui
           
-          # Stop existing UI service
-          echo "Stopping existing microservice-ui processes..."
           sudo pkill -f "ng serve" || true
           sleep 5
           
-          # Install dependencies
-          echo "Installing npm dependencies..."
           sudo npm install
           
-          echo "Installing Angular CLI..."
           sudo npm install -g @angular/cli@8.3.25
           
-          # Start the UI service in background
-          echo "Starting microservice-ui on port 3000..."
           nohup npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose          
           
-          # Wait for service to start and verify
-          echo "Waiting for microservice-ui to be ready..."
+          echo "Waiting for microservice-ui to be ready (this may take up to 2 minutes)..."
+          for i in {1..60}; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "✅ Microservice UI is ready after $((i*2)) seconds!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ Microservice UI failed to start within 2 minutes"
+              echo "=== Last 50 lines of microservice-ui.log ==="
+              tail -50 /tmp/microservice-ui.log
+              exit 1
+            fi
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "Still waiting... ($((i*2))/120 seconds)"
+            fi
+            sleep 2
+          done         
+
           sleep 10
           
   health-check:
