@@ -23,7 +23,7 @@ jobs:
           sudo chmod -R u+w $GITHUB_WORKSPACE 2>/dev/null || true
           # Force remove target directories if they exist
           sudo rm -rf $GITHUB_WORKSPACE/complete-microservice-application/*/target || true
-          
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -204,7 +204,7 @@ jobs:
           echo "Building api-gateway with Maven..."
           sudo mvn clean install -DskipTests
 
-          nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
+          nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" &
           
           for i in {1..90}; do
             if curl -s http://localhost:8000/actuator/health > /dev/null 2>&1; then
@@ -332,7 +332,7 @@ jobs:
 
           sudo mvn clean install -DskipTests
 
-          nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
+          nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
 
           for i in {1..90}; do
             if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
@@ -392,9 +392,8 @@ jobs:
           
           sudo npm install -g @angular/cli@8.3.25
           
-          nohup npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose          
+          nohup npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose &          
           
-          echo "Waiting for microservice-ui to be ready (this may take up to 2 minutes)..."
           for i in {1..60}; do
             if curl -s http://localhost:3000 > /dev/null 2>&1; then
               echo "✅ Microservice UI is ready after $((i*2)) seconds!"
