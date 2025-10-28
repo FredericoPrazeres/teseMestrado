@@ -106,7 +106,7 @@ stages:
     dependsOn: 
       - DetectChanges
       - SetupInfrastructure
-    condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+    condition: and(succeeded(), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
     jobs:
       - job: BuildServiceRegistry
         displayName: 'Build and restart service-registry'
@@ -148,7 +148,14 @@ stages:
       - DetectChanges
       - SetupInfrastructure
       - BuildServiceRegistry
-    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
+    condition: |
+      and(
+        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        or(
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true'),
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+        )
+      )
     jobs:
       - job: BuildApiGateway
         displayName: 'Build and restart api-gateway'
@@ -205,7 +212,14 @@ stages:
       - DetectChanges
       - SetupInfrastructure
       - BuildServiceRegistry
-    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.productServiceChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
+    condition: |
+      and(
+        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        or(
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.productServiceChanged'], 'true'),
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+        )
+      )
     jobs:
       - job: BuildProductService
         displayName: 'Build and restart product-service'
@@ -283,7 +297,14 @@ stages:
       - DetectChanges
       - SetupInfrastructure
       - BuildServiceRegistry
-    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.offerServiceChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true'))
+    condition: |
+      and(
+        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        or(
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.offerServiceChanged'], 'true'),
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
+        )
+      )
     jobs:
       - job: BuildOfferService
         displayName: 'Build and restart offer-service'
@@ -342,7 +363,17 @@ stages:
       - BuildApiGateway
       - BuildProductService
       - BuildOfferService
-    condition: or(eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.microserviceUiChanged'], 'true'), eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true'))
+    condition: |
+      and(
+        in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        in(dependencies.BuildApiGateway.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        in(dependencies.BuildProductService.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        in(dependencies.BuildOfferService.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
+        or(
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.microserviceUiChanged'], 'true'),
+          eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true')
+        )
+      )
     jobs:
       - job: BuildMicroserviceUI
         displayName: 'Build and restart microservice-ui'
@@ -384,7 +415,17 @@ stages:
       - BuildProductService
       - BuildOfferService
       - BuildMicroserviceUI
-    condition: always()
+    condition: |
+      and(
+        always(),
+        or(
+          eq(dependencies.BuildServiceRegistry.result, 'Succeeded'),
+          eq(dependencies.BuildApiGateway.result, 'Succeeded'),
+          eq(dependencies.BuildProductService.result, 'Succeeded'),
+          eq(dependencies.BuildOfferService.result, 'Succeeded'),
+          eq(dependencies.BuildMicroserviceUI.result, 'Succeeded')
+        )
+      )
     jobs:
       - job: HealthCheck
         displayName: 'Health check services'
