@@ -17,7 +17,7 @@ stages:
         displayName: 'Detect changes in microservices'
         steps:
           - checkout: self
-            fetchDepth: 0
+            fetchDepth: 0 
             clean: false
 
           - bash: |
