@@ -174,12 +174,7 @@ jobs:
   build-api-gateway:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure, build-service-registry]
-    if: |
-      always() &&
-      !cancelled() &&
-      needs.setup-infrastructure.result == 'success' &&
-      (needs.detect-changes.outputs.api-gateway == 'true' || 
-       (needs.detect-changes.outputs.service-registry == 'true' && needs.build-service-registry.result == 'success'))
+    if: needs.detect-changes.outputs.api-gateway == 'true'
     steps:
       - name: Clean workspace
         run: |
@@ -233,12 +228,7 @@ jobs:
   build-product-service:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure, build-service-registry]
-    if: |
-      always() &&
-      !cancelled() &&
-      needs.setup-infrastructure.result == 'success' &&
-      (needs.detect-changes.outputs.offer-service == 'true' || 
-       (needs.detect-changes.outputs.service-registry == 'true' && needs.build-service-registry.result == 'success'))
+    if: needs.detect-changes.outputs.product-service == 'true'
     steps:
       - name: Clean workspace
         run: |
@@ -313,12 +303,7 @@ jobs:
   build-offer-service:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure, build-service-registry]
-    if: |
-      always() &&
-      !cancelled() &&
-      needs.setup-infrastructure.result == 'success' &&
-      (needs.detect-changes.outputs.microservice-ui == 'true' || 
-       (needs.detect-changes.outputs.api-gateway == 'true' && needs.build-api-gateway.result == 'success'))
+    if: needs.detect-changes.outputs.offer-service == 'true'
     steps:
       - name: Clean workspace
         run: |
@@ -371,7 +356,7 @@ jobs:
   build-microservice-ui:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure, build-service-registry, build-api-gateway, build-product-service, build-offer-service]
-    if: needs.detect-changes.outputs.microservice-ui == 'true' || needs.detect-changes.outputs.api-gateway == 'true'
+    if: needs.detect-changes.outputs.microservice-ui == 'true'
     steps:
       - name: Clean workspace
         run: |
