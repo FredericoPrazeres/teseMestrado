@@ -174,7 +174,12 @@ jobs:
   build-api-gateway:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure, build-service-registry]
-    if: needs.detect-changes.outputs.api-gateway == 'true' || needs.detect-changes.outputs.service-registry == 'true'
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.setup-infrastructure.result == 'success' &&
+      (needs.detect-changes.outputs.api-gateway == 'true' || 
+       (needs.detect-changes.outputs.service-registry == 'true' && needs.build-service-registry.result == 'success'))
     steps:
       - name: Clean workspace
         run: |
@@ -228,7 +233,12 @@ jobs:
   build-product-service:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure, build-service-registry]
-    if: needs.detect-changes.outputs.product-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.setup-infrastructure.result == 'success' &&
+      (needs.detect-changes.outputs.offer-service == 'true' || 
+       (needs.detect-changes.outputs.service-registry == 'true' && needs.build-service-registry.result == 'success'))
     steps:
       - name: Clean workspace
         run: |
@@ -303,7 +313,12 @@ jobs:
   build-offer-service:
     runs-on: self-hosted
     needs: [detect-changes, setup-infrastructure, build-service-registry]
-    if: needs.detect-changes.outputs.offer-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.setup-infrastructure.result == 'success' &&
+      (needs.detect-changes.outputs.microservice-ui == 'true' || 
+       (needs.detect-changes.outputs.api-gateway == 'true' && needs.build-api-gateway.result == 'success'))
     steps:
       - name: Clean workspace
         run: |
