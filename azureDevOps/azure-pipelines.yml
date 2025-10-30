@@ -108,7 +108,7 @@ stages:
       - SetupInfrastructure
     condition: |
       and(
-        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
+        succeeded('SetupInfrastructure'),
         eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
       )
     jobs:
