@@ -20,6 +20,7 @@ RUN curl -L https://get.jenkins.io/war-stable/${JENKINS_VERSION}/jenkins.war -o 
 
 # Set permissions
 RUN chown -R ${JENKINS_USER}:${JENKINS_GROUP} ${JENKINS_HOME}
+RUN git config --system --add safe.directory '*'
 
 WORKDIR /home/scripts
 
