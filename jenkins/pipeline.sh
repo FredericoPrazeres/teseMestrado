@@ -4,7 +4,7 @@ set -e
 # This script replicates the GitHub Actions workflow logic for Jenkins
 # It detects changes in microservices and builds only what's necessary
 
-WORKSPACE_PATH="${WORKSPACE:-/var/jenkins_home/workspace/microservices-pipeline}"
+WORKSPACE_PATH="/home/scripts"
 APP_BASE="$WORKSPACE_PATH/complete-microservice-application"
 
 # Java 11 for microservices
