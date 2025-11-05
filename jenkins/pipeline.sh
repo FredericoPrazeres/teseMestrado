@@ -3,8 +3,9 @@ set -e
 
 # This script replicates the GitHub Actions workflow logic for Jenkins
 # It detects changes in microservices and builds only what's necessary
-
-WORKSPACE_PATH="/home/scripts"
+WORKSPACE_PATH="/var/jenkins_home/workspace/microservices-pipeline"
+GIT_COMMIT=$(git rev-parse HEAD)
+GIT_PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
 APP_BASE="$WORKSPACE_PATH/complete-microservice-application"
 
 # Java 11 for microservices
@@ -71,7 +72,7 @@ if ! docker ps | grep -q rabbitmq; then
         docker run -d --name rabbitmq \
           -p 5672:5672 -p 15672:15672 \
           -e RABBITMQ_DEFAULT_USER=guest \
-            -e RABBITMQ_DEFAULT_PASS=guest \
+        -e RABBITMQ_DEFAULT_PASS=guest \
             rabbitmq:3-management || echo "RabbitMQ already running or failed to start"
           
 fi
