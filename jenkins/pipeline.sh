@@ -3,7 +3,7 @@ set -e
 
 # This script replicates the GitHub Actions workflow logic for Jenkins
 # It detects changes in microservices and builds only what's necessary
-WORKSPACE_PATH="/var/jenkins_home/workspace/microservices-pipeline"
+WORKSPACE_PATH="/var/jenkins_home/workspace/teseMestrado"
 GIT_COMMIT=$(git rev-parse HEAD)
 GIT_PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
 APP_BASE="$WORKSPACE_PATH/complete-microservice-application"
