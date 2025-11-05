@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+sudo chown root:docker /var/run/docker.sock
+sudo chmod 660 /var/run/docker.sock
+
 /usr/local/bin/cadvisor \
   --port=8081 \
   --prometheus_endpoint="/metrics" \

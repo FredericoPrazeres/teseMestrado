@@ -4,10 +4,11 @@ ENV JENKINS_VERSION=2.516.1
 ENV JENKINS_HOME=/var/jenkins_home
 ENV JENKINS_USER=jenkins
 ENV JENKINS_GROUP=jenkins
+ENV MAVEN_VERSION=3.8.6
+ENV NODE_VERSION=12
 
-# Install dependencies
 RUN apt-get update && \
-    apt-get install -y openjdk-21-jdk curl git sudo docker.io && \
+    apt-get install -y openjdk-21-jdk openjdk-11-jdk maven curl git sudo docker.io wget lsb-release gnupg apt-transport-https && \
     groupadd -g 1000 ${JENKINS_GROUP} && \
     useradd -m -d ${JENKINS_HOME} -u 1000 -g ${JENKINS_GROUP} ${JENKINS_USER} && \
     echo "${JENKINS_USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -26,7 +27,7 @@ RUN chown -R jenkins:jenkins /home/scripts
 
 # Copy start script
 COPY start.sh /home/scripts/start.sh
-RUN chmod +x /home/scripts/start.sh\
+RUN chmod +x /home/scripts/start.sh
 
 USER ${JENKINS_USER}
 

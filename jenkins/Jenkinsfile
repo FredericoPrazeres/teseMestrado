@@ -1,0 +1,103 @@
+pipeline {
+    agent any
+    
+    environment {
+        JAVA_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'
+        MAVEN_HOME = '/opt/maven'
+        PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "=== Checking out code ==="
+                    checkout scm
+                    
+                    // Get commit info for change detection
+                    env.GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+                    env.GIT_PREVIOUS_COMMIT = sh(returnStdout: true, script: 'git rev-parse HEAD~1 2>/dev/null || echo ""').trim()
+                    
+                    echo "Current commit: ${env.GIT_COMMIT}"
+                    echo "Previous commit: ${env.GIT_PREVIOUS_COMMIT}"
+                }
+            }
+        }
+        
+        stage('Setup Infrastructure') {
+            steps {
+                script {
+                    echo "=== Setting up infrastructure ==="
+                    sh '''
+                        # Ensure RabbitMQ is running
+                        if ! sudo rabbitmqctl status > /dev/null 2>&1; then
+                            echo "Starting RabbitMQ..."
+                            sudo rabbitmq-server -detached &
+                            sleep 10
+                        fi
+                        echo "✅ RabbitMQ is ready"
+                    '''
+                }
+            }
+        }
+        
+        stage('Build and Deploy Microservices') {
+            steps {
+                script {
+                    echo "=== Running microservices pipeline ==="
+                    sh '''
+                        export WORKSPACE="${WORKSPACE}"
+                        export GIT_COMMIT="${GIT_COMMIT}"
+                        export GIT_PREVIOUS_COMMIT="${GIT_PREVIOUS_COMMIT}"
+                        
+                        bash /home/scripts/pipeline.sh
+                    '''
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                script {
+                    echo "=== Final Health Check ==="
+                    sh '''
+                        echo "Checking all services..."
+                        
+                        check_service() {
+                            local url=$1
+                            local name=$2
+                            if curl -s "$url" > /dev/null 2>&1; then
+                                echo "✅ $name is healthy"
+                                return 0
+                            else
+                                echo "⚠️  $name is not responding"
+                                return 1
+                            fi
+                        }
+                        
+                        check_service "http://localhost:8761/actuator/health" "Service Registry"
+                        check_service "http://localhost:8000/actuator/health" "API Gateway"
+                        check_service "http://localhost:8081/actuator/health" "Product Service"
+                        check_service "http://localhost:8082/actuator/health" "Offer Service"
+                        check_service "http://localhost:4200" "Microservice UI"
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo "=== Pipeline Summary ==="
+                echo "Build completed for commit: ${env.GIT_COMMIT}"
+            }
+        }
+        success {
+            echo "✅ Pipeline completed successfully!"
+        }
+        failure {
+            echo "❌ Pipeline failed. Check logs for details."
+        }
+    }
+}
