@@ -9,10 +9,6 @@ GIT_COMMIT=$(git rev-parse HEAD)
 GIT_PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
 APP_BASE="$WORKSPACE_PATH/complete-microservice-application"
 
-# Java 11 for microservices
-export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-export PATH=$JAVA_HOME/bin:$PATH
-
 echo "=== Jenkins Pipeline for Microservices ==="
 echo "Workspace: $WORKSPACE_PATH"
 echo "Java Version: $(java -version 2>&1 | head -n 1)"
@@ -125,12 +121,10 @@ if [ "$SERVICE_REGISTRY_CHANGED" = true ]; then
     sleep 5
     
     echo "Building with Maven..."
-    mvn clean install -DskipTests
+    sudo mvn clean install -DskipTests
     
     echo "Starting service-registry..."
-    nohup mvn spring-boot:run \
-        -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" \
-        > /tmp/service-registry.log 2>&1 &
+    nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &
     
     wait_for_service "http://localhost:8761/actuator/health" "service-registry" 180
     sleep 5
@@ -152,12 +146,10 @@ if [ "$API_GATEWAY_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true ]; 
     sleep 5
     
     echo "Building with Maven..."
-    mvn clean install -DskipTests
+    sudo mvn clean install -DskipTests
     
     echo "Starting api-gateway..."
-    nohup mvn spring-boot:run \
-        -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" \
-        > /tmp/api-gateway.log 2>&1 &
+    nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" &
     
     wait_for_service "http://localhost:8000/actuator/health" "api-gateway" 90
     sleep 10
@@ -178,13 +170,11 @@ if [ "$PRODUCT_SERVICE_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true
     sudo pkill -f "product-service" || true
     sleep 5
     
-    echo "Building with Maven..."
-    mvn clean install -DskipTests
-    
-    echo "Starting product-service..."
-    nohup mvn spring-boot:run \
-        -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" \
-        > /tmp/product-service.log 2>&1 &
+    sudo mvn clean install -DskipTests
+      
+    cd target
+    nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
+    nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 &
     
     sleep 10
 fi
@@ -205,12 +195,9 @@ if [ "$OFFER_SERVICE_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true ]
     sleep 5
     
     echo "Building with Maven..."
-    mvn clean install -DskipTests
-    
-    echo "Starting offer-service..."
-    nohup mvn spring-boot:run \
-        -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" \
-        > /tmp/offer-service.log 2>&1 &
+    sudo mvn clean install -DskipTests
+
+    nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
     
     sleep 30
 fi
@@ -219,21 +206,17 @@ fi
 if [ "$MICROSERVICE_UI_CHANGED" = true ] || [ "$API_GATEWAY_CHANGED" = true ]; then
     echo "=== Building Microservice UI ==="
     
-    cd $APP_BASE/microservice-ui
-    
-    echo "Stopping existing microservice-ui..."
-    sudo pkill -f "ng serve" || sudo pkill -f "node.*microservice-ui" || true
+    cd complete-microservice-application/microservice-ui
+          
+    sudo pkill -f "ng serve" || true
     sleep 5
-    
-    echo "Installing dependencies..."
-    npm install
-    
-    echo "Building Angular application..."
-    npm run build --prod || npm run build
-    
-    echo "Starting microservice-ui..."
-    nohup npm start > /tmp/microservice-ui.log 2>&1 &
-    
+          
+    sudo npm install
+          
+    sudo npm install -g @angular/cli@8.3.25
+
+    nohup sudo npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose &
+
     sleep 10
 fi
 

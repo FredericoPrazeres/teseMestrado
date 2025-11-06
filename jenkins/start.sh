@@ -10,6 +10,9 @@ sudo chmod 660 /var/run/docker.sock
   --docker_only=true \
   --housekeeping_interval=30s &
 
+export JAVA_HOME=/usr/lib/jvm/java-1.11.0-openjdk-arm64
+export PATH=$JAVA_HOME/bin:$PATH
+
 exec /usr/lib/jvm/java-1.21.0-openjdk-arm64/bin/java $JAVA_OPTS -jar /usr/share/jenkins.war
 
 

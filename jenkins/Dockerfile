@@ -8,7 +8,7 @@ ENV MAVEN_VERSION=3.8.6
 ENV NODE_VERSION=12
 
 RUN apt-get update && \
-    apt-get install -y openjdk-21-jdk openjdk-11-jdk maven curl git sudo docker.io wget lsb-release gnupg apt-transport-https && \
+    apt-get install -y openjdk-21-jdk openjdk-11-jdk maven curl nodejs npm git sudo docker.io wget lsb-release gnupg apt-transport-https && \
     groupadd -g 1000 ${JENKINS_GROUP} && \
     useradd -m -d ${JENKINS_HOME} -u 1000 -g ${JENKINS_GROUP} ${JENKINS_USER} && \
     echo "${JENKINS_USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
