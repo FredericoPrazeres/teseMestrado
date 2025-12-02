@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Pipeline Monitoring Overview">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" page="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Docker Container -->
+        <mxCell id="docker" value="Docker Container" style="swimlane;whiteSpace=wrap;html=1;rounded=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontSize=13" vertex="1" parent="1">
+          <mxGeometry x="280" y="140" width="260" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Agent inside Docker -->
+        <mxCell id="agent" value="Pipeline Agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#0D47A1;fontSize=12" vertex="1" parent="docker">
+          <mxGeometry x="60" y="60" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- GitHub -->
+        <mxCell id="github" value="GitHub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="40" y="160" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- cAdvisor -->
+        <mxCell id="cadvisor" value="cAdvisor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#EF6C00;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="600" y="120" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Prometheus -->
+        <mxCell id="prom" value="Prometheus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#C62828;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="600" y="220" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Grafana -->
+        <mxCell id="graf" value="Grafana" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="820" y="170" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Connections -->
+        <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#424242" edge="1" parent="1" source="github" target="docker">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#424242" edge="1" parent="1" source="docker" target="cadvisor">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge3" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#D32F2F" edge="1" parent="1" source="cadvisor" target="prom">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge4" style="edgeStyle=orthogonalEdgeStyle;endArrow=block;html=1;strokeColor=#6A1B9A" edge="1" parent="1" source="prom" target="graf">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
