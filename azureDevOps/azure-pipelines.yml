@@ -10,74 +10,8 @@ variables:
   JAVA_OPTS: '--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED'
 
 stages:
-  - stage: DetectChanges
-    displayName: 'Detect Changes'
-    jobs:
-      - job: DetectChanges
-        displayName: 'Detect changes in microservices'
-        steps:
-          - checkout: self
-            fetchDepth: 0 
-            clean: false
-
-          - bash: |
-              echo "Detecting changes in microservices..."
-              
-              # Show what files changed for debugging
-              echo "Changed files:"
-              git diff --name-only HEAD~1 HEAD || git diff --name-only HEAD
-              
-              # Check for changes in each microservice directory
-              if git diff --name-only HEAD~1 HEAD | grep -E "(microservice-ui|complete-microservice-application/microservice-ui)" || \
-                 git diff --name-only HEAD | grep -E "(microservice-ui|complete-microservice-application/microservice-ui)"; then
-                echo "##vso[task.setvariable variable=microserviceUiChanged;isOutput=true]true"
-                echo "✅ Detected changes in microservice-ui"
-              else
-                echo "##vso[task.setvariable variable=microserviceUiChanged;isOutput=true]false"
-                echo "❌ No changes in microservice-ui"
-              fi
-              
-              if git diff --name-only HEAD~1 HEAD | grep -E "(service-registry|complete-microservice-application/service-registry)" || \
-                 git diff --name-only HEAD | grep -E "(service-registry|complete-microservice-application/service-registry)"; then
-                echo "##vso[task.setvariable variable=serviceRegistryChanged;isOutput=true]true"
-                echo "✅ Detected changes in service-registry"
-              else
-                echo "##vso[task.setvariable variable=serviceRegistryChanged;isOutput=true]false"
-                echo "❌ No changes in service-registry"
-              fi
-              
-              if git diff --name-only HEAD~1 HEAD | grep -E "(api-gateway|complete-microservice-application/api-gateway)" || \
-                 git diff --name-only HEAD | grep -E "(api-gateway|complete-microservice-application/api-gateway)"; then
-                echo "##vso[task.setvariable variable=apiGatewayChanged;isOutput=true]true"
-                echo "✅ Detected changes in api-gateway"
-              else
-                echo "##vso[task.setvariable variable=apiGatewayChanged;isOutput=true]false"
-                echo "❌ No changes in api-gateway"
-              fi
-              
-              if git diff --name-only HEAD~1 HEAD | grep -E "(product-service|complete-microservice-application/product-service)" || \
-                 git diff --name-only HEAD | grep -E "(product-service|complete-microservice-application/product-service)"; then
-                echo "##vso[task.setvariable variable=productServiceChanged;isOutput=true]true"
-                echo "✅ Detected changes in product-service"
-              else
-                echo "##vso[task.setvariable variable=productServiceChanged;isOutput=true]false"
-                echo "❌ No changes in product-service"
-              fi
-              
-              if git diff --name-only HEAD~1 HEAD | grep -E "(offer-service|complete-microservice-application/offer-service)" || \
-                 git diff --name-only HEAD | grep -E "(offer-service|complete-microservice-application/offer-service)"; then
-                echo "##vso[task.setvariable variable=offerServiceChanged;isOutput=true]true"
-                echo "✅ Detected changes in offer-service"
-              else
-                echo "##vso[task.setvariable variable=offerServiceChanged;isOutput=true]false"
-                echo "❌ No changes in offer-service"
-              fi
-            displayName: 'Detect changes'
-            name: changes
-
   - stage: SetupInfrastructure
     displayName: 'Setup Infrastructure'
-    dependsOn: DetectChanges
     jobs:
       - job: SetupInfrastructure
         displayName: 'Setup RabbitMQ'
@@ -104,13 +38,7 @@ stages:
   - stage: BuildServiceRegistry
     displayName: 'Build Service Registry'
     dependsOn: 
-      - DetectChanges
       - SetupInfrastructure
-    condition: |
-      and(
-        succeeded('SetupInfrastructure'),
-        eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
-      )
     jobs:
       - job: BuildServiceRegistry
         displayName: 'Build and restart service-registry'
@@ -136,10 +64,12 @@ stages:
               
               for i in {1..180}; do
                 if curl -s http://localhost:8761/actuator/health > /dev/null 2>&1; then
+                  echo "✅ Service Registry is ready after $((i*2)) seconds!"
                   break
                 fi
                 if [ $i -eq 60 ]; then
-                  cat /tmp/service-registry.log
+                  echo "❌ Service Registry failed to start early"
+                  tail -100 /tmp/service-registry.log || true
                   exit 1
                 fi
                 sleep 2
@@ -149,23 +79,7 @@ stages:
   - stage: BuildApiGateway
     displayName: 'Build API Gateway'
     dependsOn:
-      - DetectChanges
-      - SetupInfrastructure
       - BuildServiceRegistry
-    condition: |
-      and(
-        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
-        or(
-          and(
-            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true')
-          ),
-          and(
-            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
-          )
-        )
-      )
     jobs:
       - job: BuildApiGateway
         displayName: 'Build and restart api-gateway'
@@ -174,27 +88,20 @@ stages:
             clean: false
 
           - bash: |
-              echo "Cleaning workspace with proper permissions..."
-              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
-              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
-            displayName: 'Clean workspace'
-
-          - bash: |
               echo "Waiting for service registry to be ready..."
               sleep 45
             displayName: 'Wait for service registry'
-            condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
 
           - bash: |
               cd complete-microservice-application/api-gateway
-              
+
               sudo pkill -f "api-gateway" || true
               sleep 5
               
               echo "Building api-gateway with Maven..."
               sudo mvn clean install -DskipTests
 
-              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" &
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" > /tmp/api-gateway.log 2>&1 &
               
               for i in {1..90}; do
                 if curl -s http://localhost:8000/actuator/health > /dev/null 2>&1; then
@@ -204,7 +111,7 @@ stages:
                 if [ $i -eq 90 ]; then
                   echo "❌ API Gateway failed to start within 3 minutes"
                   echo "=== Last 50 lines of api-gateway.log ==="
-                  tail -50 /tmp/api-gateway.log
+                  tail -50 /tmp/api-gateway.log || true
                   exit 1
                 fi
                 if [ $((i % 15)) -eq 0 ]; then
@@ -212,30 +119,14 @@ stages:
                 fi
                 sleep 2
               done
-              
+
               sleep 10
             displayName: 'Build and restart api-gateway'
 
   - stage: BuildProductService
     displayName: 'Build Product Service'
     dependsOn:
-      - DetectChanges
-      - SetupInfrastructure
       - BuildServiceRegistry
-    condition: |
-      and(
-        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
-        or(
-          and(
-            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.productServiceChanged'], 'true')
-          ),
-          and(
-            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
-          )
-        )
-      )
     jobs:
       - job: BuildProductService
         displayName: 'Build and restart product-service'
@@ -244,29 +135,21 @@ stages:
             clean: false
 
           - bash: |
-              echo "Cleaning workspace with proper permissions..."
-              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
-              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
-            displayName: 'Clean workspace'
-
-          - bash: |
               echo "Waiting for service registry to be ready..."
               sleep 45
             displayName: 'Wait for service registry'
-            condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
 
           - bash: |
               cd complete-microservice-application/product-service
-              
+
               sudo pkill -f "product-service" || true
               sleep 5
               
               sudo mvn clean install -DskipTests
               
               cd target
-              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8081 &
-
-              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8180 &
+              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8081 > /tmp/product-service-8081.log 2>&1 &
+              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8180 > /tmp/product-service-8180.log 2>&1 &
 
               # Check instance on port 8081
               for i in {1..90}; do
@@ -277,7 +160,7 @@ stages:
                 if [ $i -eq 90 ]; then
                   echo "❌ Product Service (8081) failed to start"
                   echo "=== Last 50 lines of product-service-8081.log ==="
-                  tail -50 /tmp/product-service-8081.log
+                  tail -50 /tmp/product-service-8081.log || true
                   exit 1
                 fi
                 if [ $((i % 15)) -eq 0 ]; then
@@ -295,7 +178,7 @@ stages:
                 if [ $i -eq 90 ]; then
                   echo "❌ Product Service (8180) failed to start"
                   echo "=== Last 50 lines of product-service-8180.log ==="
-                  tail -50 /tmp/product-service-8180.log
+                  tail -50 /tmp/product-service-8180.log || true
                   exit 1
                 fi
                 if [ $((i % 15)) -eq 0 ]; then
@@ -310,23 +193,7 @@ stages:
   - stage: BuildOfferService
     displayName: 'Build Offer Service'
     dependsOn:
-      - DetectChanges
-      - SetupInfrastructure
       - BuildServiceRegistry
-    condition: |
-      and(
-        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
-        or(
-          and(
-            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.offerServiceChanged'], 'true')
-          ),
-          and(
-            in(dependencies.BuildServiceRegistry.result, 'Succeeded', 'SucceededWithIssues'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
-          )
-        )
-      )
     jobs:
       - job: BuildOfferService
         displayName: 'Build and restart offer-service'
@@ -335,26 +202,19 @@ stages:
             clean: false
 
           - bash: |
-              echo "Cleaning workspace with proper permissions..."
-              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
-              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
-            displayName: 'Clean workspace'
-
-          - bash: |
               echo "Waiting for service registry to be ready..."
               sleep 45
             displayName: 'Wait for service registry'
-            condition: eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.serviceRegistryChanged'], 'true')
 
           - bash: |
               cd complete-microservice-application/offer-service
-              
+
               sudo pkill -f "offer-service" || true
               sleep 5
 
               sudo mvn clean install -DskipTests
 
-              nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" > /tmp/offer-service.log 2>&1 &
 
               for i in {1..90}; do
                 if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
@@ -364,7 +224,7 @@ stages:
                 if [ $i -eq 90 ]; then
                   echo "❌ Offer Service failed to start within 3 minutes"
                   echo "=== Last 50 lines of offer-service.log ==="
-                  tail -50 /tmp/offer-service.log
+                  tail -50 /tmp/offer-service.log || true
                   exit 1
                 fi
                 if [ $((i % 15)) -eq 0 ]; then
@@ -379,38 +239,16 @@ stages:
   - stage: BuildMicroserviceUI
     displayName: 'Build Microservice UI'
     dependsOn:
-      - DetectChanges
-      - SetupInfrastructure
       - BuildServiceRegistry
       - BuildApiGateway
       - BuildProductService
       - BuildOfferService
-    condition: |
-      and(
-        in(dependencies.SetupInfrastructure.result, 'Succeeded', 'SucceededWithIssues'),
-        or(
-          and(
-            in(dependencies.BuildApiGateway.result, 'Succeeded', 'SucceededWithIssues', 'Skipped'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.microserviceUiChanged'], 'true')
-          ),
-          and(
-            in(dependencies.BuildApiGateway.result, 'Succeeded', 'SucceededWithIssues'),
-            eq(stageDependencies.DetectChanges.DetectChanges.outputs['changes.apiGatewayChanged'], 'true')
-          )
-        )
-      )
     jobs:
       - job: BuildMicroserviceUI
         displayName: 'Build and restart microservice-ui'
         steps:
           - checkout: self
             clean: false
-
-          - bash: |
-              echo "Cleaning workspace with proper permissions..."
-              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
-              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
-            displayName: 'Clean workspace'
 
           - task: NodeTool@0
             inputs:
@@ -424,10 +262,9 @@ stages:
               sleep 5
               
               sudo npm install
-              
               sudo npm install -g @angular/cli@8.3.25
 
-              nohup sudo npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose &
+              nohup sudo npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose > /tmp/microservice-ui.log 2>&1 &
 
               sleep 10
             displayName: 'Build and restart microservice-ui'
@@ -440,7 +277,6 @@ stages:
       - BuildProductService
       - BuildOfferService
       - BuildMicroserviceUI
-    condition: always()
     jobs:
       - job: HealthCheck
         displayName: 'Health check services'
@@ -514,7 +350,6 @@ stages:
   - stage: DeploymentStatus
     displayName: 'Deployment Status'
     dependsOn: HealthCheck
-    condition: always()
     jobs:
       - job: DeploymentStatus
         displayName: 'Show deployment summary'
