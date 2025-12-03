@@ -47,20 +47,14 @@ stages:
             clean: false
 
           - bash: |
-              echo "Cleaning workspace with proper permissions..."
-              sudo rm -rf $(Build.SourcesDirectory)/complete-microservice-application/*/target || true
-              sudo chown -R azureagent:azureagent $(Build.SourcesDirectory) || true
-            displayName: 'Clean workspace'
-
-          - bash: |
               cd complete-microservice-application/service-registry
               
-              sudo pkill -f "service-registry" || true
+              pkill -f "service-registry" || true
               sleep 5
               
-              sudo mvn clean install -DskipTests
+              mvn clean install -DskipTests
 
-              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" > /tmp/service-registry.log 2>&1 &
+              nohup mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" > /tmp/service-registry.log 2>&1 &
               
               for i in {1..180}; do
                 if curl -s http://localhost:8761/actuator/health > /dev/null 2>&1; then
@@ -89,19 +83,19 @@ stages:
 
           - bash: |
               echo "Waiting for service registry to be ready..."
-              sleep 45
+              sleep 10
             displayName: 'Wait for service registry'
 
           - bash: |
               cd complete-microservice-application/api-gateway
 
-              sudo pkill -f "api-gateway" || true
+              pkill -f "api-gateway" || true
               sleep 5
               
               echo "Building api-gateway with Maven..."
-              sudo mvn clean install -DskipTests
+              mvn clean install -DskipTests
 
-              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" > /tmp/api-gateway.log 2>&1 &
+              nohup mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" > /tmp/api-gateway.log 2>&1 &
               
               for i in {1..90}; do
                 if curl -s http://localhost:8000/actuator/health > /dev/null 2>&1; then
@@ -142,14 +136,14 @@ stages:
           - bash: |
               cd complete-microservice-application/product-service
 
-              sudo pkill -f "product-service" || true
+              pkill -f "product-service" || true
               sleep 5
               
-              sudo mvn clean install -DskipTests
+              mvn clean install -DskipTests
               
               cd target
-              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8081 > /tmp/product-service-8081.log 2>&1 &
-              nohup sudo java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8180 > /tmp/product-service-8180.log 2>&1 &
+              nohup java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8081 > /tmp/product-service-8081.log 2>&1 &
+              nohup java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8180 > /tmp/product-service-8180.log 2>&1 &
 
               # Check instance on port 8081
               for i in {1..90}; do
@@ -209,12 +203,12 @@ stages:
           - bash: |
               cd complete-microservice-application/offer-service
 
-              sudo pkill -f "offer-service" || true
+              pkill -f "offer-service" || true
               sleep 5
 
-              sudo mvn clean install -DskipTests
+              mvn clean install -DskipTests
 
-              nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" > /tmp/offer-service.log 2>&1 &
+              nohup mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" > /tmp/offer-service.log 2>&1 &
 
               for i in {1..90}; do
                 if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
@@ -258,13 +252,13 @@ stages:
           - bash: |
               cd complete-microservice-application/microservice-ui
               
-              sudo pkill -f "ng serve" || true
+              pkill -f "ng serve" || true
               sleep 5
               
               sudo npm install
               sudo npm install -g @angular/cli@8.3.25
 
-              nohup sudo npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose > /tmp/microservice-ui.log 2>&1 &
+              nohup npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose > /tmp/microservice-ui.log 2>&1 &
 
               sleep 10
             displayName: 'Build and restart microservice-ui'
