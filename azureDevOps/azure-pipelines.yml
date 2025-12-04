@@ -56,18 +56,6 @@ stages:
 
               nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &
               
-              for i in {1..180}; do
-                if curl -s http://localhost:8761/actuator/health > /dev/null 2>&1; then
-                  echo "✅ Service Registry is ready after $((i*2)) seconds!"
-                  break
-                fi
-                if [ $i -eq 60 ]; then
-                  echo "❌ Service Registry failed to start early"
-                  tail -100 /tmp/service-registry.log || true
-                  exit 1
-                fi
-                sleep 2
-              done
             displayName: 'Build and restart service-registry'
 
   - stage: BuildApiGateway
