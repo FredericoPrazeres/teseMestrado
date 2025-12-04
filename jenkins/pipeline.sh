@@ -218,7 +218,7 @@ fi
 if [ "$MICROSERVICE_UI_CHANGED" = true ] || [ "$API_GATEWAY_CHANGED" = true ]; then
     echo "=== Building Microservice UI ==="
     
-    cd complete-microservice-application/microservice-ui
+    cd $APP_BASE/microservice-ui
           
     sudo pkill -f "ng serve" || true
     sleep 5
