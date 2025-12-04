@@ -64,17 +64,28 @@ sudo chown -R jenkins:jenkins $WORKSPACE_PATH 2>/dev/null || true
 sudo chmod -R u+w $WORKSPACE_PATH 2>/dev/null || true
 sudo rm -rf $APP_BASE/*/target || true
 
-# Ensure RabbitMQ is running
+# Ensure RabbitMQ is installed and running
 echo "=== Checking RabbitMQ ==="
-if ! docker ps | grep -q rabbitmq; then
-        docker run -d --name rabbitmq \
-          -p 5672:5672 -p 15672:15672 \
-          -e RABBITMQ_DEFAULT_USER=guest \
-        -e RABBITMQ_DEFAULT_PASS=guest \
-            rabbitmq:3-management || echo "RabbitMQ already running or failed to start"
-          
+if ! command -v rabbitmq-server &> /dev/null; then
+    echo "Installing RabbitMQ..."
+    cd $WORKSPACE_PATH
+    sudo bash complete-microservice-application/install-rabbitmq-ubuntu.sh
+else
+    echo "RabbitMQ is already installed"
+    # Ensure RabbitMQ service is running
+    sudo systemctl start rabbitmq-server 2>/dev/null || sudo service rabbitmq-server start 2>/dev/null || true
 fi
-echo "✅ RabbitMQ is running"
+
+# Wait for RabbitMQ to be ready
+echo "Waiting for RabbitMQ to be ready..."
+for i in {1..30}; do
+    if curl -s http://localhost:15672 > /dev/null 2>&1; then
+        echo "✅ RabbitMQ is running and ready!"
+        break
+    fi
+    echo "Attempt $i/30 - waiting for RabbitMQ..."
+    sleep 2
+done
 
 # Detect changes for each service
 SERVICE_REGISTRY_CHANGED=false
