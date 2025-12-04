@@ -49,7 +49,7 @@ stages:
           - bash: |
               cd complete-microservice-application/service-registry
               
-              pkill -f "service-registry" || true
+              sudo sudo pkill -f "service-registry" || true
               sleep 5
               
               mvn clean install -DskipTests
@@ -77,7 +77,7 @@ stages:
           - bash: |
               cd complete-microservice-application/api-gateway
 
-              pkill -f "api-gateway" || true
+              sudo sudo pkill -f "api-gateway" || true
               sleep 5
               
               echo "Building api-gateway with Maven..."
@@ -124,7 +124,7 @@ stages:
           - bash: |
               cd complete-microservice-application/product-service
 
-              pkill -f "product-service" || true
+              sudo pkill -f "product-service" || true
               sleep 5
               
               mvn clean install -DskipTests
@@ -193,7 +193,7 @@ stages:
           - bash: |
               cd complete-microservice-application/offer-service
 
-              pkill -f "offer-service" || true
+              sudo pkill -f "offer-service" || true
               sleep 5
 
               mvn clean install -DskipTests
@@ -242,7 +242,7 @@ stages:
           - bash: |
               cd complete-microservice-application/microservice-ui
               
-              pkill -f "ng serve" || true
+              sudo pkill -f "ng serve" || true
               sleep 5
               
               sudo npm install
