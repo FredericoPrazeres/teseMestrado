@@ -54,8 +54,7 @@ stages:
               
               mvn clean install -DskipTests
 
-
-              nohup mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &              
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &
               
               for i in {1..180}; do
                 if curl -s http://localhost:8761/actuator/health > /dev/null 2>&1; then
@@ -96,7 +95,7 @@ stages:
               echo "Building api-gateway with Maven..."
               mvn clean install -DskipTests
 
-              nohup mvn spring-boot:run -Dspring-boot.run.jvmArguments="$(JAVA_OPTS)" > /tmp/api-gateway.log 2>&1 &
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" &
               
               for i in {1..90}; do
                 if curl -s http://localhost:8000/actuator/health > /dev/null 2>&1; then
@@ -143,8 +142,10 @@ stages:
               mvn clean install -DskipTests
               
               cd target
-              nohup java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8081 > /tmp/product-service-8081.log 2>&1 &
-              nohup java $(JAVA_OPTS) -jar product-service-*.jar --server.port=8180 > /tmp/product-service-8180.log 2>&1 &
+              nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
+
+              nohup sudo java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 &
+
 
               # Check instance on port 8081
               for i in {1..90}; do
@@ -209,7 +210,7 @@ stages:
 
               mvn clean install -DskipTests
 
-              nohup mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" > /tmp/offer-service.log 2>&1 &
+              nohup sudo mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
 
               for i in {1..90}; do
                 if curl -s http://localhost:8082/actuator/health > /dev/null 2>&1; then
@@ -368,38 +369,6 @@ stages:
               echo "  │ RabbitMQ Management:         http://localhost:15672"
               echo "  └─────────────────────────────────────────────────────────────"
               echo ""
-              echo "🔐 Database Credentials:"
-              echo "  ┌─────────────────────────────────────────────────────────────"
-              echo "  │ Product H2 Console:  http://localhost:8081/h2"
-              echo "  │   JDBC URL:  jdbc:h2:~/product"
-              echo "  │   Username:  root"
-              echo "  │   Password:  root"
-              echo "  │"
-              echo "  │ Offer H2 Console:    http://localhost:8082/h2"
-              echo "  │   JDBC URL:  jdbc:h2:~/offer"
-              echo "  │   Username:  root"  
-              echo "  │   Password:  root"
-              echo "  │"
-              echo "  │ RabbitMQ Credentials:"
-              echo "  │   Username:  guest"
-              echo "  │   Password:  guest"
-              echo "  └─────────────────────────────────────────────────────────────"
-              echo ""
-              echo "📋 API Endpoints (via API Gateway):"
-              echo "  ┌─────────────────────────────────────────────────────────────"
-              echo "  │ GET    http://localhost:8000/product-service/products"
-              echo "  │ POST   http://localhost:8000/product-service/products"
-              echo "  │ PUT    http://localhost:8000/product-service/products/addPrice"
-              echo "  │ POST   http://localhost:8000/offer-service/offer"
-              echo "  └─────────────────────────────────────────────────────────────"
-              echo ""
-              echo "🔄 Load Balancing: API Gateway handles round-robin distribution"
-              echo "   between Product Service instances (8081, 8180)"
-              echo ""
-              echo "📨 Event-Driven: RabbitMQ manages async communication between"
-              echo "   Offer Service and Product Service"
-              echo ""
-              echo "════════════════════════════════════════════════════════════════"
             displayName: 'Show deployment summary'
 
 
