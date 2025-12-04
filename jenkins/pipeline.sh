@@ -13,7 +13,7 @@ echo "=== Jenkins Pipeline for Microservices ==="
 echo "Workspace: $WORKSPACE_PATH"
 echo "Java 21 Version (Jenkins): $(java -version 2>&1 | head -n 1)"
 echo "Java 11 Version (Microservices): $($JAVA_11_HOME/bin/java -version 2>&1 | head -n 1)"
-echo "Maven Version: $($JAVA_11_HOME/bin/mvn -version | head -n 1)"
+echo "Maven Version: $(mvn -version | head -n 1)"
 
 # Function to detect changes in a directory
 detect_changes() {
@@ -122,10 +122,10 @@ if [ "$SERVICE_REGISTRY_CHANGED" = true ]; then
     sleep 5
     
     echo "Building with Maven..."
-    sudo JAVA_HOME=$JAVA_11_HOME $JAVA_11_HOME/bin/mvn clean install -DskipTests
+    sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
     
     echo "Starting service-registry..."
-    nohup sudo JAVA_HOME=$JAVA_11_HOME $JAVA_11_HOME/bin/mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &
+    nohup sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &
     
     wait_for_service "http://localhost:8761/actuator/health" "service-registry" 180
     sleep 5
@@ -147,10 +147,10 @@ if [ "$API_GATEWAY_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true ]; 
     sleep 5
     
     echo "Building with Maven..."
-    sudo JAVA_HOME=$JAVA_11_HOME $JAVA_11_HOME/bin/mvn clean install -DskipTests
+    sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
     
     echo "Starting api-gateway..."
-    nohup sudo JAVA_HOME=$JAVA_11_HOME $JAVA_11_HOME/bin/mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" &
+    nohup sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" &
     
     wait_for_service "http://localhost:8000/actuator/health" "api-gateway" 90
     sleep 10
@@ -171,7 +171,7 @@ if [ "$PRODUCT_SERVICE_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true
     sudo pkill -f "product-service" || true
     sleep 5
     
-    sudo JAVA_HOME=$JAVA_11_HOME $JAVA_11_HOME/bin/mvn clean install -DskipTests
+    sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
       
     cd target
     nohup sudo $JAVA_11_HOME/bin/java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
@@ -196,9 +196,9 @@ if [ "$OFFER_SERVICE_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true ]
     sleep 5
     
     echo "Building with Maven..."
-    sudo JAVA_HOME=$JAVA_11_HOME $JAVA_11_HOME/bin/mvn clean install -DskipTests
+    sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
 
-    nohup sudo JAVA_HOME=$JAVA_11_HOME $JAVA_11_HOME/bin/mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
+    nohup sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
     
     sleep 30
 fi
