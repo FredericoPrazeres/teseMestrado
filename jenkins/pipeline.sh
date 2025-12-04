@@ -136,7 +136,8 @@ if [ "$SERVICE_REGISTRY_CHANGED" = true ]; then
     sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
     
     echo "Starting service-registry..."
-    nohup sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 &
+    setsid sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/service-registry.log 2>&1 < /dev/null &
+    disown
     
     wait_for_service "http://localhost:8761/actuator/health" "service-registry" 180
     sleep 5
@@ -161,7 +162,8 @@ if [ "$API_GATEWAY_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true ]; 
     sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
     
     echo "Starting api-gateway..."
-    nohup sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" &
+    setsid sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.jvmArguments="--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED" > /tmp/api-gateway.log 2>&1 < /dev/null &
+    disown
     
     wait_for_service "http://localhost:8000/actuator/health" "api-gateway" 90
     sleep 10
@@ -185,8 +187,10 @@ if [ "$PRODUCT_SERVICE_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true
     sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
       
     cd target
-    nohup sudo $JAVA_11_HOME/bin/java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 &
-    nohup sudo $JAVA_11_HOME/bin/java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 &
+    setsid sudo $JAVA_11_HOME/bin/java $JAVA_OPTS -jar product-service-*.jar --server.port=8081 > /tmp/product-service-8081.log 2>&1 < /dev/null &
+    disown
+    setsid sudo $JAVA_11_HOME/bin/java $JAVA_OPTS -jar product-service-*.jar --server.port=8180 > /tmp/product-service-8180.log 2>&1 < /dev/null &
+    disown
     
     sleep 10
 fi
@@ -209,7 +213,8 @@ if [ "$OFFER_SERVICE_CHANGED" = true ] || [ "$SERVICE_REGISTRY_CHANGED" = true ]
     echo "Building with Maven..."
     sudo JAVA_HOME=$JAVA_11_HOME mvn clean install -DskipTests
 
-    nohup sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" &
+    setsid sudo JAVA_HOME=$JAVA_11_HOME mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082" > /tmp/offer-service.log 2>&1 < /dev/null &
+    disown
     
     sleep 30
 fi
@@ -227,7 +232,8 @@ if [ "$MICROSERVICE_UI_CHANGED" = true ] || [ "$API_GATEWAY_CHANGED" = true ]; t
           
     sudo npm install -g @angular/cli@8.3.25
 
-    nohup sudo npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose &
+    setsid sudo npx ng serve --host 0.0.0.0 --port 3000 --disable-host-check --poll=2000 --verbose > /tmp/microservice-ui.log 2>&1 < /dev/null &
+    disown
 
     sleep 10
 fi

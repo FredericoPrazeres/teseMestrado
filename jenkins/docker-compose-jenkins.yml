@@ -25,6 +25,7 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     environment:
+      JAVA_HOME: /usr/lib/jvm/java-1.11.0-openjdk-arm64
       JAVA_OPTS: >-
         -Djenkins.install.runSetupWizard=false
         -Dhudson.model.UpdateCenter.connectionCheckTimeoutMillis=60000
