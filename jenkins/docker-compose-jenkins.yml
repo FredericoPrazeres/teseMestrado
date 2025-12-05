@@ -28,12 +28,7 @@ services:
     user: root
     networks:
       - monitoring
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512MB
-
+      
 volumes:
   jenkins_home:
 
