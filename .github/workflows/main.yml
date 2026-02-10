@@ -3,10 +3,10 @@ name: Akaunting CI/CD Pipeline
 on:
   push:
     branches:
-      - master
+      - applications/akaunting
   pull_request:
     branches:
-      - master
+      - applications/akaunting
 
 jobs:
   setup-and-validate:
