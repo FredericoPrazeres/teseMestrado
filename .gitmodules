@@ -1,0 +1,3 @@
+[submodule "akaunting"]
+	path = akaunting
+	url = https://github.com/akaunting/akaunting.git
