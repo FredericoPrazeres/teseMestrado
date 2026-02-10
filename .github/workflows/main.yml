@@ -80,11 +80,6 @@ jobs:
         working-directory: ./akaunting
         run: |
           composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader --no-scripts
-          
-      - name: Generate application key
-        working-directory: ./akaunting
-        run: |
-          php artisan key:generate --ansi
 
       - name: Cache Node modules
         uses: actions/cache@v3
