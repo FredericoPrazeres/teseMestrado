@@ -59,10 +59,14 @@ jobs:
           cp .env.example .env
           # Set database to SQLite to avoid MySQL connection during install
           sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/' .env
-          sed -i 's/DB_DATABASE=akaunting/DB_DATABASE=database\/database.sqlite/' .env
-          # Create SQLite database file
+          # Use absolute path for SQLite database
+          DB_PATH="$(pwd)/database/database.sqlite"
+          sed -i "s|DB_DATABASE=akaunting|DB_DATABASE=${DB_PATH}|" .env
+          # Create SQLite database file with proper permissions
           mkdir -p database
           touch database/database.sqlite
+          chmod 664 database/database.sqlite
+          chmod 775 database
 
       - name: Cache Composer dependencies
         uses: actions/cache@v3
@@ -117,7 +121,7 @@ jobs:
           sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/' .env
           sed -i 's/DB_DATABASE=akaunting/DB_DATABASE=:memory:/' .env
           mkdir -p database
-          touch database/database.sqlite
+          chmod 775 database
 
       - name: Restore Composer dependencies
         uses: actions/cache@v3
@@ -162,10 +166,12 @@ jobs:
         working-directory: ./akaunting
         run: |
           cp .env.example .env
+          # For tests, we use :memory: which doesn't need a file
           sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/' .env
           sed -i 's/DB_DATABASE=akaunting/DB_DATABASE=:memory:/' .env
+          # Still create database directory for any file-based operations
           mkdir -p database
-          touch database/database.sqlite
+          chmod 775 database
 
       - name: Restore Composer dependencies
         uses: actions/cache@v3
@@ -225,6 +231,8 @@ jobs:
           cp .env.example .env
           sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/' .env
           sed -i 's/DB_DATABASE=akaunting/DB_DATABASE=:memory:/' .env
+          mkdir -p database
+          chmod 775 database
 
       - name: Restore Composer dependencies
         uses: actions/cache@v3
