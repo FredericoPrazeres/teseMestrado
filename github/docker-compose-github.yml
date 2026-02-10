@@ -3,20 +3,45 @@ version: '3.8'
 services:
   github-runner:
     build: .
+    container_name: github-runner
     environment:
       - REPO_URL=${REPO_URL}
       - RUNNER_TOKEN=${RUNNER_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - runner-data:/home/runner/_work
+      - ../akaunting:/home/runner/_work/akaunting:cached
     restart: always
     ports:
       - "9102:8080"  # Expose cAdvisor on a unique port
     networks:
       - monitoring
+    depends_on:
+      - mysql
+      
+  mysql:
+    image: mysql:8.0
+    container_name: github-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: akaunting
+      MYSQL_USER: akaunting
+      MYSQL_PASSWORD: akaunting_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
           
 volumes:
   runner-data:
+  mysql-data:
 
 networks:
   monitoring:
+    driver: bridge

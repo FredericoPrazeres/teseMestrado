@@ -1,17 +1,192 @@
-name: Microservices CI/CD Pipeline
+name: Akaunting CI/CD Pipeline
 
 on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
-  remove-containers:
+  setup-and-validate:
+    name: Setup and Validate
     runs-on: self-hosted
     steps:
-      - name: Hello World
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Stop and remove existing microservices
+      - name: Validate composer.json
+        working-directory: ./akaunting
         run: |
-          echo "Hello, World!"
+          composer validate --strict
+
+      - name: Check PHP version
+        run: |
+          php -v
+          php -m
+
+  install-dependencies:
+    name: Install Dependencies
+    runs-on: self-hosted
+    needs: setup-and-validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: akaunting/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('akaunting/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        working-directory: ./akaunting
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+
+      - name: Cache Node modules
+        uses: actions/cache@v3
+        with:
+          path: akaunting/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('akaunting/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install NPM dependencies
+        working-directory: ./akaunting
+        run: |
+          npm ci
+
+      - name: Build frontend assets
+        working-directory: ./akaunting
+        run: |
+          npm run production
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: self-hosted
+    needs: install-dependencies
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: akaunting/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('akaunting/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        working-directory: ./akaunting
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Check code style (PSR-12)
+        working-directory: ./akaunting
+        run: |
+          echo "Checking code style..."
+          # Add your code style checker here (e.g., PHP_CodeSniffer, PHP-CS-Fixer)
+          # ./vendor/bin/phpcs --standard=PSR12 app/
+
+      - name: Run static analysis
+        working-directory: ./akaunting
+        run: |
+          echo "Running static analysis..."
+          # Add your static analysis tool here (e.g., PHPStan, Psalm)
+          # ./vendor/bin/phpstan analyse
+
+  test:
+    name: Run Tests
+    runs-on: self-hosted
+    needs: install-dependencies
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: akaunting/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('akaunting/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        working-directory: ./akaunting
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Prepare Laravel Application
+        working-directory: ./akaunting
+        run: |
+          cp .env.example .env || true
+          php artisan key:generate
+          touch database/database.sqlite
+
+      - name: Run Unit Tests
+        working-directory: ./akaunting
+        run: |
+          ./vendor/bin/phpunit --testsuite=Unit --log-junit reports/unit-tests.xml
+
+      - name: Run Feature Tests
+        working-directory: ./akaunting
+        run: |
+          ./vendor/bin/phpunit --testsuite=Feature --log-junit reports/feature-tests.xml
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: akaunting/reports/
+
+  security-scan:
+    name: Security Scan
+    runs-on: self-hosted
+    needs: install-dependencies
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: akaunting/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('akaunting/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        working-directory: ./akaunting
+        run: |
+          composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Check for security vulnerabilities
+        working-directory: ./akaunting
+        run: |
+          composer audit
+
+  build-report:
+    name: Build Report
+    runs-on: self-hosted
+    needs: [code-quality, test, security-scan]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate build report
+        run: |
+          echo "Build completed at $(date)"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Pipeline status: ${{ job.status }}"
+
+      - name: Notify completion
+        run: |
+          echo "CI/CD Pipeline completed successfully!"
