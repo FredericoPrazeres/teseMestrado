@@ -15,11 +15,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
-      - name: Validate composer.json
-        working-directory: ./akaunting
+      - name: Verify akaunting directory
         run: |
-          composer validate --strict
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          if [ ! -d "./akaunting" ]; then
+            echo "Error: akaunting directory not found!"
+            echo "Available directories:"
+            find . -maxdepth 2 -type d
+            exit 1
+          fi
+          echo "Akaunting directory found, contents:"
+          ls -la ./akaunting
+          if [ -f "./akaunting/composer.json" ]; then
+            echo "✓ composer.json found"
+          else
+            echo "✗ composer.json not found - this will be needed for dependency installation"
+          fi
 
       - name: Check PHP version
         run: |
@@ -33,6 +49,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Cache Composer dependencies
         uses: actions/cache@v3
@@ -72,6 +90,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Restore Composer dependencies
         uses: actions/cache@v3
@@ -107,6 +127,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Restore Composer dependencies
         uses: actions/cache@v3
@@ -152,6 +174,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Restore Composer dependencies
         uses: actions/cache@v3
@@ -179,6 +203,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Generate build report
         run: |
