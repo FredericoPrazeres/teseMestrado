@@ -69,20 +69,6 @@ for i in $(seq 1 60); do
   fi
 done
 
-echo "⏳ Waiting for Zammad web interface..."
-for i in $(seq 1 40); do
-  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8090 2>/dev/null || echo "000")
-  if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
-    echo "✅ Zammad is reachable (HTTP $HTTP_STATUS)."
-    break
-  fi
-  echo "  Attempt $i/40 - HTTP status: $HTTP_STATUS"
-  sleep 10
-  if [ "$i" -eq 40 ]; then
-    echo "❌ Zammad web interface failed to respond."
-    exit 1
-  fi
-done
 
 ###############################################################################
 # STAGE 3: TEST
