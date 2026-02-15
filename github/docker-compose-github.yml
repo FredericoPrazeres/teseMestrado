@@ -57,7 +57,7 @@ services:
     <<: *zammad-service
     command: ["zammad-nginx"]
     ports:
-      - "8080:8080"
+      - "8090:8080"
     depends_on:
       - zammad-railsserver
 

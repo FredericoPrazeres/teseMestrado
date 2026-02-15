@@ -1,6 +1,31 @@
 version: '3.8'
 
+x-shared:
+  zammad-service: &zammad-service
+    environment: &zammad-environment
+      MEMCACHE_SERVERS: zammad-memcached:11211
+      POSTGRESQL_DB: zammad_production
+      POSTGRESQL_HOST: zammad-postgresql
+      POSTGRESQL_USER: zammad
+      POSTGRESQL_PASS: zammad
+      POSTGRESQL_PORT: "5432"
+      POSTGRESQL_OPTIONS: "?pool=50"
+      REDIS_URL: redis://zammad-redis:6379
+      ELASTICSEARCH_ENABLED: "false"
+      TZ: Europe/Berlin
+    image: ghcr.io/zammad/zammad:6.5.2-85
+    restart: always
+    volumes:
+      - zammad-storage:/opt/zammad/storage
+    depends_on:
+      - zammad-memcached
+      - zammad-postgresql
+      - zammad-redis
+    networks:
+      - monitoring
+
 services:
+  # ── Azure DevOps Self-Hosted Agent ──
   azure-agent:
     build:
       context: .
@@ -22,8 +47,68 @@ services:
     networks:
       - monitoring
 
+  # ── Zammad Application Stack ──
+  zammad-init:
+    <<: *zammad-service
+    command: ["zammad-init"]
+    depends_on:
+      - zammad-postgresql
+    restart: on-failure
+    user: 0:0
+
+  zammad-railsserver:
+    <<: *zammad-service
+    command: ["zammad-railsserver"]
+
+  zammad-nginx:
+    <<: *zammad-service
+    command: ["zammad-nginx"]
+    ports:
+      - "8090:8080"
+    depends_on:
+      - zammad-railsserver
+
+  zammad-websocket:
+    <<: *zammad-service
+    command: ["zammad-websocket"]
+
+  zammad-scheduler:
+    <<: *zammad-service
+    command: ["zammad-scheduler"]
+
+  # ── Supporting Services ──
+  zammad-memcached:
+    command: memcached -m 256M
+    image: memcached:1.6.40-alpine
+    restart: always
+    networks:
+      - monitoring
+
+  zammad-postgresql:
+    environment:
+      POSTGRES_DB: zammad_production
+      POSTGRES_USER: zammad
+      POSTGRES_PASSWORD: zammad
+    image: postgres:17.7-alpine
+    restart: always
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    networks:
+      - monitoring
+
+  zammad-redis:
+    image: redis:7.4.7-alpine
+    restart: always
+    volumes:
+      - redis-data:/data
+    networks:
+      - monitoring
+
 volumes:
   agent-data:
+  zammad-storage:
+  postgresql-data:
+  redis-data:
 
 networks:
   monitoring:

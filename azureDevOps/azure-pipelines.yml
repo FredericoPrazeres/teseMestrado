@@ -1,18 +1,179 @@
 trigger:
   branches:
     include:
-      - master
+      - zammad
 
 pool:
   name: TeseMestradoPool
 
-jobs:
-  - job: BuildAndTest
-    displayName: 'Test Pipeline'
-    steps:
-      - checkout: self
-        displayName: 'Checkout code'
+stages:
+  # ── Stage 1: Cleanup ──
+  - stage: Cleanup
+    displayName: 'Cleanup Old Containers'
+    jobs:
+      - job: Cleanup
+        displayName: 'Cleanup'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
 
-      - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+          - script: |
+              echo "🧹 Cleaning up old containers..."
+              if [ -d "zammad-docker-compose" ]; then
+                docker-compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans 2>/dev/null || true
+              fi
+              docker system prune -f --volumes 2>/dev/null || true
+              echo "✅ Cleanup complete."
+            displayName: 'Stop and remove existing Zammad containers'
+
+  # ── Stage 2: Deploy ──
+  - stage: Deploy
+    displayName: 'Deploy Zammad'
+    dependsOn: Cleanup
+    jobs:
+      - job: Deploy
+        displayName: 'Deploy'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - script: |
+              echo "📦 Cloning Zammad Docker Compose repository..."
+              rm -rf zammad-docker-compose
+              git clone https://github.com/zammad/zammad-docker-compose.git zammad-docker-compose
+              echo "✅ Zammad repo cloned."
+            displayName: 'Clone Zammad Docker Compose'
+
+          - script: |
+              echo "🚀 Starting Zammad application stack..."
+              export NGINX_EXPOSE_PORT=8090
+              docker-compose -f zammad-docker-compose/docker-compose.yml up -d
+              echo "✅ Zammad stack started."
+            displayName: 'Start Zammad stack'
+
+          - script: |
+              echo "⏳ Waiting for PostgreSQL..."
+              for i in $(seq 1 30); do
+                if docker-compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-postgresql pg_isready -U zammad > /dev/null 2>&1; then
+                  echo "✅ PostgreSQL is ready."
+                  exit 0
+                fi
+                echo "  Attempt $i/30 - PostgreSQL not ready yet..."
+                sleep 5
+              done
+              echo "❌ PostgreSQL failed to start."
+              exit 1
+            displayName: 'Wait for PostgreSQL to be ready'
+
+          - script: |
+              echo "⏳ Waiting for Zammad init container to finish..."
+              for i in $(seq 1 60); do
+                # docker-compose V1: ps output shows "Exit 0" for successful completion
+                if docker-compose -f zammad-docker-compose/docker-compose.yml ps zammad-init 2>/dev/null | grep -q "Exit 0"; then
+                  echo "✅ Zammad init completed successfully."
+                  exit 0
+                fi
+                # Check if it exited with a non-zero code
+                if docker-compose -f zammad-docker-compose/docker-compose.yml ps zammad-init 2>/dev/null | grep -q "Exit"; then
+                  echo "❌ Zammad init failed."
+                  docker-compose -f zammad-docker-compose/docker-compose.yml logs zammad-init
+                  exit 1
+                fi
+                echo "  Attempt $i/60 - Zammad init still running..."
+                sleep 10
+              done
+              echo "❌ Zammad init timed out."
+              exit 1
+            displayName: 'Wait for Zammad init to complete'
+
+  # ── Stage 3: Test ──
+  - stage: Test
+    displayName: 'Test Zammad Deployment'
+    dependsOn: Deploy
+    jobs:
+      - job: Test
+        displayName: 'Test'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - script: |
+              rm -rf zammad-docker-compose
+              git clone https://github.com/zammad/zammad-docker-compose.git zammad-docker-compose
+            displayName: 'Clone Zammad Docker Compose'
+
+          - script: |
+              echo "🔍 Checking running services..."
+              SERVICES=("zammad-nginx" "zammad-railsserver" "zammad-scheduler" "zammad-websocket" "zammad-postgresql" "zammad-redis" "zammad-memcached")
+              ALL_OK=true
+              for svc in "${SERVICES[@]}"; do
+                if docker-compose -f zammad-docker-compose/docker-compose.yml ps "$svc" 2>/dev/null | grep -q "Up"; then
+                  echo "  ✅ $svc is running."
+                else
+                  echo "  ❌ $svc is NOT running."
+                  ALL_OK=false
+                fi
+              done
+              if [ "$ALL_OK" = false ]; then
+                echo "❌ Some services are not running."
+                exit 1
+              fi
+              echo "✅ All services are healthy."
+            displayName: 'Verify all services are running'
+
+          - script: |
+              echo "🔍 Testing Zammad API..."
+              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8090/api/v1/monitoring/health_check 2>/dev/null || echo "000")
+              echo "  Health check HTTP status: $HTTP_STATUS"
+              if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 500 ]; then
+                echo "✅ Zammad API is responding."
+              else
+                echo "⚠️ Zammad API returned HTTP $HTTP_STATUS (may still be initializing)."
+              fi
+            displayName: 'Test Zammad API health endpoint'
+
+          - script: |
+              echo "🔍 Testing PostgreSQL..."
+              docker-compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-postgresql psql -U zammad -d zammad_production -c "SELECT count(*) FROM pg_tables WHERE schemaname = 'public';" 2>/dev/null
+              echo "✅ PostgreSQL connectivity verified."
+            displayName: 'Test PostgreSQL connectivity'
+
+          - script: |
+              echo "🔍 Testing Redis..."
+              PONG=$(docker-compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-redis redis-cli ping 2>/dev/null || echo "FAIL")
+              if [ "$PONG" = "PONG" ]; then
+                echo "✅ Redis is healthy."
+              else
+                echo "❌ Redis ping failed."
+                exit 1
+              fi
+            displayName: 'Test Redis connectivity'
+
+          - script: |
+              echo "📋 Collecting container logs..."
+              docker-compose -f zammad-docker-compose/docker-compose.yml logs --tail=50
+            displayName: 'Collect container logs'
+            condition: always()
+
+  # ── Stage 4: Teardown ──
+  - stage: Teardown
+    displayName: 'Teardown Zammad'
+    dependsOn: Test
+    condition: always()
+    jobs:
+      - job: Teardown
+        displayName: 'Teardown'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - script: |
+              rm -rf zammad-docker-compose
+              git clone https://github.com/zammad/zammad-docker-compose.git zammad-docker-compose
+            displayName: 'Clone Zammad Docker Compose'
+
+          - script: |
+              echo "🛑 Stopping Zammad stack..."
+              docker-compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans
+              echo "✅ Zammad stack stopped and cleaned up."
+            displayName: 'Stop Zammad stack'

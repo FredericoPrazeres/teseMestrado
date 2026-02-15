@@ -10,8 +10,8 @@ RUN apt-get update && \
 RUN useradd -m azureagent && \
     echo "azureagent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Install Docker
-RUN apt-get install -y docker.io && \
+# Install Docker and docker-compose
+RUN apt-get install -y docker.io docker-compose && \
     usermod -aG docker azureagent
 
 # Install cAdvisor for monitoring
