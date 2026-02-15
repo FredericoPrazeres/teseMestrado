@@ -92,7 +92,7 @@ echo "🔍 STAGE 3: Test Zammad Deployment"
 echo "============================================"
 
 echo "🔍 Checking running services..."
-SERVICES=("zammad-nginx" "zammad-railsserver" "zammad-scheduler" "zammad-websocket" "zammad-postgresql" "zammad-redis" "zammad-memcached")
+SERVICES=("zammad-railsserver" "zammad-scheduler" "zammad-websocket" "zammad-postgresql" "zammad-redis" "zammad-memcached")
 ALL_OK=true
 for svc in "${SERVICES[@]}"; do
   if docker-compose -f "$COMPOSE_FILE" ps "$svc" 2>/dev/null | grep -q "Up"; then
