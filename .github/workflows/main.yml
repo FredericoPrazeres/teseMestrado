@@ -62,17 +62,16 @@ jobs:
         run: |
           echo "⏳ Waiting for Zammad init container to finish..."
           for i in $(seq 1 60); do
-            STATUS=$(docker-compose -f zammad-docker-compose/docker-compose.yml ps --format json zammad-init 2>/dev/null | jq -r '.State' 2>/dev/null || echo "running")
-            if [ "$STATUS" = "exited" ]; then
-              EXIT_CODE=$(docker-compose -f zammad-docker-compose/docker-compose.yml ps --format json zammad-init 2>/dev/null | jq -r '.ExitCode' 2>/dev/null || echo "1")
-              if [ "$EXIT_CODE" = "0" ]; then
-                echo "✅ Zammad init completed successfully."
-                exit 0
-              else
-                echo "❌ Zammad init failed with exit code $EXIT_CODE."
-                docker-compose -f zammad-docker-compose/docker-compose.yml logs zammad-init
-                exit 1
-              fi
+            # docker-compose V1: ps output shows "Exit 0" for successful completion
+            if docker-compose -f zammad-docker-compose/docker-compose.yml ps zammad-init 2>/dev/null | grep -q "Exit 0"; then
+              echo "✅ Zammad init completed successfully."
+              exit 0
+            fi
+            # Check if it exited with a non-zero code
+            if docker-compose -f zammad-docker-compose/docker-compose.yml ps zammad-init 2>/dev/null | grep -q "Exit"; then
+              echo "❌ Zammad init failed."
+              docker-compose -f zammad-docker-compose/docker-compose.yml logs zammad-init
+              exit 1
             fi
             echo "  Attempt $i/60 - Zammad init still running..."
             sleep 10
@@ -114,11 +113,10 @@ jobs:
           SERVICES=("zammad-nginx" "zammad-railsserver" "zammad-scheduler" "zammad-websocket" "zammad-postgresql" "zammad-redis" "zammad-memcached")
           ALL_OK=true
           for svc in "${SERVICES[@]}"; do
-            STATUS=$(docker-compose -f zammad-docker-compose/docker-compose.yml ps --format json "$svc" 2>/dev/null | jq -r '.State' 2>/dev/null || echo "missing")
-            if [ "$STATUS" = "running" ]; then
+            if docker-compose -f zammad-docker-compose/docker-compose.yml ps "$svc" 2>/dev/null | grep -q "Up"; then
               echo "  ✅ $svc is running."
             else
-              echo "  ❌ $svc is NOT running (state: $STATUS)."
+              echo "  ❌ $svc is NOT running."
               ALL_OK=false
             fi
           done
