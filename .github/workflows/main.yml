@@ -41,10 +41,7 @@ jobs:
         run: |
           echo "🚀 Starting Zammad application stack..."
           export NGINX_EXPOSE_PORT=8090
-          export ELASTICSEARCH_ENABLED=false
-          docker-compose -f zammad-docker-compose/docker-compose.yml up -d \
-            --scale zammad-elasticsearch=0 \
-            --scale zammad-backup=0
+          docker-compose -f zammad-docker-compose/docker-compose.yml up -d
           echo "✅ Zammad stack started."
 
       - name: Wait for PostgreSQL to be ready
@@ -80,23 +77,6 @@ jobs:
             sleep 10
           done
           echo "❌ Zammad init timed out."
-          exit 1
-
-      - name: Wait for Zammad Nginx to be healthy
-        run: |
-          echo "⏳ Waiting for Zammad web interface (Rails cold start takes a while)..."
-          # Give Rails time for initial boot before polling
-          sleep 30
-          for i in $(seq 1 60); do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8090 2>/dev/null || echo "000")
-            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
-              echo "✅ Zammad is reachable (HTTP $HTTP_STATUS)."
-              exit 0
-            fi
-            echo "  Attempt $i/60 - HTTP status: $HTTP_STATUS"
-            sleep 5
-          done
-          echo "❌ Zammad web interface failed to respond."
           exit 1
 
   test:
