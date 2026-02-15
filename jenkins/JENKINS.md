@@ -37,4 +37,5 @@ Correr o ngrok para criar um novo ip exposto: ngrok http http://localhost:8080
 
 
 
+
     
