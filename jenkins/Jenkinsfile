@@ -50,25 +50,6 @@ pipeline {
                 '''
 
                 sh '''
-                    echo "⏳ Waiting for Zammad init container to finish..."
-                    for i in $(seq 1 60); do
-                      if docker-compose -f "$COMPOSE_FILE" ps zammad-init 2>/dev/null | grep -q "Exit 0"; then
-                        echo "✅ Zammad init completed successfully."
-                        exit 0
-                      fi
-                      if docker-compose -f "$COMPOSE_FILE" ps zammad-init 2>/dev/null | grep -q "Exit"; then
-                        echo "❌ Zammad init failed."
-                        docker-compose -f "$COMPOSE_FILE" logs zammad-init
-                        exit 1
-                      fi
-                      echo "  Attempt $i/60 - Zammad init still running..."
-                      sleep 10
-                    done
-                    echo "❌ Zammad init timed out."
-                    exit 1
-                '''
-
-                sh '''
                     echo "⏳ Waiting for Zammad web interface..."
                     for i in $(seq 1 40); do
                       HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8090 2>/dev/null || echo "000")
