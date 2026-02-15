@@ -16,7 +16,7 @@ jobs:
       - name: Stop and remove existing Zammad containers
         run: |
           echo "🧹 Cleaning up old containers..."
-          docker compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans 2>/dev/null || true
+          docker-compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans 2>/dev/null || true
           docker system prune -f --volumes 2>/dev/null || true
           echo "✅ Cleanup complete."
 
@@ -31,14 +31,14 @@ jobs:
       - name: Start Zammad stack
         run: |
           echo "🚀 Starting Zammad application stack..."
-          docker compose -f zammad-docker-compose/docker-compose.yml up -d
+          docker-compose -f zammad-docker-compose/docker-compose.yml up -d
           echo "✅ Zammad stack started."
 
       - name: Wait for PostgreSQL to be ready
         run: |
           echo "⏳ Waiting for PostgreSQL..."
           for i in $(seq 1 30); do
-            if docker compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-postgresql pg_isready -U zammad > /dev/null 2>&1; then
+            if docker-compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-postgresql pg_isready -U zammad > /dev/null 2>&1; then
               echo "✅ PostgreSQL is ready."
               exit 0
             fi
@@ -52,15 +52,15 @@ jobs:
         run: |
           echo "⏳ Waiting for Zammad init container to finish..."
           for i in $(seq 1 60); do
-            STATUS=$(docker compose -f zammad-docker-compose/docker-compose.yml ps --format json zammad-init 2>/dev/null | jq -r '.State' 2>/dev/null || echo "running")
+            STATUS=$(docker-compose -f zammad-docker-compose/docker-compose.yml ps --format json zammad-init 2>/dev/null | jq -r '.State' 2>/dev/null || echo "running")
             if [ "$STATUS" = "exited" ]; then
-              EXIT_CODE=$(docker compose -f zammad-docker-compose/docker-compose.yml ps --format json zammad-init 2>/dev/null | jq -r '.ExitCode' 2>/dev/null || echo "1")
+              EXIT_CODE=$(docker-compose -f zammad-docker-compose/docker-compose.yml ps --format json zammad-init 2>/dev/null | jq -r '.ExitCode' 2>/dev/null || echo "1")
               if [ "$EXIT_CODE" = "0" ]; then
                 echo "✅ Zammad init completed successfully."
                 exit 0
               else
                 echo "❌ Zammad init failed with exit code $EXIT_CODE."
-                docker compose -f zammad-docker-compose/docker-compose.yml logs zammad-init
+                docker-compose -f zammad-docker-compose/docker-compose.yml logs zammad-init
                 exit 1
               fi
             fi
@@ -99,7 +99,7 @@ jobs:
           SERVICES=("zammad-nginx" "zammad-railsserver" "zammad-scheduler" "zammad-websocket" "zammad-postgresql" "zammad-redis" "zammad-memcached")
           ALL_OK=true
           for svc in "${SERVICES[@]}"; do
-            STATUS=$(docker compose -f zammad-docker-compose/docker-compose.yml ps --format json "$svc" 2>/dev/null | jq -r '.State' 2>/dev/null || echo "missing")
+            STATUS=$(docker-compose -f zammad-docker-compose/docker-compose.yml ps --format json "$svc" 2>/dev/null | jq -r '.State' 2>/dev/null || echo "missing")
             if [ "$STATUS" = "running" ]; then
               echo "  ✅ $svc is running."
             else
@@ -127,13 +127,13 @@ jobs:
       - name: Test PostgreSQL connectivity
         run: |
           echo "🔍 Testing PostgreSQL..."
-          docker compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-postgresql psql -U zammad -d zammad_production -c "SELECT count(*) FROM pg_tables WHERE schemaname = 'public';" 2>/dev/null
+          docker-compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-postgresql psql -U zammad -d zammad_production -c "SELECT count(*) FROM pg_tables WHERE schemaname = 'public';" 2>/dev/null
           echo "✅ PostgreSQL connectivity verified."
 
       - name: Test Redis connectivity
         run: |
           echo "🔍 Testing Redis..."
-          PONG=$(docker compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-redis redis-cli ping 2>/dev/null || echo "FAIL")
+          PONG=$(docker-compose -f zammad-docker-compose/docker-compose.yml exec -T zammad-redis redis-cli ping 2>/dev/null || echo "FAIL")
           if [ "$PONG" = "PONG" ]; then
             echo "✅ Redis is healthy."
           else
@@ -145,7 +145,7 @@ jobs:
         if: always()
         run: |
           echo "📋 Collecting container logs..."
-          docker compose -f zammad-docker-compose/docker-compose.yml logs --tail=50
+          docker-compose -f zammad-docker-compose/docker-compose.yml logs --tail=50
 
   teardown:
     name: Teardown Zammad
@@ -159,5 +159,5 @@ jobs:
       - name: Stop Zammad stack
         run: |
           echo "🛑 Stopping Zammad stack..."
-          docker compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans
+          docker-compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans
           echo "✅ Zammad stack stopped and cleaned up."
