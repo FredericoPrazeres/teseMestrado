@@ -16,7 +16,9 @@ jobs:
       - name: Stop and remove existing Zammad containers
         run: |
           echo "🧹 Cleaning up old containers..."
-          docker-compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans 2>/dev/null || true
+          if [ -d "zammad-docker-compose" ]; then
+            docker-compose -f zammad-docker-compose/docker-compose.yml down --volumes --remove-orphans 2>/dev/null || true
+          fi
           docker system prune -f --volumes 2>/dev/null || true
           echo "✅ Cleanup complete."
 
@@ -27,6 +29,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Clone Zammad Docker Compose
+        run: |
+          echo "📦 Cloning Zammad Docker Compose repository..."
+          rm -rf zammad-docker-compose
+          git clone https://github.com/zammad/zammad-docker-compose.git zammad-docker-compose
+          echo "✅ Zammad repo cloned."
 
       - name: Start Zammad stack
         run: |
@@ -93,6 +102,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Clone Zammad Docker Compose
+        run: |
+          rm -rf zammad-docker-compose
+          git clone https://github.com/zammad/zammad-docker-compose.git zammad-docker-compose
+
       - name: Verify all services are running
         run: |
           echo "🔍 Checking running services..."
@@ -155,6 +169,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Clone Zammad Docker Compose
+        run: |
+          rm -rf zammad-docker-compose
+          git clone https://github.com/zammad/zammad-docker-compose.git zammad-docker-compose
 
       - name: Stop Zammad stack
         run: |
