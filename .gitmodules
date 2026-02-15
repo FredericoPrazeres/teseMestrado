@@ -1,0 +1,3 @@
+[submodule "zammad-docker-compose"]
+	path = zammad-docker-compose
+	url = https://github.com/zammad/zammad-docker-compose.git

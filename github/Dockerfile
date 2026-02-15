@@ -3,8 +3,9 @@ FROM ubuntu:22.04
 ARG RUNNER_VERSION="2.327.1"
 
 RUN apt-get update && \
-    apt-get install -y curl git sudo && \
+    apt-get install -y curl git sudo jq docker.io docker-compose && \
     useradd -m runner && \
+    usermod -aG docker runner && \
     echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Install Node Exporter
