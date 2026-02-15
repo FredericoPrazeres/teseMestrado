@@ -7,7 +7,7 @@ ENV JENKINS_GROUP=jenkins
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y openjdk-21-jdk curl git sudo docker.io && \
+    apt-get install -y openjdk-21-jdk curl git sudo docker.io docker-compose && \
     groupadd -g 1000 ${JENKINS_GROUP} && \
     useradd -m -d ${JENKINS_HOME} -u 1000 -g ${JENKINS_GROUP} ${JENKINS_USER} && \
     echo "${JENKINS_USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -26,7 +26,7 @@ RUN chown -R jenkins:jenkins /home/scripts
 
 # Copy start script
 COPY start.sh /home/scripts/start.sh
-RUN chmod +x /home/scripts/start.sh\
+RUN chmod +x /home/scripts/start.sh
 
 USER ${JENKINS_USER}
 
