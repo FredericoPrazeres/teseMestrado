@@ -129,3 +129,4 @@ echo "============================================"
 echo "🛑 Stopping Zammad stack..."
 docker-compose -f "$COMPOSE_FILE" down --volumes --remove-orphans
 echo "✅ Zammad stack stopped and cleaned up."
+
