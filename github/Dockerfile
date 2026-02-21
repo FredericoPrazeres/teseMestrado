@@ -3,9 +3,10 @@ FROM ubuntu:22.04
 ARG RUNNER_VERSION="2.327.1"
 
 RUN apt-get update && \
-    apt-get install -y curl git sudo && \
+    apt-get install -y curl git sudo docker.io jq && \
     useradd -m runner && \
-    echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    usermod -aG docker runner
 
 # Install Node Exporter
 #RUN curl -LO https://github.com/prometheus/node_exporter/releases/download/v1.8.1/node_exporter-1.8.1.linux-amd64.tar.gz && \
