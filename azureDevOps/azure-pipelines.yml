@@ -1,18 +1,206 @@
 trigger:
   branches:
     include:
-      - master
+      - waitTest
 
 pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: BuildAndTest
-    displayName: 'Test Pipeline'
+  - job: RemoveContainers
+    displayName: 'Remove Containers'
     steps:
       - checkout: self
         displayName: 'Checkout code'
 
-      - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+      - script: echo "Step 1 — waiting..." && sleep 3
+        displayName: 'Step 1'
+
+      - script: echo "Step 2 — waiting..." && sleep 3
+        displayName: 'Step 2'
+
+      - script: echo "Step 3 — waiting..." && sleep 3
+        displayName: 'Step 3'
+
+      - script: echo "Step 4 — waiting..." && sleep 3
+        displayName: 'Step 4'
+
+      - script: echo "Step 5 — waiting..." && sleep 3
+        displayName: 'Step 5'
+
+      - script: echo "Step 6 — waiting..." && sleep 3
+        displayName: 'Step 6'
+
+      - script: echo "Step 7 — waiting..." && sleep 3
+        displayName: 'Step 7'
+
+      - script: echo "Step 8 — waiting..." && sleep 3
+        displayName: 'Step 8'
+
+      - script: echo "Step 9 — waiting..." && sleep 3
+        displayName: 'Step 9'
+
+      - script: echo "Step 10 — waiting..." && sleep 3
+        displayName: 'Step 10'
+
+      - script: echo "Step 11 — waiting..." && sleep 3
+        displayName: 'Step 11'
+
+      - script: echo "Step 12 — waiting..." && sleep 3
+        displayName: 'Step 12'
+
+      - script: echo "Step 13 — waiting..." && sleep 3
+        displayName: 'Step 13'
+
+      - script: echo "Step 14 — waiting..." && sleep 3
+        displayName: 'Step 14'
+
+      - script: echo "Step 15 — done!"
+        displayName: 'Step 15'
+
+  - job: Build
+    displayName: 'Build'
+    dependsOn: RemoveContainers
+    steps:
+      - script: echo "Build Step 1 — waiting..." && sleep 3
+        displayName: 'Step 1'
+
+      - script: echo "Build Step 2 — waiting..." && sleep 3
+        displayName: 'Step 2'
+
+      - script: echo "Build Step 3 — waiting..." && sleep 3
+        displayName: 'Step 3'
+
+      - script: echo "Build Step 4 — waiting..." && sleep 3
+        displayName: 'Step 4'
+
+      - script: echo "Build Step 5 — waiting..." && sleep 3
+        displayName: 'Step 5'
+
+      - script: echo "Build Step 6 — waiting..." && sleep 3
+        displayName: 'Step 6'
+
+      - script: echo "Build Step 7 — waiting..." && sleep 3
+        displayName: 'Step 7'
+
+      - script: echo "Build Step 8 — waiting..." && sleep 3
+        displayName: 'Step 8'
+
+      - script: echo "Build Step 9 — waiting..." && sleep 3
+        displayName: 'Step 9'
+
+      - script: echo "Build Step 10 — waiting..." && sleep 3
+        displayName: 'Step 10'
+
+      - script: echo "Build Step 11 — waiting..." && sleep 3
+        displayName: 'Step 11'
+
+      - script: echo "Build Step 12 — waiting..." && sleep 3
+        displayName: 'Step 12'
+
+      - script: echo "Build Step 13 — waiting..." && sleep 3
+        displayName: 'Step 13'
+
+      - script: echo "Build Step 14 — waiting..." && sleep 3
+        displayName: 'Step 14'
+
+      - script: echo "Build Step 15 — done!"
+        displayName: 'Step 15'
+
+  - job: Test
+    displayName: 'Test'
+    dependsOn: Build
+    steps:
+      - script: echo "Test Step 1 — waiting..." && sleep 3
+        displayName: 'Step 1'
+
+      - script: echo "Test Step 2 — waiting..." && sleep 3
+        displayName: 'Step 2'
+
+      - script: echo "Test Step 3 — waiting..." && sleep 3
+        displayName: 'Step 3'
+
+      - script: echo "Test Step 4 — waiting..." && sleep 3
+        displayName: 'Step 4'
+
+      - script: echo "Test Step 5 — waiting..." && sleep 3
+        displayName: 'Step 5'
+
+      - script: echo "Test Step 6 — waiting..." && sleep 3
+        displayName: 'Step 6'
+
+      - script: echo "Test Step 7 — waiting..." && sleep 3
+        displayName: 'Step 7'
+
+      - script: echo "Test Step 8 — waiting..." && sleep 3
+        displayName: 'Step 8'
+
+      - script: echo "Test Step 9 — waiting..." && sleep 3
+        displayName: 'Step 9'
+
+      - script: echo "Test Step 10 — waiting..." && sleep 3
+        displayName: 'Step 10'
+
+      - script: echo "Test Step 11 — waiting..." && sleep 3
+        displayName: 'Step 11'
+
+      - script: echo "Test Step 12 — waiting..." && sleep 3
+        displayName: 'Step 12'
+
+      - script: echo "Test Step 13 — waiting..." && sleep 3
+        displayName: 'Step 13'
+
+      - script: echo "Test Step 14 — waiting..." && sleep 3
+        displayName: 'Step 14'
+
+      - script: echo "Test Step 15 — done!"
+        displayName: 'Step 15'
+
+  - job: Deploy
+    displayName: 'Deploy'
+    dependsOn: Test
+    steps:
+      - script: echo "Deploy Step 1 — waiting..." && sleep 3
+        displayName: 'Step 1'
+
+      - script: echo "Deploy Step 2 — waiting..." && sleep 3
+        displayName: 'Step 2'
+
+      - script: echo "Deploy Step 3 — waiting..." && sleep 3
+        displayName: 'Step 3'
+
+      - script: echo "Deploy Step 4 — waiting..." && sleep 3
+        displayName: 'Step 4'
+
+      - script: echo "Deploy Step 5 — waiting..." && sleep 3
+        displayName: 'Step 5'
+
+      - script: echo "Deploy Step 6 — waiting..." && sleep 3
+        displayName: 'Step 6'
+
+      - script: echo "Deploy Step 7 — waiting..." && sleep 3
+        displayName: 'Step 7'
+
+      - script: echo "Deploy Step 8 — waiting..." && sleep 3
+        displayName: 'Step 8'
+
+      - script: echo "Deploy Step 9 — waiting..." && sleep 3
+        displayName: 'Step 9'
+
+      - script: echo "Deploy Step 10 — waiting..." && sleep 3
+        displayName: 'Step 10'
+
+      - script: echo "Deploy Step 11 — waiting..." && sleep 3
+        displayName: 'Step 11'
+
+      - script: echo "Deploy Step 12 — waiting..." && sleep 3
+        displayName: 'Step 12'
+
+      - script: echo "Deploy Step 13 — waiting..." && sleep 3
+        displayName: 'Step 13'
+
+      - script: echo "Deploy Step 14 — waiting..." && sleep 3
+        displayName: 'Step 14'
+
+      - script: echo "Deploy Step 15 — done!"
+        displayName: 'Step 15'
