@@ -26,7 +26,7 @@ RUN chown -R jenkins:jenkins /home/scripts
 
 # Copy start script
 COPY start.sh /home/scripts/start.sh
-RUN chmod +x /home/scripts/start.sh\
+RUN chmod +x /home/scripts/start.sh
 
 USER ${JENKINS_USER}
 

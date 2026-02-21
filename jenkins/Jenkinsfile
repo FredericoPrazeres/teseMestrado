@@ -1,0 +1,198 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Remove Containers') {
+            steps {
+                echo 'Step 1 — waiting...'
+                sleep 3
+
+                echo 'Step 2 — waiting...'
+                sleep 3
+
+                echo 'Step 3 — waiting...'
+                sleep 3
+
+                echo 'Step 4 — waiting...'
+                sleep 3
+
+                echo 'Step 5 — waiting...'
+                sleep 3
+
+                echo 'Step 6 — waiting...'
+                sleep 3
+
+                echo 'Step 7 — waiting...'
+                sleep 3
+
+                echo 'Step 8 — waiting...'
+                sleep 3
+
+                echo 'Step 9 — waiting...'
+                sleep 3
+
+                echo 'Step 10 — waiting...'
+                sleep 3
+
+                echo 'Step 11 — waiting...'
+                sleep 3
+
+                echo 'Step 12 — waiting...'
+                sleep 3
+
+                echo 'Step 13 — waiting...'
+                sleep 3
+
+                echo 'Step 14 — waiting...'
+                sleep 3
+
+                echo 'Step 15 — done!'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Build Step 1 — waiting...'
+                sleep 3
+
+                echo 'Build Step 2 — waiting...'
+                sleep 3
+
+                echo 'Build Step 3 — waiting...'
+                sleep 3
+
+                echo 'Build Step 4 — waiting...'
+                sleep 3
+
+                echo 'Build Step 5 — waiting...'
+                sleep 3
+
+                echo 'Build Step 6 — waiting...'
+                sleep 3
+
+                echo 'Build Step 7 — waiting...'
+                sleep 3
+
+                echo 'Build Step 8 — waiting...'
+                sleep 3
+
+                echo 'Build Step 9 — waiting...'
+                sleep 3
+
+                echo 'Build Step 10 — waiting...'
+                sleep 3
+
+                echo 'Build Step 11 — waiting...'
+                sleep 3
+
+                echo 'Build Step 12 — waiting...'
+                sleep 3
+
+                echo 'Build Step 13 — waiting...'
+                sleep 3
+
+                echo 'Build Step 14 — waiting...'
+                sleep 3
+
+                echo 'Build Step 15 — done!'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Test Step 1 — waiting...'
+                sleep 3
+
+                echo 'Test Step 2 — waiting...'
+                sleep 3
+
+                echo 'Test Step 3 — waiting...'
+                sleep 3
+
+                echo 'Test Step 4 — waiting...'
+                sleep 3
+
+                echo 'Test Step 5 — waiting...'
+                sleep 3
+
+                echo 'Test Step 6 — waiting...'
+                sleep 3
+
+                echo 'Test Step 7 — waiting...'
+                sleep 3
+
+                echo 'Test Step 8 — waiting...'
+                sleep 3
+
+                echo 'Test Step 9 — waiting...'
+                sleep 3
+
+                echo 'Test Step 10 — waiting...'
+                sleep 3
+
+                echo 'Test Step 11 — waiting...'
+                sleep 3
+
+                echo 'Test Step 12 — waiting...'
+                sleep 3
+
+                echo 'Test Step 13 — waiting...'
+                sleep 3
+
+                echo 'Test Step 14 — waiting...'
+                sleep 3
+
+                echo 'Test Step 15 — done!'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploy Step 1 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 2 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 3 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 4 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 5 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 6 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 7 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 8 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 9 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 10 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 11 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 12 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 13 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 14 — waiting...'
+                sleep 3
+
+                echo 'Deploy Step 15 — done!'
+            }
+        }
+    }
+}
+
