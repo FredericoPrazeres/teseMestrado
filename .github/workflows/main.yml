@@ -6,10 +6,10 @@ on:
       - waitTest
 
 jobs:
-  remove-containers:
+  wait1:
     runs-on: self-hosted
     steps:
-      - name: Hello World
+      - name: Wait Step 1
         uses: actions/checkout@v4
 
       - name: Step 1
@@ -43,163 +43,115 @@ jobs:
         run: echo "Step 10 — waiting..." && sleep 3
 
       - name: Step 11
-        run: echo "Step 11 — waiting..." && sleep 3
+        run: echo "Step 11 — done!"
 
-      - name: Step 12
-        run: echo "Step 12 — waiting..." && sleep 3
-
-      - name: Step 13
-        run: echo "Step 13 — waiting..." && sleep 3
-
-      - name: Step 14
-        run: echo "Step 14 — waiting..." && sleep 3
-
-      - name: Step 15
-        run: echo "Step 15 — done!"
-
-  build:
+  wait2:
     runs-on: self-hosted
-    needs: remove-containers
+    needs: wait1
     steps:
       - name: Step 1
-        run: echo "Build Step 1 — waiting..." && sleep 3
+        run: echo "Wait Step 1 — waiting..." && sleep 3
 
       - name: Step 2
-        run: echo "Build Step 2 — waiting..." && sleep 3
+        run: echo "Wait Step 2 — waiting..." && sleep 3
 
       - name: Step 3
-        run: echo "Build Step 3 — waiting..." && sleep 3
+        run: echo "Wait Step 3 — waiting..." && sleep 3
 
       - name: Step 4
-        run: echo "Build Step 4 — waiting..." && sleep 3
+        run: echo "Wait Step 4 — waiting..." && sleep 3
 
       - name: Step 5
-        run: echo "Build Step 5 — waiting..." && sleep 3
+        run: echo "Wait Step 5 — waiting..." && sleep 3
 
       - name: Step 6
-        run: echo "Build Step 6 — waiting..." && sleep 3
+        run: echo "Wait Step 6 — waiting..." && sleep 3
 
       - name: Step 7
-        run: echo "Build Step 7 — waiting..." && sleep 3
+        run: echo "Wait Step 7 — waiting..." && sleep 3
 
       - name: Step 8
-        run: echo "Build Step 8 — waiting..." && sleep 3
+        run: echo "Wait Step 8 — waiting..." && sleep 3
 
       - name: Step 9
-        run: echo "Build Step 9 — waiting..." && sleep 3
+        run: echo "Wait Step 9 — waiting..." && sleep 3
 
       - name: Step 10
-        run: echo "Build Step 10 — waiting..." && sleep 3
+        run: echo "Wait Step 10 — waiting..." && sleep 3
 
       - name: Step 11
-        run: echo "Build Step 11 — waiting..." && sleep 3
+        run: echo "Wait Step 11 — done!"
 
-      - name: Step 12
-        run: echo "Build Step 12 — waiting..." && sleep 3
-
-      - name: Step 13
-        run: echo "Build Step 13 — waiting..." && sleep 3
-
-      - name: Step 14
-        run: echo "Build Step 14 — waiting..." && sleep 3
-
-      - name: Step 15
-        run: echo "Build Step 15 — done!"
-
-  test:
+  wait3:
     runs-on: self-hosted
-    needs: build
+    needs: wait2
     steps:
       - name: Step 1
-        run: echo "Test Step 1 — waiting..." && sleep 3
+        run: echo "Wait Step 1 — waiting..." && sleep 3
 
       - name: Step 2
-        run: echo "Test Step 2 — waiting..." && sleep 3
+        run: echo "Wait Step 2 — waiting..." && sleep 3
 
       - name: Step 3
-        run: echo "Test Step 3 — waiting..." && sleep 3
+        run: echo "Wait Step 3 — waiting..." && sleep 3
 
       - name: Step 4
-        run: echo "Test Step 4 — waiting..." && sleep 3
+        run: echo "Wait Step 4 — waiting..." && sleep 3
 
       - name: Step 5
-        run: echo "Test Step 5 — waiting..." && sleep 3
+        run: echo "Wait Step 5 — waiting..." && sleep 3
 
       - name: Step 6
-        run: echo "Test Step 6 — waiting..." && sleep 3
+        run: echo "Wait Step 6 — waiting..." && sleep 3
 
       - name: Step 7
-        run: echo "Test Step 7 — waiting..." && sleep 3
+        run: echo "Wait Step 7 — waiting..." && sleep 3
 
       - name: Step 8
-        run: echo "Test Step 8 — waiting..." && sleep 3
+        run: echo "Wait Step 8 — waiting..." && sleep 3
 
       - name: Step 9
-        run: echo "Test Step 9 — waiting..." && sleep 3
+        run: echo "Wait Step 9 — waiting..." && sleep 3
 
       - name: Step 10
-        run: echo "Test Step 10 — waiting..." && sleep 3
+        run: echo "Wait Step 10 — waiting..." && sleep 3
 
       - name: Step 11
-        run: echo "Test Step 11 — waiting..." && sleep 3
+        run: echo "Wait Step 11 — done!"
 
-      - name: Step 12
-        run: echo "Test Step 12 — waiting..." && sleep 3
-
-      - name: Step 13
-        run: echo "Test Step 13 — waiting..." && sleep 3
-
-      - name: Step 14
-        run: echo "Test Step 14 — waiting..." && sleep 3
-
-      - name: Step 15
-        run: echo "Test Step 15 — done!"
-
-  deploy:
+  wait4:
     runs-on: self-hosted
-    needs: test
+    needs: wait3
     steps:
       - name: Step 1
-        run: echo "Deploy Step 1 — waiting..." && sleep 3
+        run: echo "Wait Step 1 — waiting..." && sleep 3
 
       - name: Step 2
-        run: echo "Deploy Step 2 — waiting..." && sleep 3
+        run: echo "Wait Step 2 — waiting..." && sleep 3
 
       - name: Step 3
-        run: echo "Deploy Step 3 — waiting..." && sleep 3
+        run: echo "Wait Step 3 — waiting..." && sleep 3
 
       - name: Step 4
-        run: echo "Deploy Step 4 — waiting..." && sleep 3
+        run: echo "Wait Step 4 — waiting..." && sleep 3
 
       - name: Step 5
-        run: echo "Deploy Step 5 — waiting..." && sleep 3
+        run: echo "Wait Step 5 — waiting..." && sleep 3
 
       - name: Step 6
-        run: echo "Deploy Step 6 — waiting..." && sleep 3
+        run: echo "Wait Step 6 — waiting..." && sleep 3
 
       - name: Step 7
-        run: echo "Deploy Step 7 — waiting..." && sleep 3
+        run: echo "Wait Step 7 — waiting..." && sleep 3
 
       - name: Step 8
-        run: echo "Deploy Step 8 — waiting..." && sleep 3
+        run: echo "Wait Step 8 — waiting..." && sleep 3
 
       - name: Step 9
-        run: echo "Deploy Step 9 — waiting..." && sleep 3
+        run: echo "Wait Step 9 — waiting..." && sleep 3
 
       - name: Step 10
-        run: echo "Deploy Step 10 — waiting..." && sleep 3
-
-      - name: Step 11
-        run: echo "Deploy Step 11 — waiting..." && sleep 3
-
-      - name: Step 12
-        run: echo "Deploy Step 12 — waiting..." && sleep 3
-
-      - name: Step 13
-        run: echo "Deploy Step 13 — waiting..." && sleep 3
-
-      - name: Step 14
-        run: echo "Deploy Step 14 — waiting..." && sleep 3
+        run: echo "Wait Step 10 — waiting..." && sleep 3
 
       - name: Step 15
-        run: echo "Deploy Step 15 — done!"
+        run: echo "Wait Step 15 — done!"
