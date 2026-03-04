@@ -6,152 +6,232 @@ on:
       - waitTest
 
 jobs:
-  wait1:
+  job1:
     runs-on: self-hosted
     steps:
-      - name: Wait Step 1
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Step 1
-        run: echo "Step 1 — waiting..." && sleep 3
+        run: echo "Job 1 - Step 1 — waiting..." && sleep 2
 
       - name: Step 2
-        run: echo "Step 2 — waiting..." && sleep 3
+        run: echo "Job 1 - Step 2 — waiting..." && sleep 2
 
       - name: Step 3
-        run: echo "Step 3 — waiting..." && sleep 3
+        run: echo "Job 1 - Step 3 — waiting..." && sleep 2
 
       - name: Step 4
-        run: echo "Step 4 — waiting..." && sleep 3
+        run: echo "Job 1 - Step 4 — waiting..." && sleep 2
 
       - name: Step 5
-        run: echo "Step 5 — waiting..." && sleep 3
+        run: echo "Job 1 - Step 5 — done!" && sleep 2
 
-      - name: Step 6
-        run: echo "Step 6 — waiting..." && sleep 3
-
-      - name: Step 7
-        run: echo "Step 7 — waiting..." && sleep 3
-
-      - name: Step 8
-        run: echo "Step 8 — waiting..." && sleep 3
-
-      - name: Step 9
-        run: echo "Step 9 — waiting..." && sleep 3
-
-      - name: Step 10
-        run: echo "Step 10 — waiting..." && sleep 3
-
-      - name: Step 11
-        run: echo "Step 11 — done!"
-
-  wait2:
+  job2:
     runs-on: self-hosted
-    needs: wait1
+    needs: job1
     steps:
       - name: Step 1
-        run: echo "Wait Step 1 — waiting..." && sleep 3
+        run: echo "Job 2 - Step 1 — waiting..." && sleep 2
 
       - name: Step 2
-        run: echo "Wait Step 2 — waiting..." && sleep 3
+        run: echo "Job 2 - Step 2 — waiting..." && sleep 2
 
       - name: Step 3
-        run: echo "Wait Step 3 — waiting..." && sleep 3
+        run: echo "Job 2 - Step 3 — waiting..." && sleep 2
 
       - name: Step 4
-        run: echo "Wait Step 4 — waiting..." && sleep 3
+        run: echo "Job 2 - Step 4 — waiting..." && sleep 2
 
       - name: Step 5
-        run: echo "Wait Step 5 — waiting..." && sleep 3
+        run: echo "Job 2 - Step 5 — done!" && sleep 2
 
-      - name: Step 6
-        run: echo "Wait Step 6 — waiting..." && sleep 3
-
-      - name: Step 7
-        run: echo "Wait Step 7 — waiting..." && sleep 3
-
-      - name: Step 8
-        run: echo "Wait Step 8 — waiting..." && sleep 3
-
-      - name: Step 9
-        run: echo "Wait Step 9 — waiting..." && sleep 3
-
-      - name: Step 10
-        run: echo "Wait Step 10 — waiting..." && sleep 3
-
-      - name: Step 11
-        run: echo "Wait Step 11 — done!"
-
-  wait3:
+  job3:
     runs-on: self-hosted
-    needs: wait2
+    needs: job2
     steps:
       - name: Step 1
-        run: echo "Wait Step 1 — waiting..." && sleep 3
+        run: echo "Job 3 - Step 1 — waiting..." && sleep 2
 
       - name: Step 2
-        run: echo "Wait Step 2 — waiting..." && sleep 3
+        run: echo "Job 3 - Step 2 — waiting..." && sleep 2
 
       - name: Step 3
-        run: echo "Wait Step 3 — waiting..." && sleep 3
+        run: echo "Job 3 - Step 3 — waiting..." && sleep 2
 
       - name: Step 4
-        run: echo "Wait Step 4 — waiting..." && sleep 3
+        run: echo "Job 3 - Step 4 — waiting..." && sleep 2
 
       - name: Step 5
-        run: echo "Wait Step 5 — waiting..." && sleep 3
+        run: echo "Job 3 - Step 5 — done!" && sleep 2
 
-      - name: Step 6
-        run: echo "Wait Step 6 — waiting..." && sleep 3
-
-      - name: Step 7
-        run: echo "Wait Step 7 — waiting..." && sleep 3
-
-      - name: Step 8
-        run: echo "Wait Step 8 — waiting..." && sleep 3
-
-      - name: Step 9
-        run: echo "Wait Step 9 — waiting..." && sleep 3
-
-      - name: Step 10
-        run: echo "Wait Step 10 — waiting..." && sleep 3
-
-      - name: Step 11
-        run: echo "Wait Step 11 — done!"
-
-  wait4:
+  job4:
     runs-on: self-hosted
-    needs: wait3
+    needs: job3
     steps:
       - name: Step 1
-        run: echo "Wait Step 1 — waiting..." && sleep 3
+        run: echo "Job 4 - Step 1 — waiting..." && sleep 2
 
       - name: Step 2
-        run: echo "Wait Step 2 — waiting..." && sleep 3
+        run: echo "Job 4 - Step 2 — waiting..." && sleep 2
 
       - name: Step 3
-        run: echo "Wait Step 3 — waiting..." && sleep 3
+        run: echo "Job 4 - Step 3 — waiting..." && sleep 2
 
       - name: Step 4
-        run: echo "Wait Step 4 — waiting..." && sleep 3
+        run: echo "Job 4 - Step 4 — waiting..." && sleep 2
 
       - name: Step 5
-        run: echo "Wait Step 5 — waiting..." && sleep 3
+        run: echo "Job 4 - Step 5 — done!" && sleep 2
 
-      - name: Step 6
-        run: echo "Wait Step 6 — waiting..." && sleep 3
+  job5:
+    runs-on: self-hosted
+    needs: job4
+    steps:
+      - name: Step 1
+        run: echo "Job 5 - Step 1 — waiting..." && sleep 2
 
-      - name: Step 7
-        run: echo "Wait Step 7 — waiting..." && sleep 3
+      - name: Step 2
+        run: echo "Job 5 - Step 2 — waiting..." && sleep 2
 
-      - name: Step 8
-        run: echo "Wait Step 8 — waiting..." && sleep 3
+      - name: Step 3
+        run: echo "Job 5 - Step 3 — waiting..." && sleep 2
 
-      - name: Step 9
-        run: echo "Wait Step 9 — waiting..." && sleep 3
+      - name: Step 4
+        run: echo "Job 5 - Step 4 — waiting..." && sleep 2
 
-      - name: Step 10
-        run: echo "Wait Step 10 — waiting..." && sleep 3
+      - name: Step 5
+        run: echo "Job 5 - Step 5 — done!" && sleep 2
 
-      - name: Step 15
-        run: echo "Wait Step 15 — done!"
+  job6:
+    runs-on: self-hosted
+    needs: job5
+    steps:
+      - name: Step 1
+        run: echo "Job 6 - Step 1 — waiting..." && sleep 2
+
+      - name: Step 2
+        run: echo "Job 6 - Step 2 — waiting..." && sleep 2
+
+      - name: Step 3
+        run: echo "Job 6 - Step 3 — waiting..." && sleep 2
+
+      - name: Step 4
+        run: echo "Job 6 - Step 4 — waiting..." && sleep 2
+
+      - name: Step 5
+        run: echo "Job 6 - Step 5 — done!" && sleep 2
+
+  job7:
+    runs-on: self-hosted
+    needs: job6
+    steps:
+      - name: Step 1
+        run: echo "Job 7 - Step 1 — waiting..." && sleep 2
+
+      - name: Step 2
+        run: echo "Job 7 - Step 2 — waiting..." && sleep 2
+
+      - name: Step 3
+        run: echo "Job 7 - Step 3 — waiting..." && sleep 2
+
+      - name: Step 4
+        run: echo "Job 7 - Step 4 — waiting..." && sleep 2
+
+      - name: Step 5
+        run: echo "Job 7 - Step 5 — done!" && sleep 2
+
+  job8:
+    runs-on: self-hosted
+    needs: job7
+    steps:
+      - name: Step 1
+        run: echo "Job 8 - Step 1 — waiting..." && sleep 2
+
+      - name: Step 2
+        run: echo "Job 8 - Step 2 — waiting..." && sleep 2
+
+      - name: Step 3
+        run: echo "Job 8 - Step 3 — waiting..." && sleep 2
+
+      - name: Step 4
+        run: echo "Job 8 - Step 4 — waiting..." && sleep 2
+
+      - name: Step 5
+        run: echo "Job 8 - Step 5 — done!" && sleep 2
+
+  job9:
+    runs-on: self-hosted
+    needs: job8
+    steps:
+      - name: Step 1
+        run: echo "Job 9 - Step 1 — waiting..." && sleep 2
+
+      - name: Step 2
+        run: echo "Job 9 - Step 2 — waiting..." && sleep 2
+
+      - name: Step 3
+        run: echo "Job 9 - Step 3 — waiting..." && sleep 2
+
+      - name: Step 4
+        run: echo "Job 9 - Step 4 — waiting..." && sleep 2
+
+      - name: Step 5
+        run: echo "Job 9 - Step 5 — done!" && sleep 2
+
+  job10:
+    runs-on: self-hosted
+    needs: job9
+    steps:
+      - name: Step 1
+        run: echo "Job 10 - Step 1 — waiting..." && sleep 2
+
+      - name: Step 2
+        run: echo "Job 10 - Step 2 — waiting..." && sleep 2
+
+      - name: Step 3
+        run: echo "Job 10 - Step 3 — waiting..." && sleep 2
+
+      - name: Step 4
+        run: echo "Job 10 - Step 4 — waiting..." && sleep 2
+
+      - name: Step 5
+        run: echo "Job 10 - Step 5 — done!" && sleep 2
+
+  job11:
+    runs-on: self-hosted
+    needs: job10
+    steps:
+      - name: Step 1
+        run: echo "Job 11 - Step 1 — waiting..." && sleep 2
+
+      - name: Step 2
+        run: echo "Job 11 - Step 2 — waiting..." && sleep 2
+
+      - name: Step 3
+        run: echo "Job 11 - Step 3 — waiting..." && sleep 2
+
+      - name: Step 4
+        run: echo "Job 11 - Step 4 — waiting..." && sleep 2
+
+      - name: Step 5
+        run: echo "Job 11 - Step 5 — done!" && sleep 2
+
+  job12:
+    runs-on: self-hosted
+    needs: job11
+    steps:
+      - name: Step 1
+        run: echo "Job 12 - Step 1 — waiting..." && sleep 2
+
+      - name: Step 2
+        run: echo "Job 12 - Step 2 — waiting..." && sleep 2
+
+      - name: Step 3
+        run: echo "Job 12 - Step 3 — waiting..." && sleep 2
+
+      - name: Step 4
+        run: echo "Job 12 - Step 4 — waiting..." && sleep 2
+
+      - name: Step 5
+        run: echo "Job 12 - Step 5 — done!" && sleep 2
