@@ -1,6 +1,6 @@
 FROM ubuntu:22.04
 
-ARG AGENT_VERSION=4.261.0
+ARG AGENT_VERSION=4.269.0
 
 # Install dependencies
 RUN apt-get update && \
