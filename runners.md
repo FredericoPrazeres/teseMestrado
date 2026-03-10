@@ -13,4 +13,17 @@
         Tese Mestrado Pool
         ./run.sh
     
-    
+# Github
+
+    Para fazer download do github
+        curl -o actions-runner-osx-arm64-2.332.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.332.0/actions-runner-osx-arm64-2.332.0.tar.gz    
+    Para dar unzip
+        tar zxvf vsts-agent-osx-arm64.tar.gz
+    Para permitir executar o runner dentro da pasta:
+        xattr -r -d com.apple.quarantine "/Users/fredericoprazeres/Tese/runners/azure"
+    Para o configurar
+        ./config.sh
+        Server: https://dev.azure.com/fc56269/
+        Personal Access Token
+        Tese Mestrado Pool
+        ./run.sh
