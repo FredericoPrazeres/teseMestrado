@@ -27,4 +27,7 @@
         Personal Access Token
         Tese Mestrado Pool
         ./run.sh
+
+    1 - Ao tentar correr varios Jobs o runner pode ter falhas na comunicaçao levando a execuçoes mais lentas!
+    2 - 
         
