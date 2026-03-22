@@ -11,34 +11,68 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Run
+        run: echo "Job 1 — waiting..." && sleep 3
 
-      - name: Step 1
-        run: echo "Job 1 - Step 1 — waiting..." && sleep 3
+  job2:
+    runs-on: self-hosted
+    needs: job1
+    steps:
+      - name: Run
+        run: echo "Job 2 — waiting..." && sleep 3
 
-      - name: Step 2
-        run: echo "Job 1 - Step 2 — waiting..." && sleep 3
+  job3:
+    runs-on: self-hosted
+    needs: job2
+    steps:
+      - name: Run
+        run: echo "Job 3 — waiting..." && sleep 3
 
-      - name: Step 3
-        run: echo "Job 1 - Step 3 — waiting..." && sleep 3
+  job4:
+    runs-on: self-hosted
+    needs: job3
+    steps:
+      - name: Run
+        run: echo "Job 4 — waiting..." && sleep 3
 
-      - name: Step 4
-        run: echo "Job 1 - Step 4 — waiting..." && sleep 3
+  job5:
+    runs-on: self-hosted
+    needs: job4
+    steps:
+      - name: Run
+        run: echo "Job 5 — waiting..." && sleep 3
 
-      - name: Step 5
-        run: echo "Job 1 - Step 5 — waiting..." && sleep 3
+  job6:
+    runs-on: self-hosted
+    needs: job5
+    steps:
+      - name: Run
+        run: echo "Job 6 — waiting..." && sleep 3
 
-      - name: Step 6
-        run: echo "Job 1 - Step 6 — waiting..." && sleep 3
+  job7:
+    runs-on: self-hosted
+    needs: job6
+    steps:
+      - name: Run
+        run: echo "Job 7 — waiting..." && sleep 3
 
-      - name: Step 7
-        run: echo "Job 1 - Step 7 — waiting..." && sleep 3
+  job8:
+    runs-on: self-hosted
+    needs: job7
+    steps:
+      - name: Run
+        run: echo "Job 8 — waiting..." && sleep 3
 
-      - name: Step 8
-        run: echo "Job 1 - Step 8 — waiting..." && sleep 3
+  job9:
+    runs-on: self-hosted
+    needs: job8
+    steps:
+      - name: Run
+        run: echo "Job 9 — waiting..." && sleep 3
 
-      - name: Step 9
-        run: echo "Job 1 - Step 9 — waiting..." && sleep 3
-
-      - name: Step 10
-        run: echo "Job 1 - Step 10 — done!" && sleep 3
-        
+  job10:
+    runs-on: self-hosted
+    needs: job9
+    steps:
+      - name: Run
+        run: echo "Job 10 — done!" && sleep 3
