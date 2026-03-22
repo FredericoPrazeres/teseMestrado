@@ -12,33 +12,68 @@ jobs:
     steps:
       - checkout: self
         displayName: 'Checkout code'
+      - script: echo "Job 1 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 1 — waiting..." && sleep 3
-        displayName: 'Step 1'
+  - job: job2
+    displayName: 'Job 2'
+    dependsOn: job1
+    steps:
+      - script: echo "Job 2 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 2 — waiting..." && sleep 3
-        displayName: 'Step 2'
+  - job: job3
+    displayName: 'Job 3'
+    dependsOn: job2
+    steps:
+      - script: echo "Job 3 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 3 — waiting..." && sleep 3
-        displayName: 'Step 3'
+  - job: job4
+    displayName: 'Job 4'
+    dependsOn: job3
+    steps:
+      - script: echo "Job 4 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 4 — waiting..." && sleep 3
-        displayName: 'Step 4'
+  - job: job5
+    displayName: 'Job 5'
+    dependsOn: job4
+    steps:
+      - script: echo "Job 5 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 5 — waiting..." && sleep 3
-        displayName: 'Step 5'
+  - job: job6
+    displayName: 'Job 6'
+    dependsOn: job5
+    steps:
+      - script: echo "Job 6 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 6 — waiting..." && sleep 3
-        displayName: 'Step 6'
+  - job: job7
+    displayName: 'Job 7'
+    dependsOn: job6
+    steps:
+      - script: echo "Job 7 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 7 — waiting..." && sleep 3
-        displayName: 'Step 7'
+  - job: job8
+    displayName: 'Job 8'
+    dependsOn: job7
+    steps:
+      - script: echo "Job 8 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 8 — waiting..." && sleep 3
-        displayName: 'Step 8'
+  - job: job9
+    displayName: 'Job 9'
+    dependsOn: job8
+    steps:
+      - script: echo "Job 9 — waiting..." && sleep 3
+        displayName: 'Run'
 
-      - script: echo "Job 1 - Step 9 — waiting..." && sleep 3
-        displayName: 'Step 9'
-
-      - script: echo "Job 1 - Step 10 — done!" && sleep 3
-        displayName: 'Step 10'
+  - job: job10
+    displayName: 'Job 10'
+    dependsOn: job9
+    steps:
+      - script: echo "Job 10 — done!" && sleep 3
+        displayName: 'Run'
