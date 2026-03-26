@@ -6,73 +6,28 @@ on:
       - waitTest
 
 jobs:
-  job1:
+  pipeline:
     runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run
-        run: echo "Job 1 - waiting..."; Start-Sleep -Seconds 3
-
-  job2:
-    runs-on: self-hosted
-    needs: job1
-    steps:
-      - name: Run
-        run: echo "Job 2 - waiting..."; Start-Sleep -Seconds 3
-
-  job3:
-    runs-on: self-hosted
-    needs: job2
-    steps:
-      - name: Run
-        run: echo "Job 3 - waiting..."; Start-Sleep -Seconds 3
-
-  job4:
-    runs-on: self-hosted
-    needs: job3
-    steps:
-      - name: Run
-        run: echo "Job 4 - waiting..."; Start-Sleep -Seconds 3
-
-  job5:
-    runs-on: self-hosted
-    needs: job4
-    steps:
-      - name: Run
-        run: echo "Job 5 - waiting..."; Start-Sleep -Seconds 3
-
-  job6:
-    runs-on: self-hosted
-    needs: job5
-    steps:
-      - name: Run
-        run: echo "Job 6 - waiting..."; Start-Sleep -Seconds 3
-
-  job7:
-    runs-on: self-hosted
-    needs: job6
-    steps:
-      - name: Run
-        run: echo "Job 7 - waiting..."; Start-Sleep -Seconds 3
-
-  job8:
-    runs-on: self-hosted
-    needs: job7
-    steps:
-      - name: Run
-        run: echo "Job 8 - waiting..."; Start-Sleep -Seconds 3
-
-  job9:
-    runs-on: self-hosted
-    needs: job8
-    steps:
-      - name: Run
-        run: echo "Job 9 - waiting..."; Start-Sleep -Seconds 3
-
-  job10:
-    runs-on: self-hosted
-    needs: job9
-    steps:
-      - name: Run
-        run: echo "Job 10 - done!"; Start-Sleep -Seconds 3
+      - name: Step 1
+        run: echo "Step 1 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 2
+        run: echo "Step 2 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 3
+        run: echo "Step 3 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 4
+        run: echo "Step 4 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 5
+        run: echo "Step 5 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 6
+        run: echo "Step 6 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 7
+        run: echo "Step 7 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 8
+        run: echo "Step 8 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 9
+        run: echo "Step 9 - waiting..."; Start-Sleep -Seconds 3
+      - name: Step 10
+        run: echo "Step 10 - done!"; Start-Sleep -Seconds 3
