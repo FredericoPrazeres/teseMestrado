@@ -1,9 +1,9 @@
-name: Microservices CI/CD Pipeline
+name: Microservices CI/CD Pipeline (Windows)
 
 on:
   push:
     branches:
-      - master
+      - waitTest
 
 jobs:
   job1:
@@ -12,67 +12,67 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Run
-        run: echo "Job 1 — waiting..." && sleep 3
+        run: echo "Job 1 - waiting..."; Start-Sleep -Seconds 3
 
   job2:
     runs-on: self-hosted
     needs: job1
     steps:
       - name: Run
-        run: echo "Job 2 — waiting..." && sleep 3
+        run: echo "Job 2 - waiting..."; Start-Sleep -Seconds 3
 
   job3:
     runs-on: self-hosted
     needs: job2
     steps:
       - name: Run
-        run: echo "Job 3 — waiting..." && sleep 3
+        run: echo "Job 3 - waiting..."; Start-Sleep -Seconds 3
 
   job4:
     runs-on: self-hosted
     needs: job3
     steps:
       - name: Run
-        run: echo "Job 4 — waiting..." && sleep 3
+        run: echo "Job 4 - waiting..."; Start-Sleep -Seconds 3
 
   job5:
     runs-on: self-hosted
     needs: job4
     steps:
       - name: Run
-        run: echo "Job 5 — waiting..." && sleep 3
+        run: echo "Job 5 - waiting..."; Start-Sleep -Seconds 3
 
   job6:
     runs-on: self-hosted
     needs: job5
     steps:
       - name: Run
-        run: echo "Job 6 — waiting..." && sleep 3
+        run: echo "Job 6 - waiting..."; Start-Sleep -Seconds 3
 
   job7:
     runs-on: self-hosted
     needs: job6
     steps:
       - name: Run
-        run: echo "Job 7 — waiting..." && sleep 3
+        run: echo "Job 7 - waiting..."; Start-Sleep -Seconds 3
 
   job8:
     runs-on: self-hosted
     needs: job7
     steps:
       - name: Run
-        run: echo "Job 8 — waiting..." && sleep 3
+        run: echo "Job 8 - waiting..."; Start-Sleep -Seconds 3
 
   job9:
     runs-on: self-hosted
     needs: job8
     steps:
       - name: Run
-        run: echo "Job 9 — waiting..." && sleep 3
+        run: echo "Job 9 - waiting..."; Start-Sleep -Seconds 3
 
   job10:
     runs-on: self-hosted
     needs: job9
     steps:
       - name: Run
-        run: echo "Job 10 — done!" && sleep 3
+        run: echo "Job 10 - done!"; Start-Sleep -Seconds 3
