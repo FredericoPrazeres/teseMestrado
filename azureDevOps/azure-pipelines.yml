@@ -7,74 +7,29 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: job1
-    displayName: 'Job 1'
+  - job: pipeline
+    displayName: 'Pipeline'
     steps:
       - checkout: self
         displayName: 'Checkout code'
-      - powershell: echo "Job 1 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job2
-    displayName: 'Job 2'
-    dependsOn: job1
-    steps:
-      - powershell: echo "Job 2 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job3
-    displayName: 'Job 3'
-    dependsOn: job2
-    steps:
-      - powershell: echo "Job 3 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job4
-    displayName: 'Job 4'
-    dependsOn: job3
-    steps:
-      - powershell: echo "Job 4 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job5
-    displayName: 'Job 5'
-    dependsOn: job4
-    steps:
-      - powershell: echo "Job 5 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job6
-    displayName: 'Job 6'
-    dependsOn: job5
-    steps:
-      - powershell: echo "Job 6 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job7
-    displayName: 'Job 7'
-    dependsOn: job6
-    steps:
-      - powershell: echo "Job 7 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job8
-    displayName: 'Job 8'
-    dependsOn: job7
-    steps:
-      - powershell: echo "Job 8 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job9
-    displayName: 'Job 9'
-    dependsOn: job8
-    steps:
-      - powershell: echo "Job 9 - waiting..."; Start-Sleep -Seconds 3
-        displayName: 'Run'
-
-  - job: job10
-    displayName: 'Job 10'
-    dependsOn: job9
-    steps:
-      - powershell: echo "Job 10 - done!"; Start-Sleep -Seconds 3
-        displayName: 'Run'
+      - powershell: echo "Step 1 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 1'
+      - powershell: echo "Step 2 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 2'
+      - powershell: echo "Step 3 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 3'
+      - powershell: echo "Step 4 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 4'
+      - powershell: echo "Step 5 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 5'
+      - powershell: echo "Step 6 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 6'
+      - powershell: echo "Step 7 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 7'
+      - powershell: echo "Step 8 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 8'
+      - powershell: echo "Step 9 - waiting..."; Start-Sleep -Seconds 3
+        displayName: 'Step 9'
+      - powershell: echo "Step 10 - done!"; Start-Sleep -Seconds 3
+        displayName: 'Step 10'
 
