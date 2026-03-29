@@ -2,18 +2,63 @@ pipeline {
     agent any
 
     stages {
-        stage('Pipeline') {
+        stage('Stage 1') {
             steps {
-                powershell 'echo "Step 1 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 2 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 3 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 4 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 5 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 6 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 7 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 8 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 9 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 10 - done!"; Start-Sleep -Seconds 3'
+                powershell 'echo "Stage 1 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 2') {
+            steps {
+                powershell 'echo "Stage 2 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 3') {
+            steps {
+                powershell 'echo "Stage 3 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 4') {
+            steps {
+                powershell 'echo "Stage 4 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 5') {
+            steps {
+                powershell 'echo "Stage 5 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 6') {
+            steps {
+                powershell 'echo "Stage 6 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 7') {
+            steps {
+                powershell 'echo "Stage 7 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 8') {
+            steps {
+                powershell 'echo "Stage 8 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 9') {
+            steps {
+                powershell 'echo "Stage 9 - waiting..."; Start-Sleep -Seconds 3'
+            }
+        }
+
+        stage('Stage 10') {
+            steps {
+                powershell 'echo "Stage 10 - done!"; Start-Sleep -Seconds 3'
             }
         }
     }
