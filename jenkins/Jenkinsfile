@@ -2,18 +2,63 @@ pipeline {
     agent any
 
     stages {
-        stage('Pipeline') {
+        stage('Job 1') {
             steps {
-                powershell 'echo "Step 1 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 2 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 3 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 4 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 5 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 6 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 7 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 8 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 9 - waiting..."; Start-Sleep -Seconds 3'
-                powershell 'echo "Step 10 - done!"; Start-Sleep -Seconds 3'
+                sh 'echo "Job 1 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 2') {
+            steps {
+                sh 'echo "Job 2 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 3') {
+            steps {
+                sh 'echo "Job 3 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 4') {
+            steps {
+                sh 'echo "Job 4 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 5') {
+            steps {
+                sh 'echo "Job 5 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 6') {
+            steps {
+                sh 'echo "Job 6 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 7') {
+            steps {
+                sh 'echo "Job 7 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 8') {
+            steps {
+                sh 'echo "Job 8 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 9') {
+            steps {
+                sh 'echo "Job 9 — waiting..." && sleep 3'
+            }
+        }
+
+        stage('Job 10') {
+            steps {
+                sh 'echo "Job 10 — done!" && sleep 3'
             }
         }
     }
