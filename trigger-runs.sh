@@ -12,7 +12,7 @@
 # ─── Configuration ───────────────────────────────────────────────────────────
 
 NUM_RUNS=${1:-5}              # Number of pipeline runs to trigger (default: 5)
-INTERVAL_SECONDS=${2:-110}     # Seconds to wait between pushes (default: 110)
+INTERVAL_SECONDS=${2:-150}     # Seconds to wait between pushes (default: 150)
 BRANCH="applications/outline" # Branch to push to
 
 # ─── Script ──────────────────────────────────────────────────────────────────
