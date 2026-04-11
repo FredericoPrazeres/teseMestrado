@@ -13,6 +13,40 @@ pipeline {
             }
         }
 
+        stage('Generate .env') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Generating .env file ==="
+                        cat > .env << 'ENVEOF'
+NODE_ENV=development
+URL=http://localhost:3000
+PORT=3000
+WEB_CONCURRENCY=1
+DEFAULT_LANGUAGE=en_US
+DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
+PGSSLMODE=disable
+REDIS_URL=redis://127.0.0.1:6379
+FILE_STORAGE=local
+FILE_STORAGE_LOCAL_ROOT_DIR=/tmp/outline-data
+FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
+FORCE_HTTPS=false
+RATE_LIMITER_ENABLED=false
+ENABLE_UPDATES=false
+DEBUG=http
+LOG_LEVEL=debug
+SMTP_FROM_EMAIL=hello@example.com
+ENVEOF
+                        SECRET_KEY=$(openssl rand -hex 32)
+                        UTILS_SECRET=$(openssl rand -hex 32)
+                        echo "SECRET_KEY=$SECRET_KEY" >> .env
+                        echo "UTILS_SECRET=$UTILS_SECRET" >> .env
+                        echo "✅ .env file created"
+                    '''
+                }
+            }
+        }
+
         stage('Verify Dependencies') {
             steps {
                 dir('outline') {
