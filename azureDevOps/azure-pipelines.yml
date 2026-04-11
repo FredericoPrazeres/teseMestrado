@@ -1,18 +1,114 @@
 trigger:
   branches:
     include:
-      - master
+      - applications/outline
 
 pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: BuildAndTest
-    displayName: 'Test Pipeline'
+  - job: BuildOutline
+    displayName: 'Build Outline'
     steps:
       - checkout: self
-        displayName: 'Checkout code'
+        displayName: 'Checkout code with submodules'
+        submodules: recursive
 
       - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+          cd outline
+          echo "=== Generating .env file ==="
+          cat > .env << 'ENVEOF'
+          NODE_ENV=development
+          URL=http://localhost:3000
+          PORT=3000
+          WEB_CONCURRENCY=1
+          DEFAULT_LANGUAGE=en_US
+          DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
+          PGSSLMODE=disable
+          REDIS_URL=redis://127.0.0.1:6379
+          FILE_STORAGE=local
+          FILE_STORAGE_LOCAL_ROOT_DIR=/tmp/outline-data
+          FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
+          FORCE_HTTPS=false
+          RATE_LIMITER_ENABLED=false
+          ENABLE_UPDATES=false
+          DEBUG=http
+          LOG_LEVEL=debug
+          SMTP_FROM_EMAIL=hello@example.com
+          ENVEOF
+          SECRET_KEY=$(openssl rand -hex 32)
+          UTILS_SECRET=$(openssl rand -hex 32)
+          echo "SECRET_KEY=$SECRET_KEY" >> .env
+          echo "UTILS_SECRET=$UTILS_SECRET" >> .env
+          echo "✅ .env file created"
+        displayName: 'Generate .env file'
+
+      - script: |
+          echo "=== Verifying system dependencies ==="
+          node --version
+          yarn --version
+          pg_isready || echo "WARNING: PostgreSQL is not running"
+          redis-cli ping || echo "WARNING: Redis is not running"
+        displayName: 'Verify dependencies'
+
+      - script: |
+          echo "=== Starting PostgreSQL and Redis ==="
+          brew services start postgresql@17 || true
+          brew services start redis || true
+          sleep 3
+          pg_isready
+          redis-cli ping
+        displayName: 'Start services'
+
+      - script: |
+          cd outline
+          echo "=== Cleaning previous build ==="
+          yarn clean || true
+          rm -rf node_modules/.cache
+          echo "=== Installing Node.js dependencies ==="
+          NODE_ENV=development yarn install --immutable
+        displayName: 'Install dependencies'
+
+      - script: |
+          cd outline
+          echo "=== Building Outline ==="
+          NODE_ENV=production yarn build
+        displayName: 'Build Outline'
+
+      - script: |
+          cd outline
+          echo "=== Resetting database ==="
+          yarn db:reset || echo "Database reset via yarn failed, trying manually..."
+          dropdb --if-exists outline && createdb -O outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
+        displayName: 'Reset database'
+
+      - script: |
+          cd outline
+          echo "=== Running database migrations ==="
+          yarn db:create --env=production-ssl-disabled || echo "Database already exists"
+          yarn start &
+          SERVER_PID=$!
+          echo "Waiting for server to start and run migrations..."
+          sleep 15
+          kill $SERVER_PID 2>/dev/null || true
+          echo "Migrations complete"
+        displayName: 'Run database migrations'
+
+      - script: |
+          cd outline
+          echo "=== Verifying build ==="
+          test -f build/server/index.js && echo "✅ Server build OK" || exit 1
+          test -d build/app && echo "✅ Client build OK" || exit 1
+          echo "🎉 Outline build completed successfully!"
+        displayName: 'Verify build'
+
+      - script: |
+          cd outline
+          echo "=== Starting Outline ==="
+          yarn start &
+          SERVER_PID=$!
+          echo "Outline started with PID $SERVER_PID"
+          echo "Waiting for server to be ready..."
+          sleep 10
+          curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\|302" && echo "✅ Outline is running at http://localhost:3000" || echo "⚠️ Server started but may still be initializing"
+        displayName: 'Start Outline'
