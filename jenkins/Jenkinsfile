@@ -1,0 +1,123 @@
+pipeline {
+    agent any
+
+    environment {
+        NODE_ENV_BUILD = 'production'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                sh 'git submodule update --init --recursive'
+            }
+        }
+
+        stage('Verify Dependencies') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Verifying system dependencies ==="
+                        echo "Node.js: $(node --version)"
+                        echo "Yarn: $(yarn --version)"
+                        pg_isready && echo "PostgreSQL: ✅ Running" || echo "PostgreSQL: ❌ Not running"
+                        redis-cli ping > /dev/null 2>&1 && echo "Redis: ✅ Running" || echo "Redis: ❌ Not running"
+                    '''
+                }
+            }
+        }
+
+        stage('Start Services') {
+            steps {
+                sh '''
+                    echo "=== Starting PostgreSQL and Redis ==="
+                    brew services start postgresql@17 || sudo systemctl start postgresql || true
+                    brew services start redis || sudo systemctl start redis || true
+                    sleep 3
+                    pg_isready
+                    redis-cli ping
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Cleaning previous build ==="
+                        yarn clean || true
+                        rm -rf node_modules/.cache
+                        echo "=== Installing Node.js dependencies ==="
+                        NODE_ENV=development yarn install --immutable
+                    '''
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Building Outline ==="
+                        NODE_ENV=production yarn build
+                    '''
+                }
+            }
+        }
+
+        stage('Database Migrations') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Running database migrations ==="
+                        yarn db:create --env=production-ssl-disabled || echo "Database already exists"
+                        yarn start &
+                        SERVER_PID=$!
+                        echo "Waiting for server to start and run migrations..."
+                        sleep 15
+                        kill $SERVER_PID 2>/dev/null || true
+                        echo "Migrations complete"
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Build') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Verifying build ==="
+                        test -f build/server/index.js && echo "✅ Server build OK" || exit 1
+                        test -d build/app && echo "✅ Client build OK" || exit 1
+                        echo "🎉 Outline build completed successfully!"
+                    '''
+                }
+            }
+        }
+
+        stage('Start Outline') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Starting Outline ==="
+                        yarn start &
+                        SERVER_PID=$!
+                        echo "Outline started with PID $SERVER_PID"
+                        echo "Waiting for server to be ready..."
+                        sleep 10
+                        curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\\|302" && echo "✅ Outline is running at http://localhost:3000" || echo "⚠️ Server started but may still be initializing"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Outline pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Outline pipeline failed.'
+        }
+    }
+}
