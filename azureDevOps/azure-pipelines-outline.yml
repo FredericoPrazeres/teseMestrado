@@ -7,13 +7,18 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: BuildOutline
-    displayName: 'Build Outline'
+  - job: Checkout
+    displayName: 'Checkout code'
     steps:
       - checkout: self
         displayName: 'Checkout code with submodules'
         submodules: recursive
 
+  - job: GenerateEnv
+    displayName: 'Generate .env file'
+    dependsOn: Checkout
+    steps:
+      - checkout: none
       - script: |
           cd outline
           echo "=== Generating .env file ==="
@@ -43,6 +48,11 @@ jobs:
           echo "✅ .env file created"
         displayName: 'Generate .env file'
 
+  - job: VerifyDependencies
+    displayName: 'Verify dependencies'
+    dependsOn: Checkout
+    steps:
+      - checkout: none
       - script: |
           echo "=== Verifying system dependencies ==="
           node --version
@@ -51,6 +61,11 @@ jobs:
           redis-cli ping || echo "WARNING: Redis is not running"
         displayName: 'Verify dependencies'
 
+  - job: StartServices
+    displayName: 'Start services'
+    dependsOn: VerifyDependencies
+    steps:
+      - checkout: none
       - script: |
           echo "=== Starting PostgreSQL and Redis ==="
           brew services start postgresql@17 || true
@@ -60,6 +75,13 @@ jobs:
           redis-cli ping
         displayName: 'Start services'
 
+  - job: InstallDependencies
+    displayName: 'Install dependencies'
+    dependsOn:
+      - GenerateEnv
+      - StartServices
+    steps:
+      - checkout: none
       - script: |
           cd outline
           echo "=== Cleaning previous build ==="
@@ -69,12 +91,22 @@ jobs:
           NODE_ENV=development yarn install --immutable
         displayName: 'Install dependencies'
 
+  - job: BuildOutline
+    displayName: 'Build Outline'
+    dependsOn: InstallDependencies
+    steps:
+      - checkout: none
       - script: |
           cd outline
           echo "=== Building Outline ==="
           NODE_ENV=production yarn build
         displayName: 'Build Outline'
 
+  - job: ResetDatabase
+    displayName: 'Reset database'
+    dependsOn: StartServices
+    steps:
+      - checkout: none
       - script: |
           cd outline
           echo "=== Resetting database ==="
@@ -82,6 +114,13 @@ jobs:
           dropdb --if-exists outline && createdb -O outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
         displayName: 'Reset database'
 
+  - job: RunMigrations
+    displayName: 'Run database migrations'
+    dependsOn:
+      - BuildOutline
+      - ResetDatabase
+    steps:
+      - checkout: none
       - script: |
           cd outline
           echo "=== Running database migrations ==="
@@ -94,6 +133,11 @@ jobs:
           echo "Migrations complete"
         displayName: 'Run database migrations'
 
+  - job: VerifyBuild
+    displayName: 'Verify build'
+    dependsOn: RunMigrations
+    steps:
+      - checkout: none
       - script: |
           cd outline
           echo "=== Verifying build ==="
@@ -102,6 +146,11 @@ jobs:
           echo "🎉 Outline build completed successfully!"
         displayName: 'Verify build'
 
+  - job: StartOutline
+    displayName: 'Start Outline'
+    dependsOn: VerifyBuild
+    steps:
+      - checkout: none
       - script: |
           cd outline
           echo "=== Starting Outline ==="
@@ -112,3 +161,4 @@ jobs:
           sleep 10
           curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\|302" && echo "✅ Outline is running at http://localhost:3000" || echo "⚠️ Server started but may still be initializing"
         displayName: 'Start Outline'
+
