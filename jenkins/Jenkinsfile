@@ -99,6 +99,18 @@ ENVEOF
             }
         }
 
+        stage('Reset Database') {
+            steps {
+                dir('outline') {
+                    sh '''
+                        echo "=== Resetting database ==="
+                        yarn db:reset || echo "Database reset via yarn failed, trying manually..."
+                        dropdb --if-exists outline && createdb -O outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
+                    '''
+                }
+            }
+        }
+
         stage('Database Migrations') {
             steps {
                 dir('outline') {
