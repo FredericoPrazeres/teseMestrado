@@ -77,7 +77,7 @@ jobs:
           }
           $redisRunning = & "D:\tools\redis\redis-cli.exe" ping 2>$null; $redisRunning = ($LASTEXITCODE -eq 0)
           if (-not $redisRunning) {
-            Start-Process -FilePath "D:\tools\redis\redis-server.exe" -ArgumentList "D:\tools\redis\redis.windows.conf" -WindowStyle Hidden
+            Start-Process -FilePath "D:\tools\redis\redis-server.exe" -ArgumentList "D:\tools\redis\redis.windows.conf" -RedirectStandardOutput "D:\tools\redis\redis-stdout.log" -RedirectStandardError "D:\tools\redis\redis-stderr.log"
           } else {
             Write-Host "Redis is already running"
           }
