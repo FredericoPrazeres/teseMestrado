@@ -1,0 +1,194 @@
+trigger:
+  branches:
+    include:
+      - applications/outline
+
+pool:
+  name: TeseMestradoPool
+
+jobs:
+  - job: Checkout
+    displayName: 'Checkout code'
+    steps:
+      - checkout: self
+        displayName: 'Checkout code with submodules'
+        submodules: recursive
+
+  - job: GenerateEnv
+    displayName: 'Generate .env file'
+    dependsOn: Checkout
+    steps:
+      - checkout: none
+      - powershell: |
+          cd outline
+          Write-Host "=== Generating .env file ==="
+          $SECRET_KEY = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
+          $UTILS_SECRET = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
+          @"
+          NODE_ENV=development
+          URL=http://localhost:3000
+          PORT=3000
+          WEB_CONCURRENCY=1
+          DEFAULT_LANGUAGE=en_US
+          DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
+          PGSSLMODE=disable
+          REDIS_URL=redis://127.0.0.1:6379
+          FILE_STORAGE=local
+          FILE_STORAGE_LOCAL_ROOT_DIR=D:\tools\outline-data
+          FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
+          FORCE_HTTPS=false
+          RATE_LIMITER_ENABLED=false
+          ENABLE_UPDATES=false
+          DEBUG=http
+          LOG_LEVEL=debug
+          SMTP_FROM_EMAIL=hello@example.com
+          SECRET_KEY=$SECRET_KEY
+          UTILS_SECRET=$UTILS_SECRET
+          DEVELOPMENT_UNSAFE_INLINE_CSP=true
+          "@ | Set-Content -Path .env -Encoding UTF8
+          Write-Host "✅ .env file created"
+        displayName: 'Generate .env file'
+
+  - job: VerifyDependencies
+    displayName: 'Verify dependencies'
+    dependsOn: Checkout
+    steps:
+      - checkout: none
+      - powershell: |
+          Write-Host "=== Verifying system dependencies ==="
+          node --version
+          yarn --version
+          & "D:\tools\pgsql\bin\pg_isready.exe" 2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "WARNING: PostgreSQL is not running" }
+          & "D:\tools\redis\redis-cli.exe" ping 2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "WARNING: Redis is not running" }
+        displayName: 'Verify dependencies'
+
+  - job: StartServices
+    displayName: 'Start services'
+    dependsOn: VerifyDependencies
+    steps:
+      - checkout: none
+      - powershell: |
+          Write-Host "=== Starting PostgreSQL and Redis ==="
+          $pgRunning = & "D:\tools\pgsql\bin\pg_isready.exe" 2>$null; $pgRunning = ($LASTEXITCODE -eq 0)
+          if (-not $pgRunning) {
+            Start-Process -FilePath "D:\tools\pgsql\bin\pg_ctl.exe" -ArgumentList "start","-D","D:\tools\pgsql\data","-l","D:\tools\pgsql\log.txt" -NoNewWindow -Wait
+          } else {
+            Write-Host "PostgreSQL is already running"
+          }
+          $redisRunning = & "D:\tools\redis\redis-cli.exe" ping 2>$null; $redisRunning = ($LASTEXITCODE -eq 0)
+          if (-not $redisRunning) {
+            Start-Process -FilePath "D:\tools\redis\redis-server.exe" -ArgumentList "D:\tools\redis\redis.windows.conf" -WindowStyle Hidden
+          } else {
+            Write-Host "Redis is already running"
+          }
+          Start-Sleep -Seconds 3
+          & "D:\tools\pgsql\bin\pg_isready.exe"
+          & "D:\tools\redis\redis-cli.exe" ping
+        displayName: 'Start services'
+
+  - job: InstallDependencies
+    displayName: 'Install dependencies'
+    dependsOn:
+      - GenerateEnv
+      - StartServices
+    steps:
+      - checkout: none
+      - powershell: |
+          cd outline
+          Write-Host "=== Cleaning previous build ==="
+          yarn clean 2>$null; $true
+          if (Test-Path "node_modules\.cache") { Remove-Item -Recurse -Force "node_modules\.cache" }
+          Write-Host "=== Installing Node.js dependencies ==="
+          $env:NODE_ENV = "development"
+          yarn install --immutable
+        displayName: 'Install dependencies'
+
+  - job: BuildOutline
+    displayName: 'Build Outline'
+    dependsOn: InstallDependencies
+    steps:
+      - checkout: none
+      - powershell: |
+          cd outline
+          Write-Host "=== Building Outline ==="
+          $env:NODE_ENV = "production"
+          yarn build
+        displayName: 'Build Outline'
+
+  - job: ResetDatabase
+    displayName: 'Reset database'
+    dependsOn: StartServices
+    steps:
+      - checkout: none
+      - powershell: |
+          cd outline
+          Write-Host "=== Resetting database ==="
+          yarn db:reset 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Database reset via yarn failed, trying manually..."
+            & "D:\tools\pgsql\bin\dropdb.exe" -U postgres --if-exists outline
+            & "D:\tools\pgsql\bin\createdb.exe" -U postgres -O outline_user outline
+            if ($LASTEXITCODE -eq 0) { Write-Host "✅ Database recreated" } else { Write-Host "Database may not have existed" }
+          }
+        displayName: 'Reset database'
+
+  - job: RunMigrations
+    displayName: 'Run database migrations'
+    dependsOn:
+      - BuildOutline
+      - ResetDatabase
+    steps:
+      - checkout: none
+      - powershell: |
+          cd outline
+          Write-Host "=== Running database migrations ==="
+          yarn db:create --env=production-ssl-disabled 2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "Database already exists" }
+          $env:NODE_ENV = "development"
+          $serverProcess = Start-Process -FilePath "node" -ArgumentList "build\server\index.js" -PassThru -NoNewWindow
+          Write-Host "Waiting for server to start and run migrations..."
+          Start-Sleep -Seconds 15
+          if (-not $serverProcess.HasExited) { Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue }
+          Write-Host "Migrations complete"
+        displayName: 'Run database migrations'
+
+  - job: VerifyBuild
+    displayName: 'Verify build'
+    dependsOn: RunMigrations
+    steps:
+      - checkout: none
+      - powershell: |
+          cd outline
+          Write-Host "=== Verifying build ==="
+          if (Test-Path "build\server\index.js") { Write-Host "✅ Server build OK" } else { Write-Host "❌ Server build missing"; exit 1 }
+          if (Test-Path "build\app" -PathType Container) { Write-Host "✅ Client build OK" } else { Write-Host "❌ Client build missing"; exit 1 }
+          Write-Host "🎉 Outline build completed successfully!"
+        displayName: 'Verify build'
+
+  - job: StartOutline
+    displayName: 'Start Outline'
+    dependsOn: VerifyBuild
+    steps:
+      - checkout: none
+      - powershell: |
+          cd outline
+          Write-Host "=== Starting Outline ==="
+          $env:NODE_ENV = "development"
+          $serverProcess = Start-Process -FilePath "node" -ArgumentList "build\server\index.js" -PassThru -NoNewWindow
+          Write-Host "Outline started with PID $($serverProcess.Id)"
+          Write-Host "Waiting for server to be ready..."
+          Start-Sleep -Seconds 10
+          try {
+            $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
+            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
+              Write-Host "✅ Outline is running at http://localhost:3000"
+            } else {
+              Write-Host "⚠️ Server started but may still be initializing"
+            }
+          } catch {
+            if ($_.Exception.Response.StatusCode.value__ -eq 302) {
+              Write-Host "✅ Outline is running at http://localhost:3000"
+            } else {
+              Write-Host "⚠️ Server started but may still be initializing"
+            }
+          }
+        displayName: 'Start Outline'
