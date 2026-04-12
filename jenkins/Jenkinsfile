@@ -3,7 +3,9 @@ pipeline {
 
     environment {
         NODE_ENV_BUILD = 'production'
-        PATH = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${env.PATH}"
+        PGSQL_BIN = 'D:\\tools\\pgsql\\bin'
+        PGSQL_DATA = 'D:\\tools\\pgsql\\data'
+        REDIS_DIR = 'D:\\tools\\redis'
     }
 
     stages {
@@ -11,13 +13,15 @@ pipeline {
             steps {
                 // Step 1: Checkout
                 checkout scm
-                sh 'git submodule update --init --recursive'
+                bat 'git submodule update --init --recursive'
 
                 // Step 2: Generate .env
                 dir('outline') {
-                    sh '''
-                        echo "=== Generating .env file ==="
-                        cat > .env << 'ENVEOF'
+                    powershell '''
+                        Write-Host "=== Generating .env file ==="
+                        $SECRET_KEY = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
+                        $UTILS_SECRET = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
+                        @"
 NODE_ENV=development
 URL=http://localhost:3000
 PORT=3000
@@ -27,7 +31,7 @@ DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
 PGSSLMODE=disable
 REDIS_URL=redis://127.0.0.1:6379
 FILE_STORAGE=local
-FILE_STORAGE_LOCAL_ROOT_DIR=/tmp/outline-data
+FILE_STORAGE_LOCAL_ROOT_DIR=D:\\tools\\outline-data
 FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
 FORCE_HTTPS=false
 RATE_LIMITER_ENABLED=false
@@ -35,105 +39,132 @@ ENABLE_UPDATES=false
 DEBUG=http
 LOG_LEVEL=debug
 SMTP_FROM_EMAIL=hello@example.com
-ENVEOF
-                        SECRET_KEY=$(openssl rand -hex 32)
-                        UTILS_SECRET=$(openssl rand -hex 32)
-                        echo "SECRET_KEY=$SECRET_KEY" >> .env
-                        echo "UTILS_SECRET=$UTILS_SECRET" >> .env
-                        echo "✅ .env file created"
+SECRET_KEY=$SECRET_KEY
+UTILS_SECRET=$UTILS_SECRET
+DEVELOPMENT_UNSAFE_INLINE_CSP=true
+"@ | Set-Content -Path .env -Encoding UTF8
+                        Write-Host "✅ .env file created"
                     '''
                 }
 
                 // Step 3: Verify dependencies
                 dir('outline') {
-                    sh '''
-                        echo "=== Verifying system dependencies ==="
-                        echo "Node.js: $(node --version)"
-                        echo "Yarn: $(yarn --version)"
-                        pg_isready && echo "PostgreSQL: ✅ Running" || echo "PostgreSQL: ❌ Not running"
-                        redis-cli ping > /dev/null 2>&1 && echo "Redis: ✅ Running" || echo "Redis: ❌ Not running"
+                    powershell '''
+                        Write-Host "=== Verifying system dependencies ==="
+                        Write-Host "Node.js: $(node --version)"
+                        Write-Host "Yarn: $(yarn --version)"
+                        cmd /c "D:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
+                        cmd /c "D:\\tools\\redis\\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"
                     '''
                 }
 
                 // Step 4: Start services
-                sh '''
-                    echo "=== Starting PostgreSQL and Redis ==="
-                    brew services start postgresql@17 || sudo systemctl start postgresql || true
-                    brew services start redis || sudo systemctl start redis || true
-                    sleep 3
-                    pg_isready
-                    redis-cli ping
+                powershell '''
+                    Write-Host "=== Starting PostgreSQL ==="
+                    cmd /c "D:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul"
+                    if ($LASTEXITCODE -ne 0) {
+                        cmd /c "D:\\tools\\pgsql\\bin\\pg_ctl.exe start -D D:\\tools\\pgsql\\data -l D:\\tools\\pgsql\\log.txt"
+                    } else {
+                        Write-Host "PostgreSQL is already running"
+                    }
+                    Write-Host "=== Starting Redis ==="
+                    cmd /c "D:\\tools\\redis\\redis-cli.exe ping 2>nul"
+                    if ($LASTEXITCODE -ne 0) {
+                        cmd /c "start /b D:\\tools\\redis\\redis-server.exe D:\\tools\\redis\\redis.windows.conf > D:\\tools\\redis\\redis.log 2>&1"
+                    } else {
+                        Write-Host "Redis is already running"
+                    }
+                    Start-Sleep -Seconds 3
+                    Write-Host "=== Verifying services ==="
+                    cmd /c "D:\\tools\\pgsql\\bin\\pg_isready.exe"
+                    if ($LASTEXITCODE -eq 0) { Write-Host "PostgreSQL: OK" } else { Write-Host "PostgreSQL: FAILED"; exit 1 }
+                    cmd /c "D:\\tools\\redis\\redis-cli.exe ping"
+                    if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
                 '''
 
                 // Step 5: Install dependencies
                 dir('outline') {
-                    sh '''
-                        echo "=== Cleaning previous build ==="
-                        yarn clean || true
-                        rm -rf node_modules/.cache
-                        echo "=== Installing Node.js dependencies ==="
-                        NODE_ENV=development yarn install --immutable
+                    powershell '''
+                        Write-Host "=== Cleaning previous build ==="
+                        yarn clean 2>$null; $true
+                        if (Test-Path "node_modules\\.cache") { Remove-Item -Recurse -Force "node_modules\\.cache" }
+                        Write-Host "=== Installing Node.js dependencies ==="
+                        $env:NODE_ENV = "development"
+                        yarn install --immutable
                     '''
                 }
 
                 // Step 6: Build
                 dir('outline') {
-                    sh '''
-                        echo "=== Building Outline ==="
-                        NODE_ENV=production yarn build
+                    powershell '''
+                        Write-Host "=== Building Outline ==="
+                        $env:NODE_ENV = "production"
+                        yarn build
                     '''
                 }
 
                 // Step 7: Reset database
                 dir('outline') {
-                    sh '''
-                        echo "=== Resetting database ==="
-                        yarn db:reset || echo "Database reset via yarn failed, trying manually..."
-                        dropdb --if-exists outline && createdb -O outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
+                    powershell '''
+                        Write-Host "=== Resetting database ==="
+                        cmd /c "D:\\tools\\pgsql\\bin\\dropdb.exe -U postgres --if-exists outline"
+                        cmd /c "D:\\tools\\pgsql\\bin\\createdb.exe -U postgres -O outline_user outline"
+                        if ($LASTEXITCODE -eq 0) { Write-Host "✅ Database recreated" } else { Write-Host "⚠️ Database may not have existed" }
                     '''
                 }
 
                 // Step 8: Database migrations
                 dir('outline') {
-                    sh '''
-                        echo "=== Running database migrations ==="
-                        yarn db:create --env=production-ssl-disabled || echo "Database already exists"
-                        yarn start &
-                        SERVER_PID=$!
-                        trap "kill $SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true" EXIT
-                        echo "Waiting for server to start and run migrations..."
-                        sleep 15
-                        kill $SERVER_PID 2>/dev/null || true
-                        wait $SERVER_PID 2>/dev/null || true
-                        trap - EXIT
-                        echo "Migrations complete"
+                    powershell '''
+                        Write-Host "=== Running database migrations ==="
+                        $prevEAP = $ErrorActionPreference
+                        $ErrorActionPreference = 'SilentlyContinue'
+                        cmd /c "yarn db:create --env=production-ssl-disabled 2>&1"
+                        $ErrorActionPreference = $prevEAP
+                        Write-Host "Database create step done (may already exist)"
+                        $env:NODE_ENV = "development"
+                        cmd /c "start /b node build\\server\\index.js > D:\\tools\\outline-migrations.log 2>&1"
+                        Write-Host "Waiting for server to start and run migrations..."
+                        Start-Sleep -Seconds 15
+                        Write-Host "=== Migration log output ==="
+                        if (Test-Path "D:\\tools\\outline-migrations.log") { Get-Content "D:\\tools\\outline-migrations.log" -Tail 30 }
+                        cmd /c "taskkill /f /im node.exe 2>nul"
+                        Write-Host "Migrations complete"
                     '''
                 }
 
                 // Step 9: Verify build
                 dir('outline') {
-                    sh '''
-                        echo "=== Verifying build ==="
-                        test -f build/server/index.js && echo "✅ Server build OK" || exit 1
-                        test -d build/app && echo "✅ Client build OK" || exit 1
-                        echo "🎉 Outline build completed successfully!"
+                    powershell '''
+                        Write-Host "=== Verifying build ==="
+                        if (Test-Path "build\\server\\index.js") { Write-Host "✅ Server build OK" } else { Write-Host "❌ Server build missing"; exit 1 }
+                        if (Test-Path "build\\app" -PathType Container) { Write-Host "✅ Client build OK" } else { Write-Host "❌ Client build missing"; exit 1 }
+                        Write-Host "🎉 Outline build completed successfully!"
                     '''
                 }
 
                 // Step 10: Start Outline
                 dir('outline') {
-                    sh '''
-                        echo "=== Starting Outline ==="
-                        yarn start &
-                        SERVER_PID=$!
-                        echo "Outline started with PID $SERVER_PID"
-                        echo "Waiting for server to be ready..."
-                        sleep 10
-                        curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\\|302" && echo "✅ Outline is running at http://localhost:3000" || echo "⚠️ Server started but may still be initializing"
-                        echo "=== Stopping Outline ==="
-                        kill $SERVER_PID 2>/dev/null
-                        wait $SERVER_PID 2>/dev/null
-                        echo "✅ Outline stopped"
+                    powershell '''
+                        Write-Host "=== Starting Outline ==="
+                        $env:NODE_ENV = "development"
+                        cmd /c "start /b node build\\server\\index.js > D:\\tools\\outline-server.log 2>&1"
+                        Write-Host "Waiting for server to be ready..."
+                        Start-Sleep -Seconds 10
+                        try {
+                            $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
+                            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
+                                Write-Host "✅ Outline is running at http://localhost:3000"
+                            } else {
+                                Write-Host "⚠️ Server started but may still be initializing"
+                            }
+                        } catch {
+                            if ($_.Exception.Response.StatusCode.value__ -eq 302) {
+                                Write-Host "✅ Outline is running at http://localhost:3000"
+                            } else {
+                                Write-Host "⚠️ Server started but may still be initializing"
+                            }
+                        }
                     '''
                 }
             }
