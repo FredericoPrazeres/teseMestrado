@@ -77,13 +77,17 @@ jobs:
           }
           $redisRunning = & "D:\tools\redis\redis-cli.exe" ping 2>$null; $redisRunning = ($LASTEXITCODE -eq 0)
           if (-not $redisRunning) {
-            Start-Process -FilePath "D:\tools\redis\redis-server.exe" -ArgumentList "D:\tools\redis\redis.windows.conf" -RedirectStandardOutput "D:\tools\redis\redis-stdout.log" -RedirectStandardError "D:\tools\redis\redis-stderr.log"
+            $redisJob = Start-Job -ScriptBlock {
+              & "D:\tools\redis\redis-server.exe" "D:\tools\redis\redis.windows.conf"
+            }
+            Write-Host "Redis started as background job (Id: $($redisJob.Id))"
           } else {
             Write-Host "Redis is already running"
           }
           Start-Sleep -Seconds 3
           & "D:\tools\pgsql\bin\pg_isready.exe"
-          & "D:\tools\redis\redis-cli.exe" ping
+          $redisCheck = Start-Process -FilePath "D:\tools\redis\redis-cli.exe" -ArgumentList "ping" -NoNewWindow -Wait -PassThru
+          if ($redisCheck.ExitCode -eq 0) { Write-Host "Redis: PONG" } else { Write-Host "WARNING: Redis may not be running" }
         displayName: 'Start services'
 
   - job: InstallDependencies
