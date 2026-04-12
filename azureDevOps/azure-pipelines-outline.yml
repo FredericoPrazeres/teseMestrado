@@ -7,18 +7,15 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: Checkout
-    displayName: 'Checkout code'
+  - job: BuildOutline
+    displayName: 'Build and Run Outline'
     steps:
+      # Step 1: Checkout
       - checkout: self
-        displayName: 'Checkout code with submodules'
+        displayName: 'Step 1 - Checkout code'
         submodules: recursive
 
-  - job: GenerateEnv
-    displayName: 'Generate .env file'
-    dependsOn: Checkout
-    steps:
-      - checkout: none
+      # Step 2: Generate .env
       - powershell: |
           cd outline
           Write-Host "=== Generating .env file ==="
@@ -47,26 +44,18 @@ jobs:
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
           "@ | Set-Content -Path .env -Encoding UTF8
           Write-Host "✅ .env file created"
-        displayName: 'Generate .env file'
+        displayName: 'Step 2 - Generate .env file'
 
-  - job: VerifyDependencies
-    displayName: 'Verify dependencies'
-    dependsOn: GenerateEnv
-    steps:
-      - checkout: none
+      # Step 3: Verify dependencies
       - powershell: |
           Write-Host "=== Verifying system dependencies ==="
           node --version
           yarn --version
           cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
           cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"
-        displayName: 'Verify dependencies'
+        displayName: 'Step 3 - Verify dependencies'
 
-  - job: StartServices
-    displayName: 'Start services'
-    dependsOn: VerifyDependencies
-    steps:
-      - checkout: none
+      # Step 4: Start services
       - powershell: |
           Write-Host "=== Starting PostgreSQL ==="
           cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
@@ -88,13 +77,9 @@ jobs:
           if ($LASTEXITCODE -eq 0) { Write-Host "PostgreSQL: OK" } else { Write-Host "PostgreSQL: FAILED"; exit 1 }
           cmd /c "D:\tools\redis\redis-cli.exe ping"
           if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
-        displayName: 'Start services'
+        displayName: 'Step 4 - Start services'
 
-  - job: InstallDependencies
-    displayName: 'Install dependencies'
-    dependsOn: StartServices
-    steps:
-      - checkout: none
+      # Step 5: Install dependencies
       - powershell: |
           cd outline
           Write-Host "=== Cleaning previous build ==="
@@ -103,62 +88,27 @@ jobs:
           Write-Host "=== Installing Node.js dependencies ==="
           $env:NODE_ENV = "development"
           yarn install --immutable
-        displayName: 'Install dependencies'
+        displayName: 'Step 5 - Install dependencies'
 
-  - job: BuildOutline
-    displayName: 'Build Outline'
-    dependsOn: InstallDependencies
-    steps:
-      - checkout: none
+      # Step 6: Build Outline
       - powershell: |
           cd outline
           Write-Host "=== Building Outline ==="
           $env:NODE_ENV = "production"
           yarn build
-        displayName: 'Build Outline'
+        displayName: 'Step 6 - Build Outline'
 
-  - job: ResetDatabase
-    displayName: 'Reset database'
-    dependsOn: BuildOutline
-    steps:
-      - checkout: none
+      # Step 7: Reset database
       - powershell: |
-          Write-Host "=== Ensuring services are running ==="
-          cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
-          if ($LASTEXITCODE -ne 0) {
-            cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
-            Start-Sleep -Seconds 3
-          }
-          cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
-          if ($LASTEXITCODE -ne 0) {
-            cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
-            Start-Sleep -Seconds 2
-          }
           cd outline
           Write-Host "=== Resetting database ==="
           cmd /c "D:\tools\pgsql\bin\dropdb.exe -U postgres --if-exists outline"
           cmd /c "D:\tools\pgsql\bin\createdb.exe -U postgres -O outline_user outline"
           if ($LASTEXITCODE -eq 0) { Write-Host "✅ Database recreated" } else { Write-Host "⚠️ Database may not have existed" }
-        displayName: 'Reset database'
+        displayName: 'Step 7 - Reset database'
 
-  - job: RunMigrations
-    displayName: 'Run database migrations'
-    dependsOn:
-      - ResetDatabase
-    steps:
-      - checkout: none
+      # Step 8: Run database migrations
       - powershell: |
-          Write-Host "=== Ensuring services are running ==="
-          cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
-          if ($LASTEXITCODE -ne 0) {
-            cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
-            Start-Sleep -Seconds 3
-          }
-          cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
-          if ($LASTEXITCODE -ne 0) {
-            cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
-            Start-Sleep -Seconds 2
-          }
           cd outline
           Write-Host "=== Running database migrations ==="
           $prevEAP = $ErrorActionPreference
@@ -174,38 +124,19 @@ jobs:
           if (Test-Path "D:\tools\outline-migrations.log") { Get-Content "D:\tools\outline-migrations.log" -Tail 30 }
           cmd /c "taskkill /f /im node.exe 2>nul"
           Write-Host "Migrations complete"
-        displayName: 'Run database migrations'
+        displayName: 'Step 8 - Run database migrations'
 
-  - job: VerifyBuild
-    displayName: 'Verify build'
-    dependsOn: RunMigrations
-    steps:
-      - checkout: none
+      # Step 9: Verify build
       - powershell: |
           cd outline
           Write-Host "=== Verifying build ==="
           if (Test-Path "build\server\index.js") { Write-Host "✅ Server build OK" } else { Write-Host "❌ Server build missing"; exit 1 }
           if (Test-Path "build\app" -PathType Container) { Write-Host "✅ Client build OK" } else { Write-Host "❌ Client build missing"; exit 1 }
           Write-Host "🎉 Outline build completed successfully!"
-        displayName: 'Verify build'
+        displayName: 'Step 9 - Verify build'
 
-  - job: StartOutline
-    displayName: 'Start Outline'
-    dependsOn: VerifyBuild
-    steps:
-      - checkout: none
+      # Step 10: Start Outline
       - powershell: |
-          Write-Host "=== Ensuring services are running ==="
-          cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
-          if ($LASTEXITCODE -ne 0) {
-            cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
-            Start-Sleep -Seconds 3
-          }
-          cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
-          if ($LASTEXITCODE -ne 0) {
-            cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
-            Start-Sleep -Seconds 2
-          }
           cd outline
           Write-Host "=== Starting Outline ==="
           $env:NODE_ENV = "development"
@@ -226,4 +157,4 @@ jobs:
               Write-Host "⚠️ Server started but may still be initializing"
             }
           }
-        displayName: 'Start Outline'
+        displayName: 'Step 10 - Start Outline'
