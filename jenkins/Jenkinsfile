@@ -6,15 +6,13 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Build Outline') {
             steps {
+                // Step 1: Checkout
                 checkout scm
                 sh 'git submodule update --init --recursive'
-            }
-        }
 
-        stage('Generate .env') {
-            steps {
+                // Step 2: Generate .env
                 dir('outline') {
                     sh '''
                         echo "=== Generating .env file ==="
@@ -44,11 +42,8 @@ ENVEOF
                         echo "✅ .env file created"
                     '''
                 }
-            }
-        }
 
-        stage('Verify Dependencies') {
-            steps {
+                // Step 3: Verify dependencies
                 dir('outline') {
                     sh '''
                         echo "=== Verifying system dependencies ==="
@@ -58,11 +53,8 @@ ENVEOF
                         redis-cli ping > /dev/null 2>&1 && echo "Redis: ✅ Running" || echo "Redis: ❌ Not running"
                     '''
                 }
-            }
-        }
 
-        stage('Start Services') {
-            steps {
+                // Step 4: Start services
                 sh '''
                     echo "=== Starting PostgreSQL and Redis ==="
                     brew services start postgresql@17 || sudo systemctl start postgresql || true
@@ -71,11 +63,8 @@ ENVEOF
                     pg_isready
                     redis-cli ping
                 '''
-            }
-        }
 
-        stage('Install Dependencies') {
-            steps {
+                // Step 5: Install dependencies
                 dir('outline') {
                     sh '''
                         echo "=== Cleaning previous build ==="
@@ -85,22 +74,16 @@ ENVEOF
                         NODE_ENV=development yarn install --immutable
                     '''
                 }
-            }
-        }
 
-        stage('Build') {
-            steps {
+                // Step 6: Build
                 dir('outline') {
                     sh '''
                         echo "=== Building Outline ==="
                         NODE_ENV=production yarn build
                     '''
                 }
-            }
-        }
 
-        stage('Reset Database') {
-            steps {
+                // Step 7: Reset database
                 dir('outline') {
                     sh '''
                         echo "=== Resetting database ==="
@@ -108,28 +91,24 @@ ENVEOF
                         dropdb --if-exists outline && createdb -O outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
                     '''
                 }
-            }
-        }
 
-        stage('Database Migrations') {
-            steps {
+                // Step 8: Database migrations
                 dir('outline') {
                     sh '''
                         echo "=== Running database migrations ==="
                         yarn db:create --env=production-ssl-disabled || echo "Database already exists"
                         yarn start &
                         SERVER_PID=$!
+                        trap "kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null" EXIT
                         echo "Waiting for server to start and run migrations..."
                         sleep 15
-                        kill $SERVER_PID 2>/dev/null || true
+                        kill $SERVER_PID 2>/dev/null
+                        wait $SERVER_PID 2>/dev/null
                         echo "Migrations complete"
                     '''
                 }
-            }
-        }
 
-        stage('Verify Build') {
-            steps {
+                // Step 9: Verify build
                 dir('outline') {
                     sh '''
                         echo "=== Verifying build ==="
@@ -138,11 +117,8 @@ ENVEOF
                         echo "🎉 Outline build completed successfully!"
                     '''
                 }
-            }
-        }
 
-        stage('Start Outline') {
-            steps {
+                // Step 10: Start Outline
                 dir('outline') {
                     sh '''
                         echo "=== Starting Outline ==="
@@ -152,6 +128,10 @@ ENVEOF
                         echo "Waiting for server to be ready..."
                         sleep 10
                         curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200\\|302" && echo "✅ Outline is running at http://localhost:3000" || echo "⚠️ Server started but may still be initializing"
+                        echo "=== Stopping Outline ==="
+                        kill $SERVER_PID 2>/dev/null
+                        wait $SERVER_PID 2>/dev/null
+                        echo "✅ Outline stopped"
                     '''
                 }
             }
