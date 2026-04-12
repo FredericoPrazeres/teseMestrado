@@ -100,11 +100,12 @@ ENVEOF
                         yarn db:create --env=production-ssl-disabled || echo "Database already exists"
                         yarn start &
                         SERVER_PID=$!
-                        trap "kill $SERVER_PID 2>/dev/null; wait $SERVER_PID 2>/dev/null" EXIT
+                        trap "kill $SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true" EXIT
                         echo "Waiting for server to start and run migrations..."
                         sleep 15
-                        kill $SERVER_PID 2>/dev/null
-                        wait $SERVER_PID 2>/dev/null
+                        kill $SERVER_PID 2>/dev/null || true
+                        wait $SERVER_PID 2>/dev/null || true
+                        trap - EXIT
                         echo "Migrations complete"
                     '''
                 }
