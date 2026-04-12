@@ -58,10 +58,8 @@ jobs:
           Write-Host "=== Verifying system dependencies ==="
           node --version
           yarn --version
-          $pgCheck = Start-Process -FilePath "D:\tools\pgsql\bin\pg_isready.exe" -NoNewWindow -Wait -PassThru 2>$null
-          if ($pgCheck.ExitCode -ne 0) { Write-Host "WARNING: PostgreSQL is not running" }
-          $redisCheck = Start-Process -FilePath "D:\tools\redis\redis-cli.exe" -ArgumentList "ping" -NoNewWindow -Wait -PassThru 2>$null
-          if ($redisCheck.ExitCode -ne 0) { Write-Host "WARNING: Redis is not running" }
+          cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
+          cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"
         displayName: 'Verify dependencies'
 
   - job: StartServices
@@ -71,25 +69,25 @@ jobs:
       - checkout: none
       - powershell: |
           Write-Host "=== Starting PostgreSQL ==="
-          $pgCheck = Start-Process -FilePath "D:\tools\pgsql\bin\pg_isready.exe" -NoNewWindow -Wait -PassThru 2>$null
-          if ($pgCheck.ExitCode -ne 0) {
-            Start-Process -FilePath "D:\tools\pgsql\bin\pg_ctl.exe" -ArgumentList "start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt" -NoNewWindow -Wait
+          cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
+          if ($LASTEXITCODE -ne 0) {
+            cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
           } else {
             Write-Host "PostgreSQL is already running"
           }
           Write-Host "=== Starting Redis ==="
-          $redisCheck = Start-Process -FilePath "D:\tools\redis\redis-cli.exe" -ArgumentList "ping" -NoNewWindow -Wait -PassThru 2>$null
-          if ($redisCheck.ExitCode -ne 0) {
+          cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
+          if ($LASTEXITCODE -ne 0) {
             cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
           } else {
             Write-Host "Redis is already running"
           }
           Start-Sleep -Seconds 3
           Write-Host "=== Verifying services ==="
-          $pgVerify = Start-Process -FilePath "D:\tools\pgsql\bin\pg_isready.exe" -NoNewWindow -Wait -PassThru
-          if ($pgVerify.ExitCode -eq 0) { Write-Host "PostgreSQL: OK" } else { Write-Host "PostgreSQL: FAILED"; exit 1 }
-          $redisVerify = Start-Process -FilePath "D:\tools\redis\redis-cli.exe" -ArgumentList "ping" -NoNewWindow -Wait -PassThru
-          if ($redisVerify.ExitCode -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
+          cmd /c "D:\tools\pgsql\bin\pg_isready.exe"
+          if ($LASTEXITCODE -eq 0) { Write-Host "PostgreSQL: OK" } else { Write-Host "PostgreSQL: FAILED"; exit 1 }
+          cmd /c "D:\tools\redis\redis-cli.exe ping"
+          if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
         displayName: 'Start services'
 
   - job: InstallDependencies
