@@ -9,13 +9,17 @@ pipeline {
     }
 
     stages {
-        stage('Build Outline') {
+        // Step 1: Checkout
+        stage('Step 1 - Checkout code') {
             steps {
-                // Step 1: Checkout
                 checkout scm
                 bat 'git submodule update --init --recursive'
+            }
+        }
 
-                // Step 2: Generate .env
+        // Step 2: Generate .env
+        stage('Step 2 - Generate .env file') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Generating .env file ===
@@ -44,8 +48,12 @@ pipeline {
                         echo .env file created
                     '''
                 }
+            }
+        }
 
-                // Step 3: Verify dependencies
+        // Step 3: Verify dependencies
+        stage('Step 3 - Verify dependencies') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Verifying system dependencies ===
@@ -55,8 +63,12 @@ pipeline {
                         D:\\tools\\redis\\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL
                     '''
                 }
+            }
+        }
 
-                // Step 4: Start services
+        // Step 4: Start services
+        stage('Step 4 - Start services') {
+            steps {
                 bat '''
                     echo === Starting PostgreSQL ===
                     D:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul
@@ -79,8 +91,12 @@ pipeline {
                     D:\\tools\\redis\\redis-cli.exe ping
                     if %ERRORLEVEL% NEQ 0 (echo Redis: FAILED && exit /b 1) else (echo Redis: OK)
                 '''
+            }
+        }
 
-                // Step 5: Install dependencies
+        // Step 5: Install dependencies
+        stage('Step 5 - Install dependencies') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Cleaning previous build ===
@@ -91,8 +107,12 @@ pipeline {
                         call yarn install --immutable
                     '''
                 }
+            }
+        }
 
-                // Step 6: Build
+        // Step 6: Build
+        stage('Step 6 - Build Outline') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Building Outline ===
@@ -100,8 +120,12 @@ pipeline {
                         call yarn build
                     '''
                 }
+            }
+        }
 
-                // Step 7: Reset database
+        // Step 7: Reset database
+        stage('Step 7 - Reset database') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Resetting database ===
@@ -110,8 +134,12 @@ pipeline {
                         if %ERRORLEVEL% EQU 0 (echo Database recreated) else (echo Database may not have existed)
                     '''
                 }
+            }
+        }
 
-                // Step 8: Database migrations
+        // Step 8: Database migrations
+        stage('Step 8 - Run database migrations') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Running database migrations ===
@@ -127,8 +155,12 @@ pipeline {
                         echo Migrations complete
                     '''
                 }
+            }
+        }
 
-                // Step 9: Verify build
+        // Step 9: Verify build
+        stage('Step 9 - Verify build') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Verifying build ===
@@ -137,8 +169,12 @@ pipeline {
                         echo Outline build completed successfully!
                     '''
                 }
+            }
+        }
 
-                // Step 10: Start Outline
+        // Step 10: Start Outline
+        stage('Step 10 - Start Outline') {
+            steps {
                 dir('outline') {
                     bat '''
                         echo === Starting Outline ===
