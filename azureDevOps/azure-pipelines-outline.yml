@@ -68,26 +68,23 @@ jobs:
     steps:
       - checkout: none
       - powershell: |
-          Write-Host "=== Starting PostgreSQL and Redis ==="
+          Write-Host "=== Starting PostgreSQL ==="
           $pgRunning = & "D:\tools\pgsql\bin\pg_isready.exe" 2>$null; $pgRunning = ($LASTEXITCODE -eq 0)
           if (-not $pgRunning) {
             Start-Process -FilePath "D:\tools\pgsql\bin\pg_ctl.exe" -ArgumentList "start","-D","D:\tools\pgsql\data","-l","D:\tools\pgsql\log.txt" -NoNewWindow -Wait
           } else {
             Write-Host "PostgreSQL is already running"
           }
+          Write-Host "=== Starting Redis ==="
           $redisRunning = & "D:\tools\redis\redis-cli.exe" ping 2>$null; $redisRunning = ($LASTEXITCODE -eq 0)
           if (-not $redisRunning) {
-            $redisJob = Start-Job -ScriptBlock {
-              & "D:\tools\redis\redis-server.exe" "D:\tools\redis\redis.windows.conf"
-            }
-            Write-Host "Redis started as background job (Id: $($redisJob.Id))"
+            cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
           } else {
             Write-Host "Redis is already running"
           }
           Start-Sleep -Seconds 3
           & "D:\tools\pgsql\bin\pg_isready.exe"
-          $redisCheck = Start-Process -FilePath "D:\tools\redis\redis-cli.exe" -ArgumentList "ping" -NoNewWindow -Wait -PassThru
-          if ($redisCheck.ExitCode -eq 0) { Write-Host "Redis: PONG" } else { Write-Host "WARNING: Redis may not be running" }
+          & "D:\tools\redis\redis-cli.exe" ping
         displayName: 'Start services'
 
   - job: InstallDependencies
