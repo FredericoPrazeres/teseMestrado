@@ -51,7 +51,7 @@ jobs:
 
   - job: VerifyDependencies
     displayName: 'Verify dependencies'
-    dependsOn: Checkout
+    dependsOn: GenerateEnv
     steps:
       - checkout: none
       - powershell: |
@@ -92,9 +92,7 @@ jobs:
 
   - job: InstallDependencies
     displayName: 'Install dependencies'
-    dependsOn:
-      - GenerateEnv
-      - StartServices
+    dependsOn: StartServices
     steps:
       - checkout: none
       - powershell: |
@@ -121,7 +119,7 @@ jobs:
 
   - job: ResetDatabase
     displayName: 'Reset database'
-    dependsOn: StartServices
+    dependsOn: BuildOutline
     steps:
       - checkout: none
       - powershell: |
@@ -139,7 +137,6 @@ jobs:
   - job: RunMigrations
     displayName: 'Run database migrations'
     dependsOn:
-      - BuildOutline
       - ResetDatabase
     steps:
       - checkout: none
