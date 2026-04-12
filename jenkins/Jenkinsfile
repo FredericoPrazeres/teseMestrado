@@ -72,7 +72,7 @@ pipeline {
                     ) else (
                         echo Redis is already running
                     )
-                    timeout /t 3 /nobreak > nul
+                    ping -n 4 127.0.0.1 > nul
                     echo === Verifying services ===
                     D:\\tools\\pgsql\\bin\\pg_isready.exe
                     if %ERRORLEVEL% NEQ 0 (echo PostgreSQL: FAILED && exit /b 1) else (echo PostgreSQL: OK)
@@ -120,7 +120,7 @@ pipeline {
                         set NODE_ENV=development
                         start "" /b node build\\server\\index.js > D:\\tools\\outline-migrations.log 2>&1
                         echo Waiting for server to start and run migrations...
-                        timeout /t 15 /nobreak > nul
+                        ping -n 16 127.0.0.1 > nul
                         echo === Migration log output ===
                         if exist "D:\\tools\\outline-migrations.log" type "D:\\tools\\outline-migrations.log"
                         taskkill /f /im node.exe 2>nul
@@ -145,7 +145,7 @@ pipeline {
                         set NODE_ENV=development
                         start "" /b node build\\server\\index.js > D:\\tools\\outline-server.log 2>&1
                         echo Waiting for server to be ready...
-                        timeout /t 10 /nobreak > nul
+                        ping -n 11 127.0.0.1 > nul
                     '''
                     powershell '''
                         try {
