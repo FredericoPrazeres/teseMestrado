@@ -161,12 +161,18 @@ jobs:
           }
           cd outline
           Write-Host "=== Running database migrations ==="
-          yarn db:create --env=production-ssl-disabled 2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "Database already exists" }
+          $prevEAP = $ErrorActionPreference
+          $ErrorActionPreference = 'SilentlyContinue'
+          cmd /c "yarn db:create --env=production-ssl-disabled 2>&1"
+          $ErrorActionPreference = $prevEAP
+          Write-Host "Database create step done (may already exist)"
           $env:NODE_ENV = "development"
-          $serverProcess = Start-Process -FilePath "node" -ArgumentList "build\server\index.js" -PassThru -NoNewWindow
+          cmd /c "start /b node build\server\index.js > D:\tools\outline-migrations.log 2>&1"
           Write-Host "Waiting for server to start and run migrations..."
           Start-Sleep -Seconds 15
-          if (-not $serverProcess.HasExited) { Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue }
+          Write-Host "=== Migration log output ==="
+          if (Test-Path "D:\tools\outline-migrations.log") { Get-Content "D:\tools\outline-migrations.log" -Tail 30 }
+          cmd /c "taskkill /f /im node.exe 2>nul"
           Write-Host "Migrations complete"
         displayName: 'Run database migrations'
 
@@ -203,8 +209,7 @@ jobs:
           cd outline
           Write-Host "=== Starting Outline ==="
           $env:NODE_ENV = "development"
-          $serverProcess = Start-Process -FilePath "node" -ArgumentList "build\server\index.js" -PassThru -NoNewWindow
-          Write-Host "Outline started with PID $($serverProcess.Id)"
+          cmd /c "start /b node build\server\index.js > D:\tools\outline-server.log 2>&1"
           Write-Host "Waiting for server to be ready..."
           Start-Sleep -Seconds 10
           try {
