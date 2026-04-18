@@ -1,0 +1,54 @@
+name: "Cal.diy — Step Overhead Benchmark"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  all-steps:
+    name: "All Steps in One Job"
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: cal.diy
+    steps:
+      - name: "Step 01 — Checkout"
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: "Step 02 — Node Setup"
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: "Step 03 — Corepack Enable"
+        run: corepack enable && corepack install
+
+      - name: "Step 04 — Yarn Install"
+        run: yarn install
+
+      - name: "Step 05 — Lint"
+        run: yarn lint
+
+      - name: "Step 06 — Type Check"
+        run: yarn type-check
+
+      - name: "Step 07 — Unit Tests"
+        run: yarn test
+        env:
+          TZ: UTC
+
+      - name: "Step 08 — Prisma Validate"
+        run: yarn workspace @calcom/prisma prisma validate
+
+      - name: "Step 09 — Prisma Generate"
+        run: yarn workspace @calcom/prisma prisma generate
+
+      - name: "Step 10 — Security Audit"
+        run: yarn npm audit --all --recursive || true
+
+      - name: "Step 11 — Build"
+        run: yarn build
+
+      - name: "Step 12 — Docker Build"
+        run: docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true

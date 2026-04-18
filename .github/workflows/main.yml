@@ -1,17 +1,95 @@
-name: Microservices CI/CD Pipeline
+name: "Cal.diy — Job Overhead Benchmark"
 
 on:
   push:
     branches:
-      - master
+      - applications/calcom
 
 jobs:
-  remove-containers:
+  job-01-checkout:
+    name: "Job 01 — Checkout"
     runs-on: self-hosted
     steps:
-      - name: Hello World
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
 
-      - name: Stop and remove existing microservices
-        run: |
-          echo "Hello, World!"
+  job-02-node-setup:
+    name: "Job 02 — Node Setup"
+    runs-on: self-hosted
+    needs: job-01-checkout
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+  job-03-corepack:
+    name: "Job 03 — Corepack Enable"
+    runs-on: self-hosted
+    needs: job-02-node-setup
+    steps:
+      - run: corepack enable && corepack install
+        working-directory: cal.diy
+
+  job-04-install:
+    name: "Job 04 — Yarn Install"
+    runs-on: self-hosted
+    needs: job-03-corepack
+    steps:
+      - run: cd cal.diy && yarn install
+
+  job-05-lint:
+    name: "Job 05 — Lint"
+    runs-on: self-hosted
+    needs: job-04-install
+    steps:
+      - run: cd cal.diy && yarn lint
+
+  job-06-type-check:
+    name: "Job 06 — Type Check"
+    runs-on: self-hosted
+    needs: job-04-install
+    steps:
+      - run: cd cal.diy && yarn type-check
+
+  job-07-test:
+    name: "Job 07 — Unit Tests"
+    runs-on: self-hosted
+    needs: job-04-install
+    steps:
+      - run: cd cal.diy && TZ=UTC yarn test
+
+  job-08-prisma-validate:
+    name: "Job 08 — Prisma Validate"
+    runs-on: self-hosted
+    needs: job-04-install
+    steps:
+      - run: cd cal.diy && yarn workspace @calcom/prisma prisma validate
+
+  job-09-prisma-generate:
+    name: "Job 09 — Prisma Generate"
+    runs-on: self-hosted
+    needs: job-08-prisma-validate
+    steps:
+      - run: cd cal.diy && yarn workspace @calcom/prisma prisma generate
+
+  job-10-security-audit:
+    name: "Job 10 — Security Audit"
+    runs-on: self-hosted
+    needs: job-04-install
+    steps:
+      - run: cd cal.diy && yarn npm audit --all --recursive || true
+
+  job-11-build:
+    name: "Job 11 — Build"
+    runs-on: self-hosted
+    needs: [job-05-lint, job-06-type-check, job-07-test, job-09-prisma-generate]
+    steps:
+      - run: cd cal.diy && yarn build
+
+  job-12-docker-build:
+    name: "Job 12 — Docker Build"
+    runs-on: self-hosted
+    needs: job-11-build
+    steps:
+      - run: cd cal.diy && docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
