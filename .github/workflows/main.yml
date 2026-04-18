@@ -98,16 +98,31 @@ jobs:
     steps:
       - run: cd cal.diy && yarn workspace @calcom/prisma prisma validate
 
-  job-11-build:
-    name: "Job 11 — Build"
+  job-11-db-start:
+    name: "Job 11 — Start Database"
     runs-on: self-hosted
     needs: job-10-prisma-validate
     steps:
+      - run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
+
+  job-12-build:
+    name: "Job 12 — Build"
+    runs-on: self-hosted
+    needs: job-11-db-start
+    steps:
       - run: cd cal.diy && yarn build
 
-  job-12-docker-build:
-    name: "Job 12 — Docker Build"
+  job-13-db-stop:
+    name: "Job 13 — Stop Database"
     runs-on: self-hosted
-    needs: job-11-build
+    needs: job-12-build
+    if: always()
+    steps:
+      - run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml down || true
+
+  job-14-docker-build:
+    name: "Job 14 — Docker Build"
+    runs-on: self-hosted
+    needs: job-13-db-stop
     steps:
       - run: cd cal.diy && docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
