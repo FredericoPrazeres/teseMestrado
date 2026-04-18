@@ -6,8 +6,8 @@ on:
       - applications/calcom
 
 env:
-  DATABASE_URL: "postgresql://unicorn_user:magical_password@localhost:5432/calendso"
-  DATABASE_DIRECT_URL: "postgresql://unicorn_user:magical_password@localhost:5432/calendso"
+  DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
+  DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
 
 jobs:
   job-01-cleanup:
