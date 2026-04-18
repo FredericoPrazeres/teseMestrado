@@ -1,18 +1,95 @@
 trigger:
   branches:
     include:
-      - master
+      - applications/calcom
+
+variables:
+  DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
+  DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
 
 pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: BuildAndTest
-    displayName: 'Test Pipeline'
+  - job: AllSteps
+    displayName: 'All Steps in One Job'
     steps:
+      - script: |
+          docker stop $(docker ps -q) 2>/dev/null || true
+          docker rm $(docker ps -aq) 2>/dev/null || true
+          docker rmi $(docker images -q) 2>/dev/null || true
+          docker system prune -af --volumes 2>/dev/null || true
+        displayName: 'Step 01 — Cleanup Previous Runs'
+
       - checkout: self
-        displayName: 'Checkout code'
+        submodules: true
+        displayName: 'Step 02 — Checkout'
+
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '18.x'
+        displayName: 'Step 03 — Node Setup'
 
       - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+          cd cal.diy
+          corepack enable && corepack install
+        displayName: 'Step 04 — Corepack Enable'
+
+      - script: |
+          cd cal.diy
+          yarn install
+        displayName: 'Step 05 — Yarn Install'
+
+      - script: |
+          cd cal.diy
+          cp .env.example .env
+          NEXTAUTH_SECRET=$(openssl rand -base64 32)
+          CALENDSO_ENCRYPTION_KEY=$(openssl rand -base64 24)
+          sed -i '' "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env 2>/dev/null || \
+            sed -i "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env
+          sed -i '' "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env 2>/dev/null || \
+            sed -i "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env
+          echo "DATABASE_URL=$(DATABASE_URL)" >> .env
+          echo "DATABASE_DIRECT_URL=$(DATABASE_DIRECT_URL)" >> .env
+        displayName: 'Step 06 — Environment Setup'
+
+      - script: |
+          cd cal.diy
+          yarn lint
+        displayName: 'Step 07 — Lint'
+
+      - script: |
+          cd cal.diy
+          yarn type-check
+        displayName: 'Step 08 — Type Check'
+
+      - script: |
+          cd cal.diy
+          TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors
+        displayName: 'Step 09 — Unit Tests'
+
+      - script: |
+          cd cal.diy
+          yarn workspace @calcom/prisma prisma validate
+        displayName: 'Step 10 — Prisma Validate'
+
+      - script: |
+          cd cal.diy
+          docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
+        displayName: 'Step 11 — Start Database'
+
+      - script: |
+          cd cal.diy
+          yarn build
+        displayName: 'Step 12 — Build'
+
+      - script: |
+          cd cal.diy
+          docker compose -f packages/prisma/docker-compose.yml down || true
+        displayName: 'Step 13 — Stop Database'
+        condition: always()
+
+      - script: |
+          cd cal.diy
+          docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
+        displayName: 'Step 14 — Docker Build'
