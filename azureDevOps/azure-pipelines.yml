@@ -97,7 +97,7 @@ jobs:
     steps:
       - script: |
           cd cal.diy
-          TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
+          CI=true TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
         displayName: 'Unit Tests'
 
   - job: Job10_PrismaValidate
