@@ -11,35 +11,55 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: AllSteps
-    displayName: 'All Steps in One Job'
+  - job: Job01_Cleanup
+    displayName: 'Job 01 — Cleanup Previous Runs'
     steps:
       - script: |
           docker stop $(docker ps -q) 2>/dev/null || true
           docker rm $(docker ps -aq) 2>/dev/null || true
           docker rmi $(docker images -q) 2>/dev/null || true
           docker system prune -af --volumes 2>/dev/null || true
-        displayName: 'Step 01 — Cleanup Previous Runs'
+        displayName: 'Cleanup'
 
+  - job: Job02_Checkout
+    displayName: 'Job 02 — Checkout'
+    dependsOn: Job01_Cleanup
+    steps:
       - checkout: self
         submodules: true
-        displayName: 'Step 02 — Checkout'
+        displayName: 'Checkout'
 
+  - job: Job03_NodeSetup
+    displayName: 'Job 03 — Node Setup'
+    dependsOn: Job02_Checkout
+    steps:
       - task: NodeTool@0
         inputs:
           versionSpec: '20.x'
-        displayName: 'Step 03 — Node Setup'
+        displayName: 'Node Setup'
 
+  - job: Job04_Corepack
+    displayName: 'Job 04 — Corepack Enable'
+    dependsOn: Job03_NodeSetup
+    steps:
       - script: |
           cd cal.diy
           corepack enable && corepack install
-        displayName: 'Step 04 — Corepack Enable'
+        displayName: 'Corepack Enable'
 
+  - job: Job05_Install
+    displayName: 'Job 05 — Yarn Install'
+    dependsOn: Job04_Corepack
+    steps:
       - script: |
           cd cal.diy
           yarn install
-        displayName: 'Step 05 — Yarn Install'
+        displayName: 'Yarn Install'
 
+  - job: Job06_EnvSetup
+    displayName: 'Job 06 — Environment Setup'
+    dependsOn: Job05_Install
+    steps:
       - script: |
           cd cal.diy
           cp .env.example .env
@@ -51,45 +71,77 @@ jobs:
             sed -i "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env
           echo "DATABASE_URL=$(DATABASE_URL)" >> .env
           echo "DATABASE_DIRECT_URL=$(DATABASE_DIRECT_URL)" >> .env
-        displayName: 'Step 06 — Environment Setup'
+        displayName: 'Environment Setup'
 
+  - job: Job07_Lint
+    displayName: 'Job 07 — Lint'
+    dependsOn: Job06_EnvSetup
+    steps:
       - script: |
           cd cal.diy
           yarn lint
-        displayName: 'Step 07 — Lint'
+        displayName: 'Lint'
 
+  - job: Job08_TypeCheck
+    displayName: 'Job 08 — Type Check'
+    dependsOn: Job07_Lint
+    steps:
       - script: |
           cd cal.diy
           yarn type-check
-        displayName: 'Step 08 — Type Check'
+        displayName: 'Type Check'
 
+  - job: Job09_Test
+    displayName: 'Job 09 — Unit Tests'
+    dependsOn: Job08_TypeCheck
+    steps:
       - script: |
           cd cal.diy
           TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
-        displayName: 'Step 09 — Unit Tests'
+        displayName: 'Unit Tests'
 
+  - job: Job10_PrismaValidate
+    displayName: 'Job 10 — Prisma Validate'
+    dependsOn: Job09_Test
+    steps:
       - script: |
           cd cal.diy
           yarn workspace @calcom/prisma prisma validate
-        displayName: 'Step 10 — Prisma Validate'
+        displayName: 'Prisma Validate'
 
+  - job: Job11_DbStart
+    displayName: 'Job 11 — Start Database'
+    dependsOn: Job10_PrismaValidate
+    steps:
       - script: |
           cd cal.diy
           docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
-        displayName: 'Step 11 — Start Database'
+        displayName: 'Start Database'
 
+  - job: Job12_Build
+    displayName: 'Job 12 — Build'
+    dependsOn: Job11_DbStart
+    steps:
       - script: |
           cd cal.diy
           yarn build
-        displayName: 'Step 12 — Build'
+        displayName: 'Build'
 
+  - job: Job13_DbStop
+    displayName: 'Job 13 — Stop Database'
+    dependsOn: Job12_Build
+    condition: always()
+    steps:
       - script: |
           cd cal.diy
           docker compose -f packages/prisma/docker-compose.yml down || true
-        displayName: 'Step 13 — Stop Database'
-        condition: always()
+        displayName: 'Stop Database'
 
+  - job: Job14_DockerBuild
+    displayName: 'Job 14 — Docker Build'
+    dependsOn: Job13_DbStop
+    steps:
       - script: |
           cd cal.diy
           docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
-        displayName: 'Step 14 — Docker Build'
+        displayName: 'Docker Build'
