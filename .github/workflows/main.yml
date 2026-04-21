@@ -33,7 +33,7 @@ jobs:
       - name: "Step 03 — Node Setup"
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: "Step 04 — Corepack Enable"
         run: corepack enable && corepack install
