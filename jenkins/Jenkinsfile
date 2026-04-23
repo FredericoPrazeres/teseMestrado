@@ -4,6 +4,7 @@ pipeline {
     environment {
         DATABASE_URL = 'postgresql://postgres@localhost:5450/cal-saml'
         DATABASE_DIRECT_URL = 'postgresql://postgres@localhost:5450/cal-saml'
+        PATH = "/usr/local/bin:/opt/homebrew/bin:${env.PATH}"
     }
 
     stages {
@@ -26,9 +27,10 @@ pipeline {
 
         stage('Job 03 — Node Setup') {
             steps {
-                nodejs(nodeJSInstallationName: 'Node 20') {
-                    sh 'node --version'
-                }
+                sh '''
+                    node --version
+                    npm --version
+                '''
             }
         }
 
