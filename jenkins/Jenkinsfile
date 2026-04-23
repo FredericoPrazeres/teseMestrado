@@ -21,7 +21,11 @@ pipeline {
 
         stage('Job 02 — Checkout') {
             steps {
-                checkout scm
+                checkout scmGit(
+                    branches: scm.branches,
+                    extensions: [submodule(recursiveSubmodules: true, parentCredentials: true)],
+                    userRemoteConfigs: scm.userRemoteConfigs
+                )
             }
         }
 
