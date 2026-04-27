@@ -95,9 +95,10 @@ jobs:
       - name: Run server and frontend unit tests
         run: |
           export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
-          cd $TOOLJET_DIR
-          NODE_ENV=test npx --prefix server jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests
-          npx --prefix frontend jest --passWithNoTests --forceExit
+          cd $TOOLJET_DIR/server
+          NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests
+          cd ../frontend
+          npx jest --passWithNoTests --forceExit
 
   # ──────────────────────────────────────────────────────────────
   # Job 7: Docker Build & Deploy
