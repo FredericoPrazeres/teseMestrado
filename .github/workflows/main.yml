@@ -3,7 +3,7 @@ name: ToolJet CI/CD Pipeline
 on:
   push:
     branches:
-      - applicatons/tooljet
+      - applications/tooljet
 
 env:
   NODE_VERSION: "22.15.1"
@@ -125,4 +125,3 @@ jobs:
           done
           echo "⚠️ ToolJet may still be initializing"
 
-          
