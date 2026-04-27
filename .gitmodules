@@ -1,0 +1,3 @@
+[submodule "ToolJet"]
+	path = ToolJet
+	url = https://github.com/ToolJet/ToolJet.git
