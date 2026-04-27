@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Install all npm dependencies
         run: |
-          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" || true
+          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
           cd $TOOLJET_DIR
           npm --prefix plugins install
           npm --prefix server install --production=false
@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Lint server and frontend code
         run: |
-          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" || true
+          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
           cd $TOOLJET_DIR
           npx --prefix server eslint . --ext .ts --max-warnings=0 || echo "Server lint completed with warnings"
           npx --prefix frontend eslint src/ --ext .js,.jsx --max-warnings=0 || echo "Frontend lint completed with warnings"
@@ -78,7 +78,7 @@ jobs:
     steps:
       - name: Build plugins, frontend, and server
         run: |
-          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" || true
+          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
           cd $TOOLJET_DIR
           NODE_ENV=production npm --prefix plugins run build
           NODE_OPTIONS="--max-old-space-size=8096" NODE_ENV=production npm --prefix frontend run build
@@ -94,7 +94,7 @@ jobs:
     steps:
       - name: Run server and frontend unit tests
         run: |
-          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" || true
+          export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
           cd $TOOLJET_DIR
           NODE_ENV=test npx --prefix server jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests
           npx --prefix frontend jest --passWithNoTests --forceExit
