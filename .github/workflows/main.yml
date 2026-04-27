@@ -19,7 +19,11 @@ jobs:
       - name: Checkout and print environment info
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Initialize ToolJet submodule (non-recursive)
+        run: |
+          git submodule update --init --depth=1 ToolJet
 
   # ──────────────────────────────────────────────────────────────
   # Job 2: Cleanup previous deployment
