@@ -100,34 +100,3 @@ jobs:
           cd ../frontend
           npm install --save-dev jest-environment-jsdom || true
           npx jest --passWithNoTests --forceExit || echo "Frontend tests completed with failures"
-
-  # ──────────────────────────────────────────────────────────────
-  # Job 7: Docker Build & Deploy
-  # ──────────────────────────────────────────────────────────────
-  deploy:
-    runs-on: self-hosted
-    needs: test
-    steps:
-      - name: Build Docker image and deploy
-        run: |
-          cd $TOOLJET_DIR
-          docker build -t tooljet-local:${{ github.sha }} -f docker/ce-production.Dockerfile .
-          docker run -d \
-            --name tooljet \
-            --restart unless-stopped \
-            -p 80:80 \
-            --platform linux/amd64 \
-            -v tooljet_data:/var/lib/postgresql/13/main \
-            tooljet/try:ee-lts-latest
-          sleep 20
-          for i in $(seq 1 5); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80 || echo "000")
-            echo "Attempt $i: HTTP $STATUS"
-            if [ "$STATUS" = "200" ] || [ "$STATUS" = "301" ] || [ "$STATUS" = "302" ]; then
-              echo "✅ ToolJet is up and running!"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "⚠️ ToolJet may still be initializing"
-
