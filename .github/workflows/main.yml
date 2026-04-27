@@ -10,12 +10,12 @@ env:
   TOOLJET_DIR: "ToolJet"
 
 jobs:
-  # ──────────────────────────────────────────────────────────────
-  # Job 1: Checkout & Environment Info
-  # ──────────────────────────────────────────────────────────────
-  checkout:
+  pipeline:
     runs-on: self-hosted
     steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 1: Checkout & Environment Info
+      # ──────────────────────────────────────────────────────────────
       - name: Checkout and print environment info
         uses: actions/checkout@v4
         with:
@@ -25,13 +25,9 @@ jobs:
         run: |
           git submodule update --init --depth=1 ToolJet
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 2: Cleanup previous deployment
-  # ──────────────────────────────────────────────────────────────
-  cleanup:
-    runs-on: self-hosted
-    needs: checkout
-    steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 2: Cleanup previous deployment
+      # ──────────────────────────────────────────────────────────────
       - name: Stop containers and prune Docker resources
         run: |
           docker stop tooljet 2>/dev/null || true
@@ -40,13 +36,9 @@ jobs:
           docker volume prune -f
           docker network prune -f
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 3: Install dependencies
-  # ──────────────────────────────────────────────────────────────
-  install-dependencies:
-    runs-on: self-hosted
-    needs: cleanup
-    steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 3: Install dependencies
+      # ──────────────────────────────────────────────────────────────
       - name: Install all npm dependencies
         run: |
           export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
@@ -55,13 +47,9 @@ jobs:
           npm --prefix server install --production=false
           npm --prefix frontend install --production=false
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 4: Lint & Code Quality
-  # ──────────────────────────────────────────────────────────────
-  lint:
-    runs-on: self-hosted
-    needs: install-dependencies
-    steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 4: Lint & Code Quality
+      # ──────────────────────────────────────────────────────────────
       - name: Lint server and frontend code
         run: |
           export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
@@ -69,13 +57,9 @@ jobs:
           npx --prefix server eslint . --ext .ts --max-warnings=0 || echo "Server lint completed with warnings"
           npx --prefix frontend eslint src/ --ext .js,.jsx --max-warnings=0 || echo "Frontend lint completed with warnings"
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 5: Build application
-  # ──────────────────────────────────────────────────────────────
-  build:
-    runs-on: self-hosted
-    needs: lint
-    steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 5: Build application
+      # ──────────────────────────────────────────────────────────────
       - name: Build plugins, frontend, and server
         run: |
           export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
@@ -85,13 +69,9 @@ jobs:
           npm install -g @nestjs/cli
           npm --prefix server run build
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 6: Run tests
-  # ──────────────────────────────────────────────────────────────
-  test:
-    runs-on: self-hosted
-    needs: build
-    steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 6: Run tests
+      # ──────────────────────────────────────────────────────────────
       - name: Run server and frontend unit tests
         run: |
           export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $NODE_VERSION || true
