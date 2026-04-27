@@ -124,4 +124,5 @@ jobs:
             sleep 10
           done
           echo "⚠️ ToolJet may still be initializing"
+
           
