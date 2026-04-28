@@ -1,5 +1,4 @@
 pipeline {
-    agent { label 'self-hosted' }
 
     environment {
         NODE_VERSION = '22.15.1'
