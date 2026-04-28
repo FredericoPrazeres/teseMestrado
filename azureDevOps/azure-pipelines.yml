@@ -11,7 +11,7 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job:
+  - job: ToolJetCI
     displayName: "ToolJet CI Pipeline"
     steps:
     # ──────────────────────────────────────────────────────────────
