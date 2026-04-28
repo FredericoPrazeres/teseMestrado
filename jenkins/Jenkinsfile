@@ -25,11 +25,12 @@ pipeline {
         stage('Cleanup') {
             steps {
                 sh '''
+                    export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
                     docker stop tooljet 2>/dev/null || true
                     docker rm tooljet 2>/dev/null || true
-                    docker image prune -f
-                    docker volume prune -f
-                    docker network prune -f
+                    docker image prune -f || true
+                    docker volume prune -f || true
+                    docker network prune -f || true
                 '''
             }
         }
