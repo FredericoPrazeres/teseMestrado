@@ -34,7 +34,7 @@ for i in $(seq 1 "$NUM_RUNS"); do
     echo "──────────────────────────────────────────"
 
     # Create an empty commit to trigger the pipeline
-    git commit --allow-empty -m "MacOS Github Job Test - $i/$NUM_RUNS"
+    git commit --allow-empty -m "MacOS Azure Step Test - $i/$NUM_RUNS"
 
     # Push to remote
     if git push origin "$BRANCH"; then
