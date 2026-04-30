@@ -11,23 +11,20 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: ToolJetCI
-    displayName: "ToolJet CI Pipeline"
+  # ──────────────────────────────────────────────────────────────
+  # Job 1: Checkout & Cleanup
+  # ──────────────────────────────────────────────────────────────
+  - job: Checkout
+    displayName: "Checkout & Cleanup"
     steps:
-    # ──────────────────────────────────────────────────────────────
-    # Step 1: Checkout & Environment Info
-    # ──────────────────────────────────────────────────────────────
     - checkout: self
       submodules: false
-      displayName: "Checkout and print environment info"
+      displayName: "Checkout repository"
 
     - script: |
         git submodule update --init --depth=1 ToolJet
       displayName: "Initialize ToolJet submodule (non-recursive)"
 
-    # ──────────────────────────────────────────────────────────────
-    # Step 2: Cleanup previous deployment
-    # ──────────────────────────────────────────────────────────────
     - script: |
         docker stop tooljet 2>/dev/null || true
         docker rm tooljet 2>/dev/null || true
@@ -36,9 +33,20 @@ jobs:
         docker network prune -f
       displayName: "Stop containers and prune Docker resources"
 
-    # ──────────────────────────────────────────────────────────────
-    # Step 3: Install dependencies
-    # ──────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────
+  # Job 2: Install dependencies
+  # ──────────────────────────────────────────────────────────────
+  - job: Install
+    displayName: "Install Dependencies"
+    dependsOn: Checkout
+    steps:
+    - checkout: self
+      submodules: false
+
+    - script: |
+        git submodule update --init --depth=1 ToolJet
+      displayName: "Initialize ToolJet submodule"
+
     - script: |
         export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
         cd $(TOOLJET_DIR)
@@ -47,9 +55,28 @@ jobs:
         npm --prefix frontend install --production=false
       displayName: "Install all npm dependencies"
 
-    # ──────────────────────────────────────────────────────────────
-    # Step 4: Lint & Code Quality
-    # ──────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────
+  # Job 3: Lint & Code Quality
+  # ──────────────────────────────────────────────────────────────
+  - job: Lint
+    displayName: "Lint & Code Quality"
+    dependsOn: Install
+    steps:
+    - checkout: self
+      submodules: false
+
+    - script: |
+        git submodule update --init --depth=1 ToolJet
+      displayName: "Initialize ToolJet submodule"
+
+    - script: |
+        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
+        cd $(TOOLJET_DIR)
+        npm --prefix plugins install
+        npm --prefix server install --production=false
+        npm --prefix frontend install --production=false
+      displayName: "Install dependencies"
+
     - script: |
         export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
         cd $(TOOLJET_DIR)
@@ -57,9 +84,28 @@ jobs:
         npx --prefix frontend eslint src/ --ext .js,.jsx --max-warnings=0 || echo "Frontend lint completed with warnings"
       displayName: "Lint server and frontend code"
 
-    # ──────────────────────────────────────────────────────────────
-    # Step 5: Build application
-    # ──────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────
+  # Job 4: Build application
+  # ──────────────────────────────────────────────────────────────
+  - job: Build
+    displayName: "Build Application"
+    dependsOn: Install
+    steps:
+    - checkout: self
+      submodules: false
+
+    - script: |
+        git submodule update --init --depth=1 ToolJet
+      displayName: "Initialize ToolJet submodule"
+
+    - script: |
+        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
+        cd $(TOOLJET_DIR)
+        npm --prefix plugins install
+        npm --prefix server install --production=false
+        npm --prefix frontend install --production=false
+      displayName: "Install dependencies"
+
     - script: |
         export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
         cd $(TOOLJET_DIR)
@@ -69,9 +115,28 @@ jobs:
         npm --prefix server run build
       displayName: "Build plugins, frontend, and server"
 
-    # ──────────────────────────────────────────────────────────────
-    # Step 6: Run tests
-    # ──────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────
+  # Job 5: Run tests
+  # ──────────────────────────────────────────────────────────────
+  - job: Test
+    displayName: "Run Tests"
+    dependsOn: Build
+    steps:
+    - checkout: self
+      submodules: false
+
+    - script: |
+        git submodule update --init --depth=1 ToolJet
+      displayName: "Initialize ToolJet submodule"
+
+    - script: |
+        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
+        cd $(TOOLJET_DIR)
+        npm --prefix plugins install
+        npm --prefix server install --production=false
+        npm --prefix frontend install --production=false
+      displayName: "Install dependencies"
+
     - script: |
         export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
         cd $(TOOLJET_DIR)/server
