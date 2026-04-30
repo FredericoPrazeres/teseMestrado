@@ -61,6 +61,7 @@ jobs:
   - job: Lint
     displayName: "Lint & Code Quality"
     dependsOn: Install
+    condition: succeeded()
     steps:
     - checkout: self
       submodules: false
@@ -89,7 +90,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   - job: Build
     displayName: "Build Application"
-    dependsOn: Install
+    dependsOn: Lint
     steps:
     - checkout: self
       submodules: false
@@ -121,6 +122,7 @@ jobs:
   - job: Test
     displayName: "Run Tests"
     dependsOn: Build
+    condition: succeeded()
     steps:
     - checkout: self
       submodules: false
