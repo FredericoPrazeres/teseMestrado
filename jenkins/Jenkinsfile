@@ -4,6 +4,8 @@ pipeline {
     environment {
         NODE_HOME = '/Users/fredericoprazeres/.nvm/versions/node/v22.22.3'
         PATH = "${NODE_HOME}/bin:${env.PATH}"
+        COREPACK_ENABLE_STRICT = '0'
+        COREPACK_ENABLE_AUTO_PIN = '0'
     }
 
     stages {
@@ -18,7 +20,6 @@ pipeline {
                 dir('directus') {
                     sh 'node --version'
                     sh 'npm install -g pnpm@10 --force'
-                    sh 'pnpm --version'
                 }
             }
         }
