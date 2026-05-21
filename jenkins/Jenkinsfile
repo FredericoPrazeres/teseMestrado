@@ -17,7 +17,7 @@ pipeline {
             steps {
                 dir('directus') {
                     sh 'node --version'
-                    sh 'npm install -g pnpm@10'
+                    sh 'npm install -g pnpm@10 --force'
                     sh 'pnpm --version'
                 }
             }
