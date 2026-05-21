@@ -17,8 +17,8 @@ pipeline {
             steps {
                 dir('directus') {
                     sh 'node --version'
-                    sh 'corepack enable'
-                    sh 'corepack prepare pnpm@10 --activate'
+                    sh 'npm install -g pnpm@10'
+                    sh 'pnpm --version'
                 }
             }
         }
