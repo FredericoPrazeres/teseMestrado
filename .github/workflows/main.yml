@@ -1,4 +1,4 @@
-name: Microservices CI/CD Pipeline
+name: Directus CI Pipeline
 
 on:
   push:
@@ -6,12 +6,36 @@ on:
       - master
 
 jobs:
-  remove-containers:
+  build-and-test:
     runs-on: self-hosted
-    steps:
-      - name: Hello World
-        uses: actions/checkout@v4
+    defaults:
+      run:
+        working-directory: directus
 
-      - name: Stop and remove existing microservices
-        run: |
-          echo "Hello, World!"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
