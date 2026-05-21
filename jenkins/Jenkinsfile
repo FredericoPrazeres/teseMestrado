@@ -1,8 +1,9 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'Node22'
+    environment {
+        NODE_HOME = '/Users/fredericoprazeres/.nvm/versions/node/v22.22.3'
+        PATH = "${NODE_HOME}/bin:${env.PATH}"
     }
 
     stages {
@@ -15,6 +16,7 @@ pipeline {
         stage('Setup') {
             steps {
                 dir('directus') {
+                    sh 'node --version'
                     sh 'corepack enable'
                     sh 'corepack prepare pnpm@10 --activate'
                 }
