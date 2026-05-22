@@ -1,18 +1,40 @@
 trigger:
   branches:
     include:
-      - master
+      - applications/directus
 
 pool:
   name: TeseMestradoPool
 
 jobs:
   - job: BuildAndTest
-    displayName: 'Test Pipeline'
+    displayName: 'Directus CI Pipeline'
     steps:
       - checkout: self
-        displayName: 'Checkout code'
+        submodules: true
+        displayName: 'Checkout repository'
+
+      - task: UseNode@1
+        inputs:
+          version: '22.x'
+        displayName: 'Setup Node.js'
 
       - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+          npm install -g pnpm@10 --force
+        displayName: 'Install pnpm'
+
+      - script: |
+          cd directus && pnpm install --frozen-lockfile
+        displayName: 'Install dependencies'
+
+      - script: |
+          cd directus && pnpm lint
+        displayName: 'Lint'
+
+      - script: |
+          cd directus && pnpm build
+        displayName: 'Build'
+
+      - script: |
+          cd directus && pnpm --recursive --filter '!tests-blackbox' --filter '!tests-e2e' --filter '!e2e' --filter '!app' test
+        displayName: 'Run tests'
