@@ -39,7 +39,6 @@ jobs:
           source .venv/bin/activate
           curl -sS https://bootstrap.pypa.io/get-pip.py | python
           pip install -e ".[dev]"
-          pip install "setuptools<81" ruff
 
   # lint:
   #  runs-on: self-hosted
@@ -65,7 +64,7 @@ jobs:
         run: |
           export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
           source .venv/bin/activate
-          pytest --reuse-db -x -q --timeout=300
+          python -m pytest --reuse-db -x -q --timeout=300
         env:
           DATABASE_URL: postgres://saleor:saleor@localhost:5432/saleor
           SECRET_KEY: test-secret-key
