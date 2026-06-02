@@ -25,32 +25,27 @@ jobs:
         with:
           submodules: true
 
-  setup-python:
-    runs-on: self-hosted
-    needs: checkout
-    steps:
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
   install-dependencies:
     runs-on: self-hosted
-    needs: setup-python
+    needs: checkout
     defaults:
       run:
         working-directory: saleor
     steps:
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Create virtual environment
+        run: |
+          /opt/homebrew/bin/python3.12 -m venv .venv
+        env:
+          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
 
       - name: Install dependencies
         run: |
+          source .venv/bin/activate
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pip install "setuptools<81" pytest pytest-django
+          pip install "setuptools<81"
+        env:
+          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
 
   lint:
     runs-on: self-hosted
@@ -59,15 +54,12 @@ jobs:
       run:
         working-directory: saleor
     steps:
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Lint with ruff
         run: |
-          pip install ruff
+          source .venv/bin/activate
           ruff check .
+        env:
+          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
 
   test:
     runs-on: self-hosted
@@ -76,11 +68,6 @@ jobs:
       run:
         working-directory: saleor
     steps:
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Run tests
         env:
           DATABASE_URL: postgres://saleor:saleor@localhost:5432/saleor
@@ -89,4 +76,7 @@ jobs:
           CELERY_BROKER_URL: redis://localhost:6379/1
           ALLOWED_HOSTS: localhost,127.0.0.1
           DEBUG: "True"
-        run: pytest --reuse-db -x -q --timeout=300
+          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
+        run: |
+          source .venv/bin/activate
+          pytest --reuse-db -x -q --timeout=300
