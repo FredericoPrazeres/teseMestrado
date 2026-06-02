@@ -1,13 +1,16 @@
-name: Directus CI Pipeline
+﻿name: Directus CI Pipeline (Windows)
 
 on:
   push:
     branches:
-      - applicationz
+      - applications/directus
 
 jobs:
   checkout:
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -15,8 +18,11 @@ jobs:
           submodules: true
 
   setup-node:
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
     needs: checkout
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,10 +35,11 @@ jobs:
           version: 10
 
   install-dependencies:
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
     needs: setup-node
     defaults:
       run:
+        shell: pwsh
         working-directory: directus
     steps:
       - name: Setup Node.js
@@ -49,10 +56,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
   lint:
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
     needs: install-dependencies
     defaults:
       run:
+        shell: pwsh
         working-directory: directus
     steps:
       - name: Setup Node.js
@@ -69,10 +77,11 @@ jobs:
         run: pnpm lint
 
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
     needs: lint
     defaults:
       run:
+        shell: pwsh
         working-directory: directus
     steps:
       - name: Setup Node.js
@@ -89,10 +98,11 @@ jobs:
         run: pnpm build
 
   test:
-    runs-on: self-hosted
+    runs-on: [self-hosted, windows]
     needs: build
     defaults:
       run:
+        shell: pwsh
         working-directory: directus
     steps:
       - name: Setup Node.js
