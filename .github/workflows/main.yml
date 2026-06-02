@@ -39,7 +39,7 @@ jobs:
           source .venv/bin/activate
           curl -sS https://bootstrap.pypa.io/get-pip.py | python
           pip install -e .
-          pip install "setuptools<81" freezegun fakeredis pytest pytest-django pytest-timeout pytest-xdist pytest-mock pytest-socket pytest-asyncio
+          pip install "setuptools<81" freezegun fakeredis pytest pytest-django pytest-timeout pytest-xdist pytest-mock pytest-socket pytest-asyncio pytest-recording
 
   # lint:
   #  runs-on: self-hosted
