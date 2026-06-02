@@ -38,8 +38,8 @@ jobs:
           /opt/homebrew/bin/python3.12 -m venv .venv --without-pip
           source .venv/bin/activate
           curl -sS https://bootstrap.pypa.io/get-pip.py | python
-          pip install -e ".[dev]"
-          pip install "setuptools<81" pytest pytest-django pytest-timeout
+          pip install -e .
+          pip install "setuptools<81" freezegun fakeredis pytest pytest-django pytest-timeout pytest-xdist pytest-mock pytest-socket pytest-asyncio
 
   # lint:
   #  runs-on: self-hosted
