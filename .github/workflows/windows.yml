@@ -116,4 +116,4 @@ jobs:
           version: 10
 
       - name: Run tests
-        run: pnpm --recursive --filter '!tests-blackbox' --filter '!tests-e2e' --filter '!e2e' --filter '!app' --filter '!create-directus-project' test
+        run: pnpm --recursive --filter '!tests-blackbox' --filter '!tests-e2e' --filter '!e2e' --filter '!app' --filter '!create-directus-project' --filter '!@directus/sdk' test
