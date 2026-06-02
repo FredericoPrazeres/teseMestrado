@@ -10,7 +10,7 @@ jobs:
     runs-on: [self-hosted, windows]
     defaults:
       run:
-        shell: pwsh
+        shell: powershell
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
     needs: checkout
     defaults:
       run:
-        shell: pwsh
+        shell: powershell
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,7 +39,7 @@ jobs:
     needs: setup-node
     defaults:
       run:
-        shell: pwsh
+        shell: powershell
         working-directory: directus
     steps:
       - name: Setup Node.js
@@ -60,7 +60,7 @@ jobs:
     needs: install-dependencies
     defaults:
       run:
-        shell: pwsh
+        shell: powershell
         working-directory: directus
     steps:
       - name: Setup Node.js
@@ -81,7 +81,7 @@ jobs:
     needs: lint
     defaults:
       run:
-        shell: pwsh
+        shell: powershell
         working-directory: directus
     steps:
       - name: Setup Node.js
@@ -102,7 +102,7 @@ jobs:
     needs: build
     defaults:
       run:
-        shell: pwsh
+        shell: powershell
         working-directory: directus
     steps:
       - name: Setup Node.js
