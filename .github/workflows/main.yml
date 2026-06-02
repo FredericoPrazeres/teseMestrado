@@ -52,7 +52,7 @@ jobs:
         run: |
           export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
           source .venv/bin/activate
-          ruff check .
+          python -m ruff check .
 
   test:
     runs-on: self-hosted
