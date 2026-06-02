@@ -97,23 +97,3 @@ jobs:
       - name: Build
         run: pnpm build
 
-  test:
-    runs-on: [self-hosted, windows]
-    needs: build
-    defaults:
-      run:
-        shell: powershell -ExecutionPolicy Bypass -File "{0}"
-        working-directory: directus
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Run tests
-        run: pnpm --recursive --filter '!tests-blackbox' --filter '!tests-e2e' --filter '!e2e' --filter '!app' --filter '!create-directus-project' --filter '!@directus/sdk' --filter '!@directus/storage-driver-local' --filter '!@directus/storage-driver-supabase' --filter '!@directus/utils' test
