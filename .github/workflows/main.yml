@@ -32,16 +32,11 @@ jobs:
       run:
         working-directory: saleor
     steps:
-      - name: Create virtual environment
+      - name: Create virtual environment and install dependencies
         run: |
-          /opt/homebrew/bin/python3.12 -m venv .venv
-        env:
-          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
-
-      - name: Install dependencies
-        run: |
+          /opt/homebrew/bin/python3.12 -m venv .venv --without-pip
           source .venv/bin/activate
-          python -m pip install --upgrade pip
+          curl -sS https://bootstrap.pypa.io/get-pip.py | python
           pip install -e ".[dev]"
           pip install "setuptools<81"
         env:
