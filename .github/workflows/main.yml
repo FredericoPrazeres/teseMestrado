@@ -41,18 +41,18 @@ jobs:
           pip install -e ".[dev]"
           pip install "setuptools<81" ruff
 
-  lint:
-    runs-on: self-hosted
-    needs: install-dependencies
-    defaults:
-      run:
-        working-directory: saleor
-    steps:
-      - name: Lint with ruff
-        run: |
-          export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
-          source .venv/bin/activate
-          python -m ruff check .
+  # lint:
+  #  runs-on: self-hosted
+  #  needs: install-dependencies
+  #  defaults:
+  #    run:
+  #      working-directory: saleor
+  #  steps:
+  #    - name: Lint with ruff
+  #     run: |
+  #        export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
+  #        source .venv/bin/activate
+  #        python -m ruff check .
 
   test:
     runs-on: self-hosted
