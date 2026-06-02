@@ -39,7 +39,7 @@ jobs:
           source .venv/bin/activate
           curl -sS https://bootstrap.pypa.io/get-pip.py | python
           pip install -e ".[dev]"
-          pip install "setuptools<81"
+          pip install "setuptools<81" ruff
 
   lint:
     runs-on: self-hosted
