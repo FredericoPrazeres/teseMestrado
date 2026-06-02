@@ -56,7 +56,7 @@ jobs:
 
   test:
     runs-on: self-hosted
-    needs: lint
+    needs: install-dependencies
     defaults:
       run:
         working-directory: saleor
