@@ -34,13 +34,12 @@ jobs:
     steps:
       - name: Create virtual environment and install dependencies
         run: |
+          export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
           /opt/homebrew/bin/python3.12 -m venv .venv --without-pip
           source .venv/bin/activate
           curl -sS https://bootstrap.pypa.io/get-pip.py | python
           pip install -e ".[dev]"
           pip install "setuptools<81"
-        env:
-          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
 
   lint:
     runs-on: self-hosted
@@ -51,10 +50,9 @@ jobs:
     steps:
       - name: Lint with ruff
         run: |
+          export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
           source .venv/bin/activate
           ruff check .
-        env:
-          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
 
   test:
     runs-on: self-hosted
@@ -64,6 +62,10 @@ jobs:
         working-directory: saleor
     steps:
       - name: Run tests
+        run: |
+          export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
+          source .venv/bin/activate
+          pytest --reuse-db -x -q --timeout=300
         env:
           DATABASE_URL: postgres://saleor:saleor@localhost:5432/saleor
           SECRET_KEY: test-secret-key
@@ -71,7 +73,38 @@ jobs:
           CELERY_BROKER_URL: redis://localhost:6379/1
           ALLOWED_HOSTS: localhost,127.0.0.1
           DEBUG: "True"
-          DYLD_LIBRARY_PATH: /opt/homebrew/opt/expat/lib
+
+  run-app:
+    runs-on: self-hosted
+    needs: test
+    defaults:
+      run:
+        working-directory: saleor
+    steps:
+      - name: Run migrations
         run: |
+          export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
           source .venv/bin/activate
-          pytest --reuse-db -x -q --timeout=300
+          python manage.py migrate
+        env:
+          DATABASE_URL: postgres://saleor:saleor@localhost:5432/saleor
+          SECRET_KEY: test-secret-key
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/1
+          ALLOWED_HOSTS: localhost,127.0.0.1
+          DEBUG: "True"
+
+      - name: Run Saleor server
+        run: |
+          export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
+          source .venv/bin/activate
+          nohup python manage.py runserver 8000 > /tmp/saleor.log 2>&1 &
+          sleep 5
+          curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/graphql/ | grep -q "200" && echo "Saleor is running successfully!" || (cat /tmp/saleor.log && exit 1)
+        env:
+          DATABASE_URL: postgres://saleor:saleor@localhost:5432/saleor
+          SECRET_KEY: test-secret-key
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/1
+          ALLOWED_HOSTS: localhost,127.0.0.1
+          DEBUG: "True"
