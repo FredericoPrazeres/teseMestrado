@@ -65,7 +65,7 @@ jobs:
         run: |
           export DYLD_LIBRARY_PATH="/opt/homebrew/opt/expat/lib:$DYLD_LIBRARY_PATH"
           source .venv/bin/activate
-          python -m pytest --reuse-db -x -q --timeout=300
+          python -m pytest --reuse-db -x -q --timeout=300 -o asyncio_default_fixture_loop_scope=function
         env:
           DATABASE_URL: postgres://saleor:saleor@localhost:5432/saleor
           SECRET_KEY: test-secret-key
