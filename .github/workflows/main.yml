@@ -1,17 +1,92 @@
-name: Microservices CI/CD Pipeline
+name: Saleor CI Pipeline
 
 on:
   push:
     branches:
-      - master
+      - applications/saleor
 
 jobs:
-  remove-containers:
+  cleanup:
     runs-on: self-hosted
     steps:
-      - name: Hello World
-        uses: actions/checkout@v4
-
-      - name: Stop and remove existing microservices
+      - name: Kill previous Saleor processes
         run: |
-          echo "Hello, World!"
+          pkill -f "manage.py runserver" || true
+          pkill -f "uvicorn saleor" || true
+          pkill -f "celery" || true
+          sleep 2
+
+  checkout:
+    runs-on: self-hosted
+    needs: cleanup
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+  setup-python:
+    runs-on: self-hosted
+    needs: checkout
+    steps:
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+  install-dependencies:
+    runs-on: self-hosted
+    needs: setup-python
+    defaults:
+      run:
+        working-directory: saleor
+    steps:
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install "setuptools<81" pytest pytest-django
+
+  lint:
+    runs-on: self-hosted
+    needs: install-dependencies
+    defaults:
+      run:
+        working-directory: saleor
+    steps:
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Lint with ruff
+        run: |
+          pip install ruff
+          ruff check .
+
+  test:
+    runs-on: self-hosted
+    needs: lint
+    defaults:
+      run:
+        working-directory: saleor
+    steps:
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgres://saleor:saleor@localhost:5432/saleor
+          SECRET_KEY: test-secret-key
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/1
+          ALLOWED_HOSTS: localhost,127.0.0.1
+          DEBUG: "True"
+        run: pytest --reuse-db -x -q --timeout=300
