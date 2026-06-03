@@ -5,9 +5,6 @@ pipeline {
         // Point this to a Node 22 installation on the Jenkins host.
         NODE_HOME = 'C:\\tools\\node-v22.22.3-win-x64'
         PATH = "${NODE_HOME};${env.PATH}"
-        NODE_EXE = "${NODE_HOME}\\node.exe"
-        NPM_CLI = "${NODE_HOME}\\node_modules\\npm\\bin\\npm-cli.js"
-        PNPM_CLI = "%APPDATA%\\npm\\node_modules\\pnpm\\bin\\pnpm.cjs"
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
     }
@@ -16,16 +13,35 @@ pipeline {
         stage('Build and Test') {
             steps {
                 checkout scm
-                bat 'git submodule update --init --recursive'
+                powershell 'git submodule update --init --recursive'
                 dir('directus') {
-                    bat 'if not exist "%NODE_EXE%" (echo Node 22 not found at %NODE_EXE% & exit /b 1)'
-                    bat 'if not exist "%NPM_CLI%" (echo npm-cli.js not found at %NPM_CLI% & exit /b 1)'
-                    bat '"%NODE_EXE%" -v && "%NODE_EXE%" "%NPM_CLI%" -v'
-                    bat '"%NODE_EXE%" "%NPM_CLI%" install -g pnpm@10 --force'
-                    bat 'if not exist "%PNPM_CLI%" (echo pnpm.cjs not found at %PNPM_CLI% & exit /b 1)'
-                    bat '"%NODE_EXE%" "%PNPM_CLI%" install --frozen-lockfile'
-                    bat '"%NODE_EXE%" "%PNPM_CLI%" lint'
-                    bat '"%NODE_EXE%" "%PNPM_CLI%" build'
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
+
+                        $nodeExe = Join-Path $env:NODE_HOME "node.exe"
+                        $npmCmd = Join-Path $env:NODE_HOME "npm.cmd"
+                        $pnpmCmd = Join-Path $env:APPDATA "npm\\pnpm.cmd"
+
+                        if (!(Test-Path $nodeExe)) { throw "Node executable not found at $nodeExe" }
+                        if (!(Test-Path $npmCmd)) { throw "npm.cmd not found at $npmCmd" }
+
+                        $nodeVersion = & $nodeExe -p "process.version"
+                        if (-not $nodeVersion.StartsWith("v22.")) {
+                            throw "Node 22 is required. Current: $nodeVersion"
+                        }
+
+                        & $nodeExe -v
+                        & $npmCmd -v
+
+                        & $npmCmd install -g pnpm@10 --force
+
+                        if (!(Test-Path $pnpmCmd)) { throw "pnpm.cmd not found at $pnpmCmd" }
+
+                        & $pnpmCmd --version
+                        & $pnpmCmd install --frozen-lockfile
+                        & $pnpmCmd lint
+                        & $pnpmCmd build
+                    '''
                 }
             }
         }
