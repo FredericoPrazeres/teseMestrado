@@ -2,9 +2,7 @@ pipeline {
     agent any
 
     environment {
-        // Point this to a Node 22 installation on the Jenkins host.
-        NODE_HOME = 'C:\\tools\\node-v22.22.3-win-x64'
-        PATH = "${NODE_HOME};${env.PATH}"
+        // Use system Node.js installation via PATH
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
     }
