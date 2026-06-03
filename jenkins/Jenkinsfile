@@ -27,19 +27,25 @@ pipeline {
 
         stage('Install pnpm') {
             steps {
-                bat 'pnpm install --frozen-lockfile'
+                dir('directus') {
+                    bat 'pnpm install --frozen-lockfile'
+                }
             }
         }
 
         stage('Lint') {
             steps {
-                bat 'pnpm lint'
+                dir('directus') {
+                    bat 'pnpm lint'
+                }
             }
         }
 
         stage('Build') {
             steps {
-                bat 'pnpm build'
+                dir('directus') {
+                    bat 'pnpm build'
+                }
             }
         }
     }
