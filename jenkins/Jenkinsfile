@@ -7,18 +7,33 @@ pipeline {
 
     stages {
         
-        stage('Build and Test') {
-            steps {
-                checkout scm
+        stage('checkout') {
+            steps{
+                checkout scm                
                 bat 'git submodule update --init --recursive'
-                dir('directus') {
-                    bat 'npm install -g pnpm@10 --force'
-                    bat 'npm list -g pnpm'
-                    bat 'pnpm install --frozen-lockfile'
-                    bat 'pnpm lint'
-                    bat 'pnpm build'
-                }
+
             }
+
+        }
+        stage('Npm install') {
+            bat 'npm install -g pnpm@10 --force'
+
+        }
+        
+        stage('Npm list') {
+            bat 'npm list -g pnpm'
+
+        }
+        stage('Install pnpm') {
+            bat 'pnpm install --frozen-lockfile'
+
+        }
+        stage('Lint') {
+            bat 'pnpm lint'
+
+        }stage('Build') {
+            bat 'pnpm build'
+
         }
     }
 }
