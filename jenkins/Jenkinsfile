@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        NODE_HOME = 'C:\\Program Files\\nodejs'
+        // Point this to a Node 22 installation on the Jenkins host.
+        NODE_HOME = 'C:\\tools\\node-v22.22.3-win-x64'
         PATH = "${NODE_HOME};${env.PATH}"
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
@@ -14,6 +15,8 @@ pipeline {
                 checkout scm
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
+                    bat 'node -v && npm -v'
+                    bat 'node -e "if(!process.version.startsWith(\"v22.\")){console.error(\"Node 22 is required. Current: \" + process.version); process.exit(1)}"'
                     bat 'npm install -g pnpm@10 --force'
                     bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm install --frozen-lockfile'
                     bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm lint'
