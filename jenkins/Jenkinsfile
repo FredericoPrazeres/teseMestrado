@@ -7,23 +7,17 @@ pipeline {
     }
 
     stages {
-        stage('Verify Node Installation') {
-            steps {
-                bat '"C:\\Program Files\\nodejs\\node.exe" --version'
-                bat '"C:\\Program Files\\nodejs\\npm.cmd" --version'
-            }
-        }
         
         stage('Build and Test') {
             steps {
                 checkout scm
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
-                    bat '"C:\\Program Files\\nodejs\\npm.cmd" install -g pnpm@10 --force'
-                    bat '"C:\\Program Files\\nodejs\\npm.cmd" list -g pnpm'
-                    bat 'set "PATH=C:\\ProgramData\\npm;C:\\Program Files\\nodejs;%PATH%" && pnpm install --frozen-lockfile'
-                    bat 'set "PATH=C:\\ProgramData\\npm;C:\\Program Files\\nodejs;%PATH%" && pnpm lint'
-                    bat 'set "PATH=C:\\ProgramData\\npm;C:\\Program Files\\nodejs;%PATH%" && pnpm build'
+                    bat 'npm install -g pnpm@10 --force'
+                    bat 'npm list -g pnpm'
+                    bat 'pnpm install --frozen-lockfile'
+                    bat 'pnpm lint'
+                    bat 'pnpm build'
                 }
             }
         }
