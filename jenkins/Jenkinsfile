@@ -5,6 +5,9 @@ pipeline {
         // Point this to a Node 22 installation on the Jenkins host.
         NODE_HOME = 'C:\\tools\\node-v22.22.3-win-x64'
         PATH = "${NODE_HOME};${env.PATH}"
+        NODE_EXE = "${NODE_HOME}\\node.exe"
+        NPM_CLI = "${NODE_HOME}\\node_modules\\npm\\bin\\npm-cli.js"
+        PNPM_CLI = "%APPDATA%\\npm\\node_modules\\pnpm\\bin\\pnpm.cjs"
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
     }
@@ -15,11 +18,14 @@ pipeline {
                 checkout scm
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
-                    bat 'node -v && npm -v'
-                    bat 'npm install -g pnpm@10 --force'
-                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm install --frozen-lockfile'
-                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm lint'
-                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm build'
+                    bat 'if not exist "%NODE_EXE%" (echo Node 22 not found at %NODE_EXE% & exit /b 1)'
+                    bat 'if not exist "%NPM_CLI%" (echo npm-cli.js not found at %NPM_CLI% & exit /b 1)'
+                    bat '"%NODE_EXE%" -v && "%NODE_EXE%" "%NPM_CLI%" -v'
+                    bat '"%NODE_EXE%" "%NPM_CLI%" install -g pnpm@10 --force'
+                    bat 'if not exist "%PNPM_CLI%" (echo pnpm.cjs not found at %PNPM_CLI% & exit /b 1)'
+                    bat '"%NODE_EXE%" "%PNPM_CLI%" install --frozen-lockfile'
+                    bat '"%NODE_EXE%" "%PNPM_CLI%" lint'
+                    bat '"%NODE_EXE%" "%PNPM_CLI%" build'
                 }
             }
         }
