@@ -14,6 +14,9 @@ pipeline {
                 checkout scm
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
+                    bat 'echo %PATH%'
+                    bat 'where npm'
+                    bat 'node --version'
                     bat 'npm install -g pnpm@10 --force'
                     bat 'npm list -g pnpm'
                     bat 'pnpm install --frozen-lockfile'
