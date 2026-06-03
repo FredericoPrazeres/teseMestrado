@@ -10,11 +10,6 @@ pipeline {
     }
 
     stages {
-        stage('Verify Node Installation') {
-            steps {
-                bat 'node --version && npm --version'
-            }
-        }
         
         stage('Build and Test') {
             steps {
