@@ -2,9 +2,7 @@ pipeline {
     agent any
 
     environment {
-        NODE_HOME = 'C:\\Program Files\\nodejs'
-        NPM_GLOBAL = 'C:\\ProgramData\\npm'
-        PATH = "${NODE_HOME}\\bin;${NPM_GLOBAL};${PATH}"
+        PATH = 'C:\\nvm4w\\nodejs;C:\\ProgramData\\npm;${PATH}'
     }
 
     stages {
@@ -14,9 +12,6 @@ pipeline {
                 checkout scm
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
-                    bat 'echo %PATH%'
-                    bat 'where npm'
-                    bat 'node --version'
                     bat 'npm install -g pnpm@10 --force'
                     bat 'npm list -g pnpm'
                     bat 'pnpm install --frozen-lockfile'
