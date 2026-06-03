@@ -2,12 +2,22 @@ pipeline {
     agent any
 
     environment {
-        // Use system Node.js installation via PATH
+        // IMPORTANT: Install Node.js at one of these locations on the Jenkins server:
+        // 1. C:\Program Files\nodejs (recommended, system-wide)
+        // 2. Or update the path below to wherever Node.js is installed
+        NODE_HOME = 'C:\\Program Files\\nodejs'
+        PATH = "${NODE_HOME};${env.APPDATA}\\npm;${env.PATH}"
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
     }
 
     stages {
+        stage('Verify Node Installation') {
+            steps {
+                bat 'node --version && npm --version'
+            }
+        }
+        
         stage('Build and Test') {
             steps {
                 checkout scm
@@ -15,9 +25,9 @@ pipeline {
                 dir('directus') {
                     bat 'node -v && npm -v'
                     bat 'npm install -g pnpm@10 --force'
-                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm install --frozen-lockfile'
-                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm lint'
-                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm build'
+                    bat 'pnpm install --frozen-lockfile'
+                    bat 'pnpm lint'
+                    bat 'pnpm build'
                 }
             }
         }
