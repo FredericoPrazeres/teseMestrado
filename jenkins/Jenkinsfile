@@ -15,11 +15,12 @@ pipeline {
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
                     bat 'node --version'
-                    bat 'npm install -g pnpm@10 --force'
-                    bat 'pnpm install --frozen-lockfile'
-                    bat 'pnpm lint'
-                    bat 'pnpm build'
-                    bat 'pnpm --recursive --filter "!tests-blackbox" --filter "!tests-e2e" --filter "!e2e" --filter "!app" test'
+                    bat 'corepack enable'
+                    bat 'corepack prepare pnpm@10 --activate'
+                    bat 'corepack pnpm install --frozen-lockfile'
+                    bat 'corepack pnpm lint'
+                    bat 'corepack pnpm build'
+                    bat 'corepack pnpm --recursive --filter "!tests-blackbox" --filter "!tests-e2e" --filter "!e2e" --filter "!app" test'
                 }
             }
         }
