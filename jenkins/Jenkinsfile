@@ -4,6 +4,7 @@ pipeline {
     environment {
         NODE_HOME = 'C:\\Program Files\\nodejs'
         NPM_GLOBAL = 'C:\\ProgramData\\npm'
+        PATH = "${NODE_HOME}\\bin;${NPM_GLOBAL};${PATH}"
     }
 
     stages {
