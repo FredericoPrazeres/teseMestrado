@@ -7,7 +7,7 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: Checkout
+  - job: RunPipeline
     displayName: 'Checkout repository'
     steps:
       - checkout: self
@@ -15,9 +15,6 @@ jobs:
         submodules: true
         displayName: 'Checkout repository'
 
-  - job: SetupNode
-    displayName: 'Setup Node.js'
-    dependsOn: Checkout
     steps:
       - checkout: none
       - task: UseNode@1
@@ -25,23 +22,11 @@ jobs:
           version: '22.x'
         displayName: 'Setup Node.js'
 
-  - job: InstallPnpm
-    displayName: 'Install pnpm'
-    dependsOn: SetupNode
-    steps:
       - checkout: none
       - script: |
           npm install -g pnpm@10 --force
         displayName: 'Install pnpm'
 
-  - job: InstallDependencies
-    displayName: 'Install dependencies'
-    dependsOn: InstallPnpm
-    steps:
-      - checkout: self
-        clean: false
-        submodules: true
-        displayName: 'Checkout repository'
       - task: UseNode@1
         inputs:
           version: '22.x'
@@ -50,14 +35,6 @@ jobs:
           cd directus && pnpm install --frozen-lockfile
         displayName: 'Install dependencies'
 
-  - job: Lint
-    displayName: 'Lint'
-    dependsOn: InstallDependencies
-    steps:
-      - checkout: self
-        clean: false
-        submodules: true
-        displayName: 'Checkout repository'
       - task: UseNode@1
         inputs:
           version: '22.x'
@@ -66,14 +43,6 @@ jobs:
           cd directus && pnpm lint
         displayName: 'Lint'
 
-  - job: Build
-    displayName: 'Build'
-    dependsOn: Lint
-    steps:
-      - checkout: self
-        clean: false
-        submodules: true
-        displayName: 'Checkout repository'
       - task: UseNode@1
         inputs:
           version: '22.x'
