@@ -2,24 +2,28 @@ pipeline {
     agent any
 
     environment {
-        // Node.js is installed at C:\Program Files\nodejs on Windows
         NODE_HOME = 'C:\\Program Files\\nodejs'
-        PATH = "${NODE_HOME};${env.APPDATA}\\npm;${env.PATH}"
-        COREPACK_ENABLE_STRICT = '0'
-        COREPACK_ENABLE_AUTO_PIN = '0'
+        NPM_GLOBAL = 'C:\\ProgramData\\npm'
     }
 
     stages {
+        stage('Verify Node Installation') {
+            steps {
+                bat '"C:\\Program Files\\nodejs\\node.exe" --version'
+                bat '"C:\\Program Files\\nodejs\\npm.cmd" --version'
+            }
+        }
         
         stage('Build and Test') {
             steps {
                 checkout scm
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
-                    bat 'npm install -g pnpm@10 --force'
-                    bat 'pnpm install --frozen-lockfile'
-                    bat 'pnpm lint'
-                    bat 'pnpm build'
+                    bat '"C:\\Program Files\\nodejs\\npm.cmd" install -g pnpm@10 --force'
+                    bat '"C:\\Program Files\\nodejs\\npm.cmd" list -g pnpm'
+                    bat 'set "PATH=C:\\ProgramData\\npm;C:\\Program Files\\nodejs;%PATH%" && pnpm install --frozen-lockfile'
+                    bat 'set "PATH=C:\\ProgramData\\npm;C:\\Program Files\\nodejs;%PATH%" && pnpm lint'
+                    bat 'set "PATH=C:\\ProgramData\\npm;C:\\Program Files\\nodejs;%PATH%" && pnpm build'
                 }
             }
         }
