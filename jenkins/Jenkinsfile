@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        NODE_HOME = '/Users/fredericoprazeres/.nvm/versions/node/v22.22.3'
-        PATH = "${NODE_HOME}/bin:${env.PATH}"
+        NODE_HOME = 'C:\\Program Files\\nodejs'
+        PATH = "${NODE_HOME};${env.PATH}"
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
     }
@@ -12,14 +12,14 @@ pipeline {
         stage('Build and Test') {
             steps {
                 checkout scm
-                sh 'git submodule update --init --recursive'
+                bat 'git submodule update --init --recursive'
                 dir('directus') {
-                    sh 'node --version'
-                    sh 'npm install -g pnpm@10 --force'
-                    sh 'pnpm install --frozen-lockfile'
-                    sh 'pnpm lint'
-                    sh 'pnpm build'
-                    sh "pnpm --recursive --filter '!tests-blackbox' --filter '!tests-e2e' --filter '!e2e' --filter '!app' test"
+                    bat 'node --version'
+                    bat 'npm install -g pnpm@10 --force'
+                    bat 'pnpm install --frozen-lockfile'
+                    bat 'pnpm lint'
+                    bat 'pnpm build'
+                    bat 'pnpm --recursive --filter "!tests-blackbox" --filter "!tests-e2e" --filter "!e2e" --filter "!app" test'
                 }
             }
         }
