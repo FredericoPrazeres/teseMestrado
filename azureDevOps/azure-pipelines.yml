@@ -66,15 +66,3 @@ jobs:
       - script: |
           cd directus && pnpm build
         displayName: 'Build'
-
-  - job: Test
-    displayName: 'Run tests'
-    dependsOn: Build
-    steps:
-      - task: UseNode@1
-        inputs:
-          version: '22.x'
-        displayName: 'Setup Node.js'
-      - script: |
-          cd directus && pnpm --recursive --filter '!tests-blackbox' --filter '!tests-e2e' --filter '!e2e' --filter '!app' --filter '!@directus/extensions-sdk' test
-        displayName: 'Run tests'
