@@ -16,7 +16,7 @@ pipeline {
                 bat 'git submodule update --init --recursive'
                 dir('directus') {
                     bat 'node -v && npm -v'
-                    bat 'node -e "if(!process.version.startsWith(\"v22.\")){console.error(\"Node 22 is required. Current: \" + process.version); process.exit(1)}"'
+                    bat 'node -v | findstr /b "v22." >nul || (echo Node 22 is required. Current version: & node -v & exit /b 1)'
                     bat 'npm install -g pnpm@10 --force'
                     bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm install --frozen-lockfile'
                     bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm lint'
