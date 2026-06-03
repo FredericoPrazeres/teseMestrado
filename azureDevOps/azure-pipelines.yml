@@ -66,3 +66,4 @@ jobs:
       - script: |
           cd directus && pnpm build
         displayName: 'Build'
+
