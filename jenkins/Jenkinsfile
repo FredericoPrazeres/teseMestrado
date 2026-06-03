@@ -2,6 +2,9 @@ pipeline {
     agent any
 
     environment {
+        // Point this to a Node 22 installation on the Jenkins host.
+        NODE_HOME = 'C:\\tools\\node-v22.22.3-win-x64'
+        PATH = "${NODE_HOME};${env.PATH}"
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
     }
@@ -10,60 +13,13 @@ pipeline {
         stage('Build and Test') {
             steps {
                 checkout scm
+                bat 'git submodule update --init --recursive'
                 dir('directus') {
-                    powershell '''
-                        $ErrorActionPreference = "Stop"
-
-                        git submodule update --init --recursive
-
-                        $nodeVersion = "22.22.3"
-                        $cacheCandidates = @(
-                            (if ($env:AGENT_TOOLSDIRECTORY) { Join-Path $env:AGENT_TOOLSDIRECTORY "node\\$nodeVersion\\x64" }),
-                            (if ($env:RUNNER_TOOL_CACHE) { Join-Path $env:RUNNER_TOOL_CACHE "node\\$nodeVersion\\x64" }),
-                            "C:\\Users\\frede\\Desktop\\Mestrado\\Tese\\runners\\azure\\_work\\_tool\\node\\$nodeVersion\\x64"
-                        ) | Where-Object { $_ -and (Test-Path (Join-Path $_ "node.exe")) }
-
-                        if ($cacheCandidates.Count -gt 0) {
-                            $nodeHome = $cacheCandidates[0]
-                        } else {
-                            $toolsDir = Join-Path $env:WORKSPACE "tools"
-                            $nodeHome = Join-Path $toolsDir "node-v$nodeVersion-win-x64"
-                            $zipPath = Join-Path $toolsDir "node-v$nodeVersion-win-x64.zip"
-
-                            if (!(Test-Path (Join-Path $nodeHome "node.exe"))) {
-                                New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
-                                Invoke-WebRequest -Uri "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip" -OutFile $zipPath
-                                Expand-Archive -Path $zipPath -DestinationPath $toolsDir -Force
-                            }
-                        }
-
-                        $env:PATH = "$nodeHome;$env:PATH"
-                        $nodeExe = Join-Path $nodeHome "node.exe"
-                        $npmCmd = Join-Path $nodeHome "npm.cmd"
-
-                        if (!(Test-Path $nodeExe)) { throw "Node executable not found at $nodeExe" }
-                        if (!(Test-Path $npmCmd)) { throw "npm.cmd not found at $npmCmd" }
-
-                        $detectedVersion = (& $nodeExe -p "process.version").Trim()
-                        if (-not $detectedVersion.StartsWith("v22.")) {
-                            throw "Node 22 is required. Current: $detectedVersion"
-                        }
-
-                        & $nodeExe -v
-                        & $npmCmd -v
-
-                        & $npmCmd install -g pnpm@10 --force
-
-                        $npmGlobalBin = (& $npmCmd prefix -g).Trim()
-                        $pnpmCmd = Join-Path $npmGlobalBin "pnpm.cmd"
-
-                        if (!(Test-Path $pnpmCmd)) { throw "pnpm.cmd not found at $pnpmCmd" }
-
-                        & $pnpmCmd --version
-                        & $pnpmCmd install --frozen-lockfile
-                        & $pnpmCmd lint
-                        & $pnpmCmd build
-                    '''
+                    bat 'node -v && npm -v'
+                    bat 'npm install -g pnpm@10 --force'
+                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm install --frozen-lockfile'
+                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm lint'
+                    bat 'set "PATH=%APPDATA%\\npm;%PATH%" && pnpm build'
                 }
             }
         }
