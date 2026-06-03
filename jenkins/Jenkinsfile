@@ -6,49 +6,41 @@ pipeline {
     }
 
     stages {
-        
-        stage('checkout') {
-            steps{
-                checkout scm                
+        stage('Checkout') {
+            steps {
+                checkout scm
                 bat 'git submodule update --init --recursive'
-
             }
-
         }
+
         stage('Npm install') {
-            steps{
-            bat 'npm install -g pnpm@10 --force'
+            steps {
+                bat 'npm install -g pnpm@10 --force'
+            }
+        }
 
+        stage('Npm list') {
+            steps {
+                bat 'npm list -g pnpm'
+            }
         }
-        }
-        
-        stage('Npm list') {            
-            
-            steps{
 
-            bat 'npm list -g pnpm'
-
-        }
-        }
         stage('Install pnpm') {
-                        steps{
-
-            bat 'pnpm install --frozen-lockfile'
-
+            steps {
+                bat 'pnpm install --frozen-lockfile'
+            }
         }
-        }
+
         stage('Lint') {
-                        steps{
-
-            bat 'pnpm lint'
-
+            steps {
+                bat 'pnpm lint'
+            }
         }
-        }stage('Build') {
-                        steps{
 
-            bat 'pnpm build'
-
-        }
+        stage('Build') {
+            steps {
+                bat 'pnpm build'
+            }
         }
     }
 }
