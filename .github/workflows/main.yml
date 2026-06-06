@@ -104,3 +104,5 @@ jobs:
           docker build -t cal-diy:bench -f Dockerfile .
           if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
           $global:LASTEXITCODE = 0
+
+
