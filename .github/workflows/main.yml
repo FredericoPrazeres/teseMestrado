@@ -16,6 +16,7 @@ jobs:
     defaults:
       run:
         working-directory: cal.diy
+        shell: powershell -ExecutionPolicy Bypass -File "{0}"
     steps:
       - name: "Step 01 — Cleanup Previous Runs"
         working-directory: .
