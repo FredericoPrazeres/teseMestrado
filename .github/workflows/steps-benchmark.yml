@@ -3,7 +3,7 @@ name: "Cal.diy — Step Overhead Benchmark"
 on:
   push:
     branches:
-      - applications/calcom
+      - applications/calcomfd
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
@@ -37,6 +37,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+
+      - name: "Step 02b — Patch cal.diy ui build-icons script"
+        # The submodule's build-icons.mjs invokes biome on apps/web/public/icons/sprite.svg,
+        # which biome.json excludes. Biome 2 exits 1 in that case. Add --no-errors-on-unmatched.
+        run: |
+          $f = 'packages/ui/scripts/build-icons.mjs'
+          if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
+          $c = Get-Content $f -Raw
+          if ($c.Contains('--no-errors-on-unmatched')) {
+            Write-Host "$f already patched"
+          } else {
+            $old = 'format --write ${filepath}'
+            $new = 'format --write --no-errors-on-unmatched ${filepath}'
+            if (-not $c.Contains($old)) { Write-Error "patch anchor not found in $f"; exit 1 }
+            $c = $c.Replace($old, $new)
+            Set-Content -Path $f -Value $c -NoNewline -Encoding UTF8
+            Write-Host "Patched $f"
+          }
 
       - name: "Step 03 — Node Setup"
         uses: actions/setup-node@v4
