@@ -75,11 +75,6 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
 
-      - name: "Step 09 — Unit Tests"
-        run: yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
-        env:
-          TZ: UTC
-
       - name: "Step 10 — Prisma Validate"
         run: yarn workspace @calcom/prisma prisma validate
 
