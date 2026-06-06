@@ -70,7 +70,10 @@ jobs:
         run: yarn lint
 
       - name: "Step 08 — Type Check"
-        run: yarn type-check
+        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches tsc child processes.
+        run: yarn turbo run type-check --env-mode=loose
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
 
       - name: "Step 09 — Unit Tests"
         run: yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
