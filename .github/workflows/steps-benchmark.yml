@@ -113,7 +113,8 @@ jobs:
 
       - name: "Step 12 — Build"
         # Bypass turbo's strict env filtering so NODE_OPTIONS reaches the Next.js build worker.
-        run: yarn turbo run build --env-mode=loose
+        # Exclude @calcom/base demo app (upstream dayjs module-augmentation type error, not part of deliverable).
+        run: yarn turbo run build --env-mode=loose --filter=!@calcom/base
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
 
