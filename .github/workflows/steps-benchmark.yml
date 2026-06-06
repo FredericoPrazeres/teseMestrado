@@ -15,15 +15,23 @@ jobs:
     runs-on: self-hosted
     defaults:
       run:
+        # Use Windows PowerShell 5.1 explicitly (avoids WSL bash collision in System32).
+        shell: powershell
         working-directory: cal.diy
     steps:
       - name: "Step 01 — Cleanup Previous Runs"
         working-directory: .
         run: |
-          docker stop $(docker ps -q) 2>/dev/null || true
-          docker rm $(docker ps -aq) 2>/dev/null || true
-          docker rmi $(docker images -q) 2>/dev/null || true
-          docker system prune -af --volumes 2>/dev/null || true
+          # Native stderr from docker would trip the runner's injected $ErrorActionPreference='stop'.
+          $ErrorActionPreference = 'Continue'
+          $ids = docker ps -q
+          if ($ids) { docker stop $ids | Out-Null }
+          $ids = docker ps -aq
+          if ($ids) { docker rm $ids | Out-Null }
+          $ids = docker images -q
+          if ($ids) { docker rmi -f $ids | Out-Null }
+          docker system prune -af --volumes | Out-Null
+          $global:LASTEXITCODE = 0
 
       - name: "Step 02 — Checkout"
         uses: actions/checkout@v4
@@ -36,31 +44,42 @@ jobs:
           node-version: '20'
 
       - name: "Step 04 — Corepack Enable"
-        run: corepack enable && corepack install
+        run: |
+          corepack enable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          corepack install
 
       - name: "Step 05 — Yarn Install"
         run: yarn install
 
       - name: "Step 06 — Environment Setup"
         run: |
-          cp .env.example .env
-          NEXTAUTH_SECRET=$(openssl rand -base64 32)
-          CALENDSO_ENCRYPTION_KEY=$(openssl rand -base64 24)
-          sed -i '' "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env 2>/dev/null || \
-            sed -i "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env
-          sed -i '' "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env 2>/dev/null || \
-            sed -i "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env
-          echo "DATABASE_URL=$DATABASE_URL" >> .env
-          echo "DATABASE_DIRECT_URL=$DATABASE_DIRECT_URL" >> .env
+          Copy-Item .env.example .env -Force
+          $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+          $b32 = New-Object byte[] 32; $rng.GetBytes($b32); $NEXTAUTH_SECRET = [Convert]::ToBase64String($b32)
+          $b24 = New-Object byte[] 24; $rng.GetBytes($b24); $CALENDSO_ENCRYPTION_KEY = [Convert]::ToBase64String($b24)
+          (Get-Content .env) | ForEach-Object {
+            if     ($_ -match '^NEXTAUTH_SECRET=')         { "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" }
+            elseif ($_ -match '^CALENDSO_ENCRYPTION_KEY=') { "CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY" }
+            else                                           { $_ }
+          } | Set-Content .env -Encoding UTF8
+          Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
+          Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
+          # Windows git checkout materializes the repo's packages/prisma/.env symlink as a text file
+          # containing "../../.env". Replace it with a real copy so docker compose can read it.
+          Copy-Item .env packages/prisma/.env -Force
 
       - name: "Step 07 — Lint"
         run: yarn lint
 
-      - name: "Step 08 — Type Check"å
-        run: yarn type-check
+      - name: "Step 08 — Type Check"
+        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches tsc child processes.
+        run: yarn turbo run type-check --env-mode=loose
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
 
       - name: "Step 09 — Unit Tests"
-        run: yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__testså__/route.test.ts' --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
+        run: yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
         env:
           TZ: UTC
 
@@ -68,14 +87,25 @@ jobs:
         run: yarn workspace @calcom/prisma prisma validate
 
       - name: "Step 11 — Start Database"
-        run: docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
+        run: |
+          $ErrorActionPreference = 'Continue'
+          docker compose -f packages/prisma/docker-compose.yml up -d
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Start-Sleep -Seconds 5
 
       - name: "Step 12 — Build"
         run: yarn build
 
       - name: "Step 13 — Stop Database"
         if: always()
-        run: docker compose -f packages/prisma/docker-compose.yml down || true
+        run: |
+          $ErrorActionPreference = 'Continue'
+          docker compose -f packages/prisma/docker-compose.yml down
+          $global:LASTEXITCODE = 0
 
       - name: "Step 14 — Docker Build"
-        run: docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
+        run: |
+          $ErrorActionPreference = 'Continue'
+          docker build -t cal-diy:bench -f Dockerfile .
+          if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+          $global:LASTEXITCODE = 0
