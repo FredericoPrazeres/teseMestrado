@@ -107,7 +107,10 @@ jobs:
           Start-Sleep -Seconds 5
 
       - name: "Step 12 — Build"
-        run: yarn build
+        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches the Next.js build worker.
+        run: yarn turbo run build --env-mode=loose
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
 
       - name: "Step 13 — Stop Database"
         if: always()
