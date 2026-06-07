@@ -1,28 +1,33 @@
-name: "Cal.diy — Step Overhead Benchmark"
+name: "Cal.diy — Job Overhead Benchmark"
 
 on:
   push:
     branches:
-      - applications/calcoms
+      - applications/calcom
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
   DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
 
+# All jobs run sequentially on the same self-hosted runner via needs:.
+# The runner's workspace (_work/<repo>) persists between jobs in the same run,
+# so jobs after Step 02 (checkout) can operate on the files left by earlier jobs.
+defaults:
+  run:
+    shell: powershell
+    working-directory: cal.diy
+
 jobs:
-  all-steps:
-    name: "All Steps in One Job"
+  step01-cleanup:
+    name: "Step 01 — Cleanup Previous Runs"
     runs-on: self-hosted
     defaults:
       run:
-        # Use Windows PowerShell 5.1 explicitly (avoids WSL bash collision in System32).
         shell: powershell
-        working-directory: cal.diy
-    steps:
-      - name: "Step 01 — Cleanup Previous Runs"
         working-directory: .
+    steps:
+      - name: "Cleanup"
         run: |
-          # Native stderr from docker would trip the runner's injected $ErrorActionPreference='stop'.
           $ErrorActionPreference = 'Continue'
           $ids = docker ps -q
           if ($ids) { docker stop $ids | Out-Null }
@@ -33,14 +38,22 @@ jobs:
           docker system prune -af --volumes | Out-Null
           $global:LASTEXITCODE = 0
 
-      - name: "Step 02 — Checkout"
+  step02-checkout:
+    name: "Step 02 — Checkout"
+    runs-on: self-hosted
+    needs: step01-cleanup
+    steps:
+      - name: "Checkout"
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: "Step 02b — Patch cal.diy ui build-icons script"
-        # The submodule's build-icons.mjs invokes biome on apps/web/public/icons/sprite.svg,
-        # which biome.json excludes. Biome 2 exits 1 in that case. Add --no-errors-on-unmatched.
+  step02b-patch:
+    name: "Step 02b — Patch cal.diy ui build-icons script"
+    runs-on: self-hosted
+    needs: step02-checkout
+    steps:
+      - name: "Patch build-icons.mjs"
         run: |
           $f = 'packages/ui/scripts/build-icons.mjs'
           if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
@@ -56,21 +69,41 @@ jobs:
             Write-Host "Patched $f"
           }
 
-      - name: "Step 03 — Node Setup"
+  step03-node-setup:
+    name: "Step 03 — Node Setup"
+    runs-on: self-hosted
+    needs: step02b-patch
+    steps:
+      - name: "Setup Node"
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: "Step 04 — Corepack Enable"
+  step04-corepack:
+    name: "Step 04 — Corepack Enable"
+    runs-on: self-hosted
+    needs: step03-node-setup
+    steps:
+      - name: "Corepack"
         run: |
           corepack enable
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           corepack install
 
-      - name: "Step 05 — Yarn Install"
+  step05-yarn-install:
+    name: "Step 05 — Yarn Install"
+    runs-on: self-hosted
+    needs: step04-corepack
+    steps:
+      - name: "Yarn Install"
         run: yarn install
 
-      - name: "Step 06 — Environment Setup"
+  step06-env-setup:
+    name: "Step 06 — Environment Setup"
+    runs-on: self-hosted
+    needs: step05-yarn-install
+    steps:
+      - name: "Generate .env"
         run: |
           Copy-Item .env.example .env -Force
           $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
@@ -83,48 +116,76 @@ jobs:
           } | Set-Content .env -Encoding UTF8
           Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
           Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
-          # Windows git checkout materializes the repo's packages/prisma/.env symlink as a text file
-          # containing "../../.env". Replace it with a real copy so docker compose can read it.
           Copy-Item .env packages/prisma/.env -Force
 
-      - name: "Step 07 — Lint"
+  step07-lint:
+    name: "Step 07 — Lint"
+    runs-on: self-hosted
+    needs: step06-env-setup
+    steps:
+      - name: "Lint"
         run: yarn lint
 
-      - name: "Step 08 — Type Check"
-        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches tsc child processes.
+  step08-type-check:
+    name: "Step 08 — Type Check"
+    runs-on: self-hosted
+    needs: step07-lint
+    steps:
+      - name: "Type Check"
         run: yarn turbo run type-check --env-mode=loose
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
 
-      - name: "Step 10 — Prisma Validate"
+  step10-prisma-validate:
+    name: "Step 10 — Prisma Validate"
+    runs-on: self-hosted
+    needs: step08-type-check
+    steps:
+      - name: "Prisma Validate"
         run: yarn workspace @calcom/prisma prisma validate
 
-      - name: "Step 11 — Start Database"
+  step11-start-db:
+    name: "Step 11 — Start Database"
+    runs-on: self-hosted
+    needs: step10-prisma-validate
+    steps:
+      - name: "Compose Up"
         run: |
           $ErrorActionPreference = 'Continue'
           docker compose -f packages/prisma/docker-compose.yml up -d
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Start-Sleep -Seconds 5
 
-      - name: "Step 12 — Build"
-        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches the Next.js build worker.
-        # Exclude @calcom/base demo app (upstream dayjs module-augmentation type error, not part of deliverable).
+  step12-build:
+    name: "Step 12 — Build"
+    runs-on: self-hosted
+    needs: step11-start-db
+    steps:
+      - name: "Build"
         run: yarn turbo run build --env-mode=loose --filter=!@calcom/base
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
 
-      - name: "Step 13 — Stop Database"
-        if: always()
+  step13-stop-db:
+    name: "Step 13 — Stop Database"
+    runs-on: self-hosted
+    needs: step12-build
+    if: always()
+    steps:
+      - name: "Compose Down"
         run: |
           $ErrorActionPreference = 'Continue'
           docker compose -f packages/prisma/docker-compose.yml down
           $global:LASTEXITCODE = 0
 
-      - name: "Step 14 — Docker Build"
+  step14-docker-build:
+    name: "Step 14 — Docker Build"
+    runs-on: self-hosted
+    needs: step13-stop-db
+    steps:
+      - name: "Docker Build"
         run: |
           $ErrorActionPreference = 'Continue'
           docker build -t cal-diy:bench -f Dockerfile .
           if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
           $global:LASTEXITCODE = 0
-
-
