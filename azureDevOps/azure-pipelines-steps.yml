@@ -16,8 +16,6 @@ jobs:
     workspace:
       clean: outputs
     steps:
-      - checkout: none
-
       - powershell: |
           # Native stderr from docker would trip the agent's default $ErrorActionPreference='Stop'.
           $ErrorActionPreference = 'Continue'
