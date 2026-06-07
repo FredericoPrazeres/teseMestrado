@@ -1,0 +1,138 @@
+trigger:
+  branches:
+    include:
+      - applications/calcom
+
+variables:
+  DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
+  DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
+
+pool:
+  name: TeseMestradoPool
+
+jobs:
+  - job: AllSteps
+    displayName: 'All Steps in One Job'
+    workspace:
+      clean: outputs
+    steps:
+      - checkout: none
+
+      - powershell: |
+          # Native stderr from docker would trip the agent's default $ErrorActionPreference='Stop'.
+          $ErrorActionPreference = 'Continue'
+          $ids = docker ps -q
+          if ($ids) { docker stop $ids | Out-Null }
+          $ids = docker ps -aq
+          if ($ids) { docker rm $ids | Out-Null }
+          $ids = docker images -q
+          if ($ids) { docker rmi -f $ids | Out-Null }
+          docker system prune -af --volumes | Out-Null
+          $global:LASTEXITCODE = 0
+        displayName: 'Step 01 — Cleanup Previous Runs'
+        errorActionPreference: continue
+
+      - checkout: self
+        submodules: true
+        displayName: 'Step 02 — Checkout'
+
+      - powershell: |
+          $f = 'packages/ui/scripts/build-icons.mjs'
+          if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
+          $c = Get-Content $f -Raw
+          if ($c.Contains('--no-errors-on-unmatched')) {
+            Write-Host "$f already patched"
+          } else {
+            $old = 'format --write ${filepath}'
+            $new = 'format --write --no-errors-on-unmatched ${filepath}'
+            if (-not $c.Contains($old)) { Write-Error "patch anchor not found in $f"; exit 1 }
+            $c = $c.Replace($old, $new)
+            Set-Content -Path $f -Value $c -NoNewline -Encoding UTF8
+            Write-Host "Patched $f"
+          }
+        displayName: 'Step 02b — Patch cal.diy ui build-icons script'
+        workingDirectory: cal.diy
+
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '20.x'
+        displayName: 'Step 03 — Node Setup'
+
+      - powershell: |
+          corepack enable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          corepack install
+        displayName: 'Step 04 — Corepack Enable'
+        workingDirectory: cal.diy
+
+      - powershell: yarn install
+        displayName: 'Step 05 — Yarn Install'
+        workingDirectory: cal.diy
+
+      - powershell: |
+          Copy-Item .env.example .env -Force
+          $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+          $b32 = New-Object byte[] 32; $rng.GetBytes($b32); $NEXTAUTH_SECRET = [Convert]::ToBase64String($b32)
+          $b24 = New-Object byte[] 24; $rng.GetBytes($b24); $CALENDSO_ENCRYPTION_KEY = [Convert]::ToBase64String($b24)
+          (Get-Content .env) | ForEach-Object {
+            if     ($_ -match '^NEXTAUTH_SECRET=')         { "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" }
+            elseif ($_ -match '^CALENDSO_ENCRYPTION_KEY=') { "CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY" }
+            else                                           { $_ }
+          } | Set-Content .env -Encoding UTF8
+          Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
+          Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
+          # Windows git checkout materializes the repo's packages/prisma/.env symlink as a text file
+          # containing "../../.env". Replace it with a real copy so docker compose can read it.
+          Copy-Item .env packages/prisma/.env -Force
+        displayName: 'Step 06 — Environment Setup'
+        workingDirectory: cal.diy
+        env:
+          DATABASE_URL: $(DATABASE_URL)
+          DATABASE_DIRECT_URL: $(DATABASE_DIRECT_URL)
+
+      - powershell: yarn lint
+        displayName: 'Step 07 — Lint'
+        workingDirectory: cal.diy
+
+      - powershell: yarn turbo run type-check --env-mode=loose
+        displayName: 'Step 08 — Type Check'
+        workingDirectory: cal.diy
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+
+      - powershell: yarn workspace @calcom/prisma prisma validate
+        displayName: 'Step 10 — Prisma Validate'
+        workingDirectory: cal.diy
+
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          docker compose -f packages/prisma/docker-compose.yml up -d
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Start-Sleep -Seconds 5
+        displayName: 'Step 11 — Start Database'
+        workingDirectory: cal.diy
+        errorActionPreference: continue
+
+      - powershell: yarn turbo run build --env-mode=loose --filter=!@calcom/base
+        displayName: 'Step 12 — Build'
+        workingDirectory: cal.diy
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          docker compose -f packages/prisma/docker-compose.yml down
+          $global:LASTEXITCODE = 0
+        displayName: 'Step 13 — Stop Database'
+        workingDirectory: cal.diy
+        condition: always()
+        errorActionPreference: continue
+
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          docker build -t cal-diy:bench -f Dockerfile .
+          if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+          $global:LASTEXITCODE = 0
+        displayName: 'Step 14 — Docker Build'
+        workingDirectory: cal.diy
+        errorActionPreference: continue
