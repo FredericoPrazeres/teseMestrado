@@ -145,3 +145,4 @@ jobs:
           cd cal.diy
           docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
         displayName: 'Docker Build'
+        
