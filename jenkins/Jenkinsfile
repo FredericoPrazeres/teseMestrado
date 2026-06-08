@@ -42,17 +42,12 @@ pipeline {
 
         stage('Step 02 — Checkout') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
+                // Step 02 — Checkout
+                checkout scmGit(
                     branches: scm.branches,
-                    extensions: scm.extensions + [[$class: 'SubmoduleOption',
-                        disableSubmodules: false,
-                        parentCredentials: true,
-                        recursiveSubmodules: true,
-                        reference: '',
-                        trackingSubmodules: false]],
+                    extensions: [submodule(recursiveSubmodules: true, parentCredentials: true)],
                     userRemoteConfigs: scm.userRemoteConfigs
-                ])
+                )
             }
         }
 
