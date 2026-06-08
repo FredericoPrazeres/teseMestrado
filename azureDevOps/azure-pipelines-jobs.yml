@@ -11,14 +11,12 @@ pool:
   name: TeseMestradoPool
 
 # Each job has a single step. Sequential execution is enforced via dependsOn.
-# workspace.clean: outputs preserves the agent's working tree across jobs so
-# files created in earlier jobs (yarn install output, .env, build artifacts)
-# remain available to later jobs without re-checkout.
+# No workspace.clean is set: the default behavior preserves the agent's working
+# tree across jobs of the same run, so node_modules and build artifacts from
+# earlier jobs remain visible to later jobs (which all use 'checkout: none').
 jobs:
   - job: Job01_Cleanup
     displayName: 'Step 01 — Cleanup Previous Runs'
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: |
@@ -37,8 +35,6 @@ jobs:
   - job: Job02_Checkout
     displayName: 'Step 02 — Checkout'
     dependsOn: Job01_Cleanup
-    workspace:
-      clean: outputs
     steps:
       - checkout: self
         submodules: true
@@ -47,8 +43,6 @@ jobs:
   - job: Job02b_Patch
     displayName: 'Step 02b — Patch cal.diy ui build-icons script'
     dependsOn: Job02_Checkout
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: |
@@ -71,8 +65,6 @@ jobs:
   - job: Job03_NodeSetup
     displayName: 'Step 03 — Node Setup'
     dependsOn: Job02b_Patch
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - task: NodeTool@0
@@ -83,8 +75,6 @@ jobs:
   - job: Job04_Corepack
     displayName: 'Step 04 — Corepack Enable'
     dependsOn: Job03_NodeSetup
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: |
@@ -97,8 +87,6 @@ jobs:
   - job: Job05_Install
     displayName: 'Step 05 — Yarn Install'
     dependsOn: Job04_Corepack
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: yarn install
@@ -108,8 +96,6 @@ jobs:
   - job: Job06_EnvSetup
     displayName: 'Step 06 — Environment Setup'
     dependsOn: Job05_Install
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: |
@@ -134,8 +120,6 @@ jobs:
   - job: Job07_Lint
     displayName: 'Step 07 — Lint'
     dependsOn: Job06_EnvSetup
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: yarn lint
@@ -145,8 +129,6 @@ jobs:
   - job: Job08_TypeCheck
     displayName: 'Step 08 — Type Check'
     dependsOn: Job07_Lint
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: yarn turbo run type-check --env-mode=loose
@@ -158,8 +140,6 @@ jobs:
   - job: Job10_PrismaValidate
     displayName: 'Step 10 — Prisma Validate'
     dependsOn: Job08_TypeCheck
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: yarn workspace @calcom/prisma prisma validate
@@ -169,8 +149,6 @@ jobs:
   - job: Job11_DbStart
     displayName: 'Step 11 — Start Database'
     dependsOn: Job10_PrismaValidate
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: |
@@ -185,8 +163,6 @@ jobs:
   - job: Job12_Build
     displayName: 'Step 12 — Build'
     dependsOn: Job11_DbStart
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: yarn turbo run build --env-mode=loose --filter=!@calcom/base
@@ -199,8 +175,6 @@ jobs:
     displayName: 'Step 13 — Stop Database'
     dependsOn: Job12_Build
     condition: always()
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: |
@@ -214,8 +188,6 @@ jobs:
   - job: Job14_DockerBuild
     displayName: 'Step 14 — Docker Build'
     dependsOn: Job13_DbStop
-    workspace:
-      clean: outputs
     steps:
       - checkout: none
       - powershell: |
