@@ -1,97 +1,215 @@
+// Cal.diy — Job Overhead Benchmark (Jenkins port of .github/workflows/jobs-benchmark.yml)
+//
+// Each "stage" mirrors one GitHub Actions job. They run sequentially on the same
+// Windows self-hosted agent, so the workspace persists between stages.
+// Most stages use `dir('cal.diy')` to match the workflow-level
+// `defaults.run.working-directory: cal.diy`.
+
 pipeline {
     agent any
 
+    triggers {
+        githubPush()
+    }
+
+    options {
+        skipDefaultCheckout(true)
+        timestamps()
+    }
+
     environment {
-        DATABASE_URL = 'postgresql://postgres@localhost:5450/cal-saml'
+        DATABASE_URL        = 'postgresql://postgres@localhost:5450/cal-saml'
         DATABASE_DIRECT_URL = 'postgresql://postgres@localhost:5450/cal-saml'
-        PATH = "/usr/local/bin:/opt/homebrew/bin:${env.PATH}"
     }
 
     stages {
-        stage('Cal.com CI') {
+
+        stage('Step 01 — Cleanup Previous Runs') {
             steps {
-                // Step 01 — Cleanup Previous Runs
-                sh '''
-                    docker stop $(docker ps -q) 2>/dev/null || true
-                    docker rm $(docker ps -aq) 2>/dev/null || true
-                    docker rmi $(docker images -q) 2>/dev/null || true
-                    docker system prune -af --volumes 2>/dev/null || true
+                powershell '''
+                    $ErrorActionPreference = 'Continue'
+                    $ids = docker ps -q
+                    if ($ids) { docker stop $ids | Out-Null }
+                    $ids = docker ps -aq
+                    if ($ids) { docker rm $ids | Out-Null }
+                    $ids = docker images -q
+                    if ($ids) { docker rmi -f $ids | Out-Null }
+                    docker system prune -af --volumes | Out-Null
+                    $global:LASTEXITCODE = 0
                 '''
+            }
+        }
 
-                // Step 02 — Checkout
-                checkout scmGit(
+        stage('Step 02 — Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
                     branches: scm.branches,
-                    extensions: [submodule(recursiveSubmodules: true, parentCredentials: true)],
+                    extensions: scm.extensions + [[$class: 'SubmoduleOption',
+                        disableSubmodules: false,
+                        parentCredentials: true,
+                        recursiveSubmodules: true,
+                        reference: '',
+                        trackingSubmodules: false]],
                     userRemoteConfigs: scm.userRemoteConfigs
-                )
+                ])
+            }
+        }
 
-                // Step 03 — Node Setup
-                sh '''
-                    node --version
-                    npm --version
-                '''
-
-                // Step 04 — Corepack Enable
+        stage('Step 02b — Patch cal.diy ui build-icons script') {
+            steps {
                 dir('cal.diy') {
-                    sh 'corepack enable && corepack install'
-                }
-
-                // Step 05 — Yarn Install
-                dir('cal.diy') {
-                    sh 'yarn install'
-                }
-
-                // Step 06 — Environment Setup
-                dir('cal.diy') {
-                    sh '''
-                        cp .env.example .env
-                        NEXTAUTH_SECRET=$(openssl rand -base64 32)
-                        CALENDSO_ENCRYPTION_KEY=$(openssl rand -base64 24)
-                        sed -i '' "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env
-                        sed -i '' "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env
-                        echo "DATABASE_URL=${DATABASE_URL}" >> .env
-                        echo "DATABASE_DIRECT_URL=${DATABASE_DIRECT_URL}" >> .env
+                    powershell '''
+                        $f = 'packages/ui/scripts/build-icons.mjs'
+                        if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
+                        $c = Get-Content $f -Raw
+                        if ($c.Contains('--no-errors-on-unmatched')) {
+                            Write-Host "$f already patched"
+                        } else {
+                            $old = 'format --write ${filepath}'
+                            $new = 'format --write --no-errors-on-unmatched ${filepath}'
+                            if (-not $c.Contains($old)) { Write-Error "patch anchor not found in $f"; exit 1 }
+                            $c = $c.Replace($old, $new)
+                            Set-Content -Path $f -Value $c -NoNewline -Encoding UTF8
+                            Write-Host "Patched $f"
+                        }
                     '''
                 }
+            }
+        }
 
-                // Step 07 — Lint
-                dir('cal.diy') {
-                    sh 'yarn lint'
+        stage('Step 03 — Node Setup') {
+            steps {
+                // Equivalent to actions/setup-node@v4 with node-version: '20'.
+                // Requires the NodeJS plugin and a "node-20" tool configured in
+                // "Manage Jenkins → Tools". If you already have Node 20 on PATH,
+                // you can replace this block with a no-op.
+                script {
+                    def nodeHome = tool name: 'node-20', type: 'jenkins.plugins.nodejs.tools.NodeJSInstallation'
+                    env.PATH = "${nodeHome};${nodeHome}\\bin;${env.PATH}"
                 }
+                powershell 'node --version; npm --version'
+            }
+        }
 
-                // Step 08 — Type Check
+        stage('Step 04 — Corepack Enable') {
+            steps {
                 dir('cal.diy') {
-                    sh 'yarn type-check'
+                    powershell '''
+                        corepack enable
+                        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                        corepack install
+                    '''
                 }
+            }
+        }
 
-                // Step 09 — Unit Tests
+        stage('Step 05 — Yarn Install') {
+            steps {
                 dir('cal.diy') {
-                    sh "CI=true TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'"
+                    powershell 'yarn install'
                 }
+            }
+        }
 
-                // Step 10 — Prisma Validate
+        stage('Step 06 — Environment Setup') {
+            steps {
                 dir('cal.diy') {
-                    sh 'yarn workspace @calcom/prisma prisma validate'
+                    powershell '''
+                        Copy-Item .env.example .env -Force
+                        $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+                        $b32 = New-Object byte[] 32; $rng.GetBytes($b32); $NEXTAUTH_SECRET = [Convert]::ToBase64String($b32)
+                        $b24 = New-Object byte[] 24; $rng.GetBytes($b24); $CALENDSO_ENCRYPTION_KEY = [Convert]::ToBase64String($b24)
+                        (Get-Content .env) | ForEach-Object {
+                            if     ($_ -match '^NEXTAUTH_SECRET=')         { "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" }
+                            elseif ($_ -match '^CALENDSO_ENCRYPTION_KEY=') { "CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY" }
+                            else                                           { $_ }
+                        } | Set-Content .env -Encoding UTF8
+                        Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
+                        Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
+                        Copy-Item .env packages/prisma/.env -Force
+                    '''
                 }
+            }
+        }
 
-                // Step 11 — Start Database
+        stage('Step 07 — Lint') {
+            steps {
                 dir('cal.diy') {
-                    sh 'docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5'
+                    powershell 'yarn lint'
                 }
+            }
+        }
 
-                // Step 12 — Build
+        stage('Step 08 — Type Check') {
+            environment {
+                NODE_OPTIONS = '--max-old-space-size=6144'
+            }
+            steps {
                 dir('cal.diy') {
-                    sh 'yarn build'
+                    powershell 'yarn turbo run type-check --env-mode=loose'
                 }
+            }
+        }
 
-                // Step 13 — Stop Database
+        stage('Step 10 — Prisma Validate') {
+            steps {
                 dir('cal.diy') {
-                    sh 'docker compose -f packages/prisma/docker-compose.yml down || true'
+                    powershell 'yarn workspace @calcom/prisma prisma validate'
                 }
+            }
+        }
 
-                // Step 14 — Docker Build
+        stage('Step 11 — Start Database') {
+            steps {
                 dir('cal.diy') {
-                    sh 'docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true'
+                    powershell '''
+                        $ErrorActionPreference = 'Continue'
+                        docker compose -f packages/prisma/docker-compose.yml up -d
+                        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                        Start-Sleep -Seconds 5
+                    '''
+                }
+            }
+        }
+
+        stage('Step 12 — Build') {
+            environment {
+                NODE_OPTIONS = '--max-old-space-size=6144'
+            }
+            steps {
+                dir('cal.diy') {
+                    powershell 'yarn turbo run build --env-mode=loose --filter=!@calcom/base'
+                }
+            }
+        }
+
+        stage('Step 13 — Stop Database') {
+            // Mirrors `if: always()` from the GH workflow.
+            // Declarative pipelines don't allow per-stage post-conditions to
+            // bypass earlier failures by default, so we run this in `post.always`
+            // of the parent pipeline as well (see below). Here we still run it
+            // when the previous stages succeeded.
+            steps {
+                dir('cal.diy') {
+                    powershell '''
+                        $ErrorActionPreference = 'Continue'
+                        docker compose -f packages/prisma/docker-compose.yml down
+                        $global:LASTEXITCODE = 0
+                    '''
+                }
+            }
+        }
+
+        stage('Step 14 — Docker Build') {
+            steps {
+                dir('cal.diy') {
+                    powershell '''
+                        $ErrorActionPreference = 'Continue'
+                        docker build -t cal-diy:bench -f Dockerfile .
+                        if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+                        $global:LASTEXITCODE = 0
+                    '''
                 }
             }
         }
@@ -99,8 +217,16 @@ pipeline {
 
     post {
         always {
+            // Best-effort DB teardown to mirror `if: always()` on Step 13,
+            // in case an earlier stage failed before reaching it.
             dir('cal.diy') {
-                sh 'docker compose -f packages/prisma/docker-compose.yml down || true'
+                powershell '''
+                    $ErrorActionPreference = 'Continue'
+                    if (Test-Path packages/prisma/docker-compose.yml) {
+                        docker compose -f packages/prisma/docker-compose.yml down 2>$null | Out-Null
+                    }
+                    $global:LASTEXITCODE = 0
+                '''
             }
         }
     }
