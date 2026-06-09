@@ -41,7 +41,16 @@ pipeline {
                 // Step 02 — Checkout
                 checkout scmGit(
                     branches: scm.branches,
-                    extensions: [submodule(recursiveSubmodules: true, parentCredentials: true)],
+                    extensions: [
+                        cleanBeforeCheckout(),
+                        submodule(
+                            recursiveSubmodules: true,
+                            parentCredentials: true,
+                            shallow: false,
+                            disableSubmodules: false,
+                            trackingSubmodules: false
+                        )
+                    ],
                     userRemoteConfigs: scm.userRemoteConfigs
                 )
             }
