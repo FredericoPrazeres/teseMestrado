@@ -49,7 +49,7 @@ pipeline {
                     ],
                     userRemoteConfigs: scm.userRemoteConfigs
                 )
-                
+
                 powershell '''
                     $ErrorActionPreference = 'Stop'
                     # Wipe any stale submodule git dirs from earlier runs
@@ -99,6 +99,35 @@ pipeline {
                             Set-Content -Path $f -Value $c -NoNewline -Encoding UTF8
                             Write-Host "Patched $f"
                         }
+                    '''
+                }
+            }
+        }
+
+        stage('Step 02c — Patch embed-react vite config (.js → .mjs)') {
+            steps {
+                dir('cal.diy') {
+                    powershell '''
+                        $dir = 'packages/embeds/embed-react'
+                        $js  = Join-Path $dir 'vite.config.js'
+                        $mjs = Join-Path $dir 'vite.config.mjs'
+                        if (Test-Path $mjs) {
+                            Write-Host "$mjs already exists; nothing to do"
+                            if (Test-Path $js) { Remove-Item $js -Force }
+                            return
+                        }
+                        if (-not (Test-Path $js)) { Write-Error "missing $js"; exit 1 }
+                        $c = Get-Content $js -Raw
+                        if ($c -notmatch 'fileURLToPath') {
+                            $shim = @'
+import { fileURLToPath } from "node:url";
+'@
+                            $c = $c -replace '(?m)^(import path from "node:path";?)', "`$1`r`n$shim"
+                            $c = $c -replace '(?m)^(const useClientBanner)', "const __dirname = path.dirname(fileURLToPath(import.meta.url));`r`n`$1"
+                        }
+                        Set-Content -Path $mjs -Value $c -Encoding UTF8
+                        Remove-Item $js -Force
+                        Write-Host "Wrote $mjs and removed $js"
                     '''
                 }
             }
