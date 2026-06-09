@@ -41,6 +41,7 @@ for ($i = 1; $i -le $NumRuns; $i++) {
     # Create an empty commit to trigger the pipeline
     git commit --allow-empty -m "Windows Azure Job Test - $i/$NumRuns"
 
+
     # Push to remote
     git push origin $Branch
     if ($LASTEXITCODE -eq 0) {
