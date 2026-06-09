@@ -73,17 +73,16 @@ pipeline {
 
         stage('Step 03 — Node Setup') {
             steps {
-                // Equivalent to actions/setup-node@v4 with node-version: '20'.
-                // Requires the NodeJS plugin and a "node-20" tool configured in
-                // "Manage Jenkins → Tools". If you already have Node 20 on PATH,
-                // you can replace this block with a no-op.
-                script {
-                    def nodeHome = tool name: 'node-20', type: 'jenkins.plugins.nodejs.tools.NodeJSInstallation'
-                    env.PATH = "${nodeHome};${nodeHome}\\bin;${env.PATH}"
-                }
-                powershell 'node --version; npm --version'
+                // Assumes Node 20 is already on the agent's PATH.
+                powershell '''
+                    node --version
+                    npm --version
+                    if (-not ($(node --version) -match '^v20\.')) {
+                        Write-Error "Node 20.x is required on the agent PATH"
+                        exit 1
+                    }
+                '''
             }
-
         }
 
         stage('Step 04 — Corepack Enable') {
