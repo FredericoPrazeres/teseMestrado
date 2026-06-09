@@ -73,15 +73,13 @@ pipeline {
 
         stage('Step 03 — Node Setup') {
             steps {
-                // Assumes Node 20 is already on the agent's PATH.
-                powershell '''
-                    node --version
-                    npm --version
-                    if (-not ($(node --version) -match '^v20\\.')) {
-                        Write-Error "Node 20.x is required on the agent PATH"
-                        exit 1
-                    }
-                '''
+                // Requires the NodeJS plugin and a "node-20" tool configured in
+                // "Manage Jenkins → Tools".
+                script {
+                    def nodeHome = tool name: 'node-20', type: 'jenkins.plugins.nodejs.tools.NodeJSInstallation'
+                    env.PATH = "${nodeHome};${nodeHome}\\bin;${env.PATH}"
+                }
+                powershell 'node --version; npm --version'
             }
         }
 
