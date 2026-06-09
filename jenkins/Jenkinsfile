@@ -36,6 +36,7 @@ pipeline {
             }
         }
 
+
         stage('Step 02 — Checkout') {
             steps {
                 // Step 02 — Checkout
