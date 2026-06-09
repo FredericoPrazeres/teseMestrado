@@ -52,30 +52,32 @@ pipeline {
                 
                 powershell '''
                     $ErrorActionPreference = 'Stop'
-                    # Wipe any stale submodule git dirs from earlier runs
+
+                    # Discover submodule paths from .gitmodules
+                    $paths = @()
+                    if (Test-Path .gitmodules) {
+                        $paths = (git config -f .gitmodules --get-regexp '^submodule\\..*\\.path$') `
+                            | ForEach-Object { ($_ -split ' ', 2)[1] }
+                    }
+
+                    # Wipe each submodule worktree (the .git pointer files
+                    # otherwise point at the cached gitdir we are about to delete).
+                    foreach ($p in $paths) {
+                        if (Test-Path $p) {
+                            Remove-Item -Recurse -Force $p
+                            New-Item -ItemType Directory -Path $p | Out-Null
+                        }
+                    }
+
+                    # Wipe any stale cached gitdirs from earlier runs
                     if (Test-Path .git\\modules) {
                         Remove-Item -Recurse -Force .git\\modules
                     }
-                    git submodule sync --recursive
+
+                    git submodule sync
                     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                     git submodule update --init --recursive --force
-                    if ($LASTEXITCODE -ne 0) {
-                        # Fallback: explicitly fetch each submodule's pinned SHA, then check out
-                        git config -f .gitmodules --get-regexp '^submodule\\..*\\.path$' | ForEach-Object {
-                            $line = $_
-                            $key  = ($line -split ' ')[0]   # e.g. submodule.cal.diy.path
-                            $path = ($line -split ' ',2)[1]
-                            $name = $key -replace '^submodule\\.',''
-                            $name = $name -replace '\\.path$',''
-                            $url  = git config -f .gitmodules --get "submodule.$name.url"
-                            $sha  = (git ls-tree HEAD $path).Split("`t")[0].Split(' ')[2]
-                            Write-Host "Forcing fetch of $name ($sha) from $url"
-                            Push-Location $path
-                            git fetch --force --tags $url $sha
-                            git checkout --force $sha
-                            Pop-Location
-                        }
-                    }
+                    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                 '''
             }
         }
