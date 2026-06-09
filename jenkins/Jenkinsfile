@@ -77,7 +77,7 @@ pipeline {
                 powershell '''
                     node --version
                     npm --version
-                    if (-not ($(node --version) -match '^v20\.')) {
+                    if (-not ($(node --version) -match '^v20\\.')) {
                         Write-Error "Node 20.x is required on the agent PATH"
                         exit 1
                     }
