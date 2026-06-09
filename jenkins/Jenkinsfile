@@ -133,6 +133,7 @@ import { fileURLToPath } from "node:url";
             }
         }
 
+
         stage('Step 03 — Node Setup') {
             steps {
                 // Requires the NodeJS plugin and a "node-20" tool configured in
