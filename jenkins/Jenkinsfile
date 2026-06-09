@@ -38,21 +38,44 @@ pipeline {
 
         stage('Step 02 — Checkout') {
             steps {
-                // Step 02 — Checkout
+                // Parent repo only — submodules handled manually below to
+                // recover from stale .git/modules caches and ensure the
+                // pinned gitlink SHAs are actually fetched.
                 checkout scmGit(
                     branches: scm.branches,
                     extensions: [
                         cleanBeforeCheckout(),
-                        submodule(
-                            recursiveSubmodules: true,
-                            parentCredentials: true,
-                            shallow: false,
-                            disableSubmodules: false,
-                            trackingSubmodules: false
-                        )
+                        submodule(disableSubmodules: true)
                     ],
                     userRemoteConfigs: scm.userRemoteConfigs
                 )
+                powershell '''
+                    $ErrorActionPreference = 'Stop'
+                    # Wipe any stale submodule git dirs from earlier runs
+                    if (Test-Path .git\\modules) {
+                        Remove-Item -Recurse -Force .git\\modules
+                    }
+                    git submodule sync --recursive
+                    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                    git submodule update --init --recursive --force
+                    if ($LASTEXITCODE -ne 0) {
+                        # Fallback: explicitly fetch each submodule's pinned SHA, then check out
+                        git config -f .gitmodules --get-regexp '^submodule\\..*\\.path$' | ForEach-Object {
+                            $line = $_
+                            $key  = ($line -split ' ')[0]   # e.g. submodule.cal.diy.path
+                            $path = ($line -split ' ',2)[1]
+                            $name = $key -replace '^submodule\\.',''
+                            $name = $name -replace '\\.path$',''
+                            $url  = git config -f .gitmodules --get "submodule.$name.url"
+                            $sha  = (git ls-tree HEAD $path).Split("`t")[0].Split(' ')[2]
+                            Write-Host "Forcing fetch of $name ($sha) from $url"
+                            Push-Location $path
+                            git fetch --force --tags $url $sha
+                            git checkout --force $sha
+                            Pop-Location
+                        }
+                    }
+                '''
             }
         }
 
