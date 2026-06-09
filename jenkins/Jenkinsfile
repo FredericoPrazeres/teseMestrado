@@ -18,7 +18,6 @@ pipeline {
         DATABASE_DIRECT_URL = 'postgresql://postgres@localhost:5450/cal-saml'
     }
 
-
     stages {
 
         stage('Step 01 — Cleanup Previous Runs') {
@@ -82,7 +81,7 @@ pipeline {
                 powershell 'node --version; npm --version'
             }
         }
-        
+
 
         stage('Step 04 — Corepack Enable') {
             steps {
