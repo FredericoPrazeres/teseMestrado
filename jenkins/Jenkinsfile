@@ -49,7 +49,7 @@ pipeline {
                     ],
                     userRemoteConfigs: scm.userRemoteConfigs
                 )
-
+                
                 powershell '''
                     $ErrorActionPreference = 'Stop'
                     # Wipe any stale submodule git dirs from earlier runs
@@ -104,44 +104,11 @@ pipeline {
             }
         }
 
-        stage('Step 02c — Patch embed-react vite config (.js → .mjs)') {
-            steps {
-                dir('cal.diy') {
-                    powershell '''
-                        $dir = 'packages/embeds/embed-react'
-                        $js  = Join-Path $dir 'vite.config.js'
-                        $mjs = Join-Path $dir 'vite.config.mjs'
-                        if (Test-Path $mjs) {
-                            Write-Host "$mjs already exists; nothing to do"
-                            if (Test-Path $js) { Remove-Item $js -Force }
-                            return
-                        }
-                        if (-not (Test-Path $js)) { Write-Error "missing $js"; exit 1 }
-                        $c = Get-Content $js -Raw
-                        if ($c -notmatch 'fileURLToPath') {
-                            $shim = @'
-import { fileURLToPath } from "node:url";
-'@
-                            $c = $c -replace '(?m)^(import path from "node:path";?)', "`$1`r`n$shim"
-                            $c = $c -replace '(?m)^(const useClientBanner)', "const __dirname = path.dirname(fileURLToPath(import.meta.url));`r`n`$1"
-                        }
-                        Set-Content -Path $mjs -Value $c -Encoding UTF8
-                        Remove-Item $js -Force
-                        Write-Host "Wrote $mjs and removed $js"
-                    '''
-                }
-            }
-        }
-
-
         stage('Step 03 — Node Setup') {
             steps {
-                // Requires the NodeJS plugin and a "node-20" tool configured in
-                // "Manage Jenkins → Tools".
-                script {
-                    def nodeHome = tool name: 'node-20', type: 'jenkins.plugins.nodejs.tools.NodeJSInstallation'
-                    env.PATH = "${nodeHome};${nodeHome}\\bin;${env.PATH}"
-                }
+                // Use the Node already installed on the agent's PATH (matches
+                // how the other runners build cal.diy). Requires Node ≥ 22.12
+                // so the embed-react vite config can require() ESM plugins.
                 powershell 'node --version; npm --version'
             }
         }
