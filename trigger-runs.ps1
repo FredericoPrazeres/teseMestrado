@@ -60,6 +60,7 @@ for ($i = 1; $i -le $NumRuns; $i++) {
     Write-Host ""
 }
 
+
 Write-Host "============================================"
 Write-Host "  All $NumRuns runs triggered successfully!"
 Write-Host "  Finished at: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
