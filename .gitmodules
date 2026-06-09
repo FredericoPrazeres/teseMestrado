@@ -1,3 +1,6 @@
 [submodule "cal.diy"]
 	path = cal.diy
 	url = https://github.com/calcom/cal.diy.git
+[submodule "directus"]
+	path = directus
+	url = https://github.com/directus/directus.git
