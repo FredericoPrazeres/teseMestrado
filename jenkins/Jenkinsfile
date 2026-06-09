@@ -86,6 +86,7 @@ pipeline {
                 }
                 powershell 'node --version; npm --version'
             }
+            
         }
 
         stage('Step 04 — Corepack Enable') {
