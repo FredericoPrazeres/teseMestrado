@@ -49,6 +49,7 @@ pipeline {
                     ],
                     userRemoteConfigs: scm.userRemoteConfigs
                 )
+                
                 powershell '''
                     $ErrorActionPreference = 'Stop'
                     # Wipe any stale submodule git dirs from earlier runs
