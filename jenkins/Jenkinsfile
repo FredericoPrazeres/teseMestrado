@@ -55,8 +55,8 @@ pipeline {
                 )
             }
         }
-    
-    
+
+
 
         stage('Step 02b — Patch cal.diy ui build-icons script') {
             steps {
