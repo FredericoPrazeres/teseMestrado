@@ -185,7 +185,21 @@ jobs:
     steps:
       - name: "Docker Build"
         run: |
-          $ErrorActionPreference = 'Continue'
-          docker build -t cal-diy:bench -f Dockerfile .
-          if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
-          $global:LASTEXITCODE = 0
+                Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+                $ErrorActionPreference = 'Continue'
+                $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                Get-ChildItem -Path . -Recurse -Include *.sh -File |
+                  Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+                  ForEach-Object {
+                    $bytes = [IO.File]::ReadAllBytes($_.FullName)
+                    if ($bytes -contains 13) {
+                      $text = [Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n" -replace "`r", "`n"
+                      [IO.File]::WriteAllBytes($_.FullName, [Text.Encoding]::UTF8.GetBytes($text))
+                      Write-Host "Normalized LF: $($_.FullName)"
+                    }
+                  }
+                docker build -t cal-diy:bench -f Dockerfile .
+                $buildExit = $LASTEXITCODE
+                if ($buildExit -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+                $global:LASTEXITCODE = 0
+                if ($buildExit -ne 0) { exit $buildExit }
