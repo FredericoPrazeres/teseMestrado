@@ -90,7 +90,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           corepack install
 
-    step04b-clean-deps:
+  step04b-clean-deps:
     name: "Step 04b — Wipe submodule node_modules / yarn cache"
     runs-on: self-hosted
     needs: step04-corepack
