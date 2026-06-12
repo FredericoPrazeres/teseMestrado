@@ -127,7 +127,7 @@ jobs:
   step05-yarn-install:
     name: "Step 05 — Yarn Install"
     runs-on: self-hosted
-    needs: step04-corepack
+    needs: step04b-clean-deps
     steps:
       - name: "Yarn Install"
         run: yarn install
