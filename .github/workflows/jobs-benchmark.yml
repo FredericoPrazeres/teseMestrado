@@ -90,6 +90,40 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           corepack install
 
+    step04b-clean-deps:
+    name: "Step 04b — Wipe submodule node_modules / yarn cache"
+    runs-on: self-hosted
+    needs: step04-corepack
+    steps:
+      - name: "Clean cal.diy install state"
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $targets = @(
+            'node_modules',
+            '.yarn/cache',
+            '.yarn/install-state.gz',
+            '.yarn/unplugged',
+            '.yarn/build-state.yml',
+            '.next',
+            '.turbo'
+          )
+          foreach ($t in $targets) {
+            if (Test-Path $t) {
+              Write-Host "Removing $t"
+              Remove-Item -Recurse -Force $t -ErrorAction SilentlyContinue
+            }
+          }
+          # Also wipe nested workspace node_modules / .next / .turbo
+          Get-ChildItem -Path . -Directory -Recurse -Force `
+            -Include node_modules, .next, .turbo `
+            -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+            ForEach-Object {
+              Write-Host "Removing $($_.FullName)"
+              Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue
+            }
+          $global:LASTEXITCODE = 0
+
   step05-yarn-install:
     name: "Step 05 — Yarn Install"
     runs-on: self-hosted
