@@ -32,6 +32,7 @@ Write-Host "  Started at       : $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 Write-Host "============================================"
 Write-Host ""
 
+
 for ($i = 1; $i -le $NumRuns; $i++) {
     Write-Host "──────────────────────────────────────────"
     Write-Host "  Run $i / $NumRuns"
