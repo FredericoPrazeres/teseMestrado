@@ -85,7 +85,7 @@ jobs:
         workingDirectory: cal.diy
 
   - job: Job04b_clean_deps
-    displayName: 'Step 04b — Wipe submodule node_modules / yarn cache"
+    displayName: 'Step 04b — Wipe submodule node_modules / yarn cache'
     dependsOn: Job03_NodeSetup
     steps:
       - checkout: none
