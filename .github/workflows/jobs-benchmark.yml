@@ -3,7 +3,7 @@ name: "Cal.diy — Job Overhead Benchmark"
 on:
   push:
     branches:
-      - applications/calcom
+      - applications/calcoms
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
@@ -150,6 +150,8 @@ jobs:
           } | Set-Content .env -Encoding UTF8
           Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
           Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
+          # Windows git checkout materializes the repo's packages/prisma/.env symlink as a text file
+          # containing "../../.env". Replace it with a real copy so docker compose can read it.
           Copy-Item .env packages/prisma/.env -Force
 
   step07-lint:
