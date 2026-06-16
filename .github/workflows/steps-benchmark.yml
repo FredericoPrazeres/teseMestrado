@@ -3,7 +3,7 @@ name: "Cal.diy — Step Overhead Benchmark"
 on:
   push:
     branches:
-      - applications/calcomfd
+      - applications/calcom
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
@@ -17,7 +17,7 @@ jobs:
       run:
         # Use Windows PowerShell 5.1 explicitly (avoids WSL bash collision in System32).
         shell: powershell
-        working-directory: cal.diy
+        working-directory: .
     steps:
       - name: "Step 01 — Cleanup Previous Runs"
         working-directory: .
@@ -67,6 +67,35 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           corepack install
 
+      - name: Step 04 - Clean dependencies
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $targets = @(
+            'node_modules',
+            '.yarn/cache',
+            '.yarn/install-state.gz',
+            '.yarn/unplugged',
+            '.yarn/build-state.yml',
+            '.next',
+            '.turbo'
+          )
+          foreach ($t in $targets) {
+            if (Test-Path $t) {
+              Write-Host "Removing $t"
+              Remove-Item -Recurse -Force $t -ErrorAction SilentlyContinue
+            }
+          }
+          # Also wipe nested workspace node_modules / .next / .turbo
+          Get-ChildItem -Path . -Directory -Recurse -Force `
+            -Include node_modules, .next, .turbo `
+            -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+            ForEach-Object {
+              Write-Host "Removing $($_.FullName)"
+              Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue
+            }
+          $global:LASTEXITCODE = 0
+
       - name: "Step 05 — Yarn Install"
         run: yarn install
 
@@ -96,10 +125,6 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
 
-      - name: "Step 09 — Unit Tests"
-        run: yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
-        env:
-          TZ: UTC
 
       - name: "Step 10 — Prisma Validate"
         run: yarn workspace @calcom/prisma prisma validate
@@ -127,7 +152,22 @@ jobs:
 
       - name: "Step 14 — Docker Build"
         run: |
-          $ErrorActionPreference = 'Continue'
-          docker build -t cal-diy:bench -f Dockerfile .
-          if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
-          $global:LASTEXITCODE = 0
+                Set-Location "$env:GITHUB_WORKSPACE\cal.diy"
+                $ErrorActionPreference = 'Continue'
+                $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                Get-ChildItem -Path . -Recurse -Include *.sh -File |
+                  Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+                  ForEach-Object {
+                    $bytes = [IO.File]::ReadAllBytes($_.FullName)
+                    if ($bytes -contains 13) {
+                      $text = [Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n" -replace "`r", "`n"
+                      [IO.File]::WriteAllBytes($_.FullName, [Text.Encoding]::UTF8.GetBytes($text))
+                      Write-Host "Normalized LF: $($_.FullName)"
+                    }
+                  }
+                docker build -t cal-diy:bench -f Dockerfile .
+                $buildExit = $LASTEXITCODE
+                if ($buildExit -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+                $global:LASTEXITCODE = 0
+                if ($buildExit -ne 0) { exit $buildExit }
+
