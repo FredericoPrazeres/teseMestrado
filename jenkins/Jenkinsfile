@@ -1,4 +1,4 @@
-﻿// Cal.diy â€” Job Overhead Benchmark (Jenkins port of .github/workflows/jobs-benchmark.yml)
+// Cal.diy â€” Job Overhead Benchmark (Jenkins port of .github/workflows/jobs-benchmark.yml)
 //
 // Each "stage" mirrors one GitHub Actions job. They run sequentially on the same
 // Windows self-hosted agent, so the workspace persists between stages.
