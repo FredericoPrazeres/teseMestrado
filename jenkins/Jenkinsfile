@@ -1,4 +1,4 @@
-// Cal.diy — Job Overhead Benchmark (Jenkins port of .github/workflows/jobs-benchmark.yml)
+﻿// Cal.diy â€” Job Overhead Benchmark (Jenkins port of .github/workflows/jobs-benchmark.yml)
 //
 // Each "stage" mirrors one GitHub Actions job. They run sequentially on the same
 // Windows self-hosted agent, so the workspace persists between stages.
@@ -20,11 +20,11 @@ pipeline {
 
     stages {
 
-        stage('Step 01 — Cleanup Previous Runs') {
+        stage('Step 01 â€” Cleanup Previous Runs') {
             steps {
                 powershell '''
                     $ErrorActionPreference = 'Continue'
-                    $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                    $env:PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;$env:PATH"
                     $ids = docker ps -q
                     if ($ids) { docker stop $ids | Out-Null }
                     $ids = docker ps -aq
@@ -37,9 +37,9 @@ pipeline {
             }
         }
         
-        stage('Step 02 — Checkout') {
+        stage('Step 02 â€” Checkout') {
             steps {
-                // Parent repo only — submodules handled manually below to
+                // Parent repo only â€” submodules handled manually below to
                 // recover from stale .git/modules caches and ensure the
                 // pinned gitlink SHAs are actually fetched.
                 checkout scmGit(
@@ -85,7 +85,7 @@ pipeline {
 
 
 
-        stage('Step 02b — Patch cal.diy ui build-icons script') {
+        stage('Step 02b â€” Patch cal.diy ui build-icons script') {
             steps {
                 dir('cal.diy') {
                     powershell '''
@@ -107,17 +107,17 @@ pipeline {
             }
         }
 
-        stage('Step 03 — Node Setup') {
+        stage('Step 03 â€” Node Setup') {
             steps {
                 // Use the Node already installed on the agent's PATH (matches
-                // how the other runners build cal.diy). Requires Node ≥ 22.12
+                // how the other runners build cal.diy). Requires Node â‰¥ 22.12
                 // so the embed-react vite config can require() ESM plugins.
                 powershell 'node --version; npm --version'
             }
         }
 
 
-        stage('Step 04 — Corepack Enable') {
+        stage('Step 04 â€” Corepack Enable') {
             steps {
                 dir('cal.diy') {
                     powershell '''
@@ -129,7 +129,7 @@ pipeline {
             }
         }
 
-        stage('Step 05 — Yarn Install') {
+        stage('Step 05 â€” Yarn Install') {
             steps {
                 dir('cal.diy') {
                     powershell 'yarn install'
@@ -137,7 +137,7 @@ pipeline {
             }
         }
 
-        stage('Step 06 — Environment Setup') {
+        stage('Step 06 â€” Environment Setup') {
             steps {
                 dir('cal.diy') {
                     powershell '''
@@ -158,7 +158,7 @@ pipeline {
             }
         }
 
-        stage('Step 07 — Lint') {
+        stage('Step 07 â€” Lint') {
             steps {
                 dir('cal.diy') {
                     powershell 'yarn lint'
@@ -166,7 +166,7 @@ pipeline {
             }
         }
 
-        stage('Step 08 — Type Check') {
+        stage('Step 08 â€” Type Check') {
             environment {
                 NODE_OPTIONS = '--max-old-space-size=6144'
             }
@@ -177,7 +177,7 @@ pipeline {
             }
         }
 
-        stage('Step 10 — Prisma Validate') {
+        stage('Step 10 â€” Prisma Validate') {
             steps {
                 dir('cal.diy') {
                     powershell 'yarn workspace @calcom/prisma prisma validate'
@@ -185,12 +185,12 @@ pipeline {
             }
         }
 
-        stage('Step 11 — Start Database') {
+        stage('Step 11 â€” Start Database') {
             steps {
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
-                        $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                        $env:PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;$env:PATH"
                         docker compose -f packages/prisma/docker-compose.yml up -d
                         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                         Start-Sleep -Seconds 5
@@ -199,7 +199,7 @@ pipeline {
             }
         }
 
-        stage('Step 12 — Build') {
+        stage('Step 12 â€” Build') {
             environment {
                 NODE_OPTIONS = '--max-old-space-size=6144'
             }
@@ -210,7 +210,7 @@ pipeline {
             }
         }
 
-        stage('Step 13 — Stop Database') {
+        stage('Step 13 â€” Stop Database') {
             // Mirrors `if: always()` from the GH workflow.
             // Declarative pipelines don't allow per-stage post-conditions to
             // bypass earlier failures by default, so we run this in `post.always`
@@ -220,7 +220,7 @@ pipeline {
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
-                        $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                        $env:PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;$env:PATH"
                         docker compose -f packages/prisma/docker-compose.yml down
                         $global:LASTEXITCODE = 0
                     '''
@@ -228,12 +228,12 @@ pipeline {
             }
         }
 
-        stage('Step 14 — Docker Build') {
+        stage('Step 14 â€” Docker Build') {
             steps {
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
-                        $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                        $env:PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;$env:PATH"
                         Get-ChildItem -Path . -Recurse -Include *.sh -File |
                           Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
                           ForEach-Object {
@@ -262,7 +262,7 @@ pipeline {
             dir('cal.diy') {
                 powershell '''
                     $ErrorActionPreference = 'Continue'
-                    $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                    $env:PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;$env:PATH"
                     if (Test-Path packages/prisma/docker-compose.yml) {
                         docker compose -f packages/prisma/docker-compose.yml down 2>$null | Out-Null
                     }
