@@ -106,7 +106,7 @@ pipeline {
                 }
             }
         }
-
+/*
         stage('Step 03 â€” Node Setup') {
             steps {
                 // Use the Node already installed on the agent's PATH (matches
@@ -227,7 +227,7 @@ pipeline {
                 }
             }
         }
-
+*/
         stage('Step 14 â€” Docker Build') {
             steps {
                 dir('cal.diy') {
