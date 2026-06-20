@@ -235,7 +235,7 @@ pipeline {
                         $ErrorActionPreference = 'Continue'
                         $env:PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;$env:PATH"
                         Get-ChildItem -Path . -Recurse -Include *.sh -File |
-                          Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+                          Where-Object { $_.FullName -notmatch '\\\\node_modules\\\\' } |
                           ForEach-Object {
                             $bytes = [IO.File]::ReadAllBytes($_.FullName)
                             if ($bytes -contains 13) {
