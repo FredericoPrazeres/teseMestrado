@@ -77,7 +77,7 @@ pipeline {
 
                     git submodule sync
                     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-                    git submodule update --init --recursive --force
+                    git submodule update --init --recursive --force --depth=1 --single-branch
                     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                 '''
             }
