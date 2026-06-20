@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - applications/calcom
+      - applications/calcoms
 
 variables:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
