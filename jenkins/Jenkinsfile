@@ -24,6 +24,7 @@ pipeline {
             steps {
                 powershell '''
                     $ErrorActionPreference = 'Continue'
+                    $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
                     $ids = docker ps -q
                     if ($ids) { docker stop $ids | Out-Null }
                     $ids = docker ps -aq
@@ -189,6 +190,7 @@ pipeline {
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
+                        $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
                         docker compose -f packages/prisma/docker-compose.yml up -d
                         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                         Start-Sleep -Seconds 5
@@ -218,6 +220,7 @@ pipeline {
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
+                        $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
                         docker compose -f packages/prisma/docker-compose.yml down
                         $global:LASTEXITCODE = 0
                     '''
@@ -230,6 +233,7 @@ pipeline {
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
+                        $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
                         Get-ChildItem -Path . -Recurse -Include *.sh -File |
                           Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
                           ForEach-Object {
@@ -258,6 +262,7 @@ pipeline {
             dir('cal.diy') {
                 powershell '''
                     $ErrorActionPreference = 'Continue'
+                    $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
                     if (Test-Path packages/prisma/docker-compose.yml) {
                         docker compose -f packages/prisma/docker-compose.yml down 2>$null | Out-Null
                     }
