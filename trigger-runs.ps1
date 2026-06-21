@@ -12,7 +12,7 @@
 
 param(
     [int]$NumRuns = 5,
-    [int]$IntervalSeconds = 2100
+    [int]$IntervalSeconds = 4500
 )
 
 $Branch = "applications/calcom"
@@ -40,7 +40,7 @@ for ($i = 1; $i -le $NumRuns; $i++) {
     Write-Host "──────────────────────────────────────────"
 
     # Create an empty commit to trigger the pipeline
-    git commit --allow-empty -m "Windows Github Job Test - $i/$NumRuns"
+    git commit --allow-empty -m "Windows Jenkins Job Test - $i/$NumRuns"
 
 
     # Push to remote
