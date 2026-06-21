@@ -19,9 +19,9 @@ pipeline {
     }
 
     stages {
-
-        stage('Step 01 â€” Cleanup Previous Runs') {
+        stage('Run Benchmark Steps') {
             steps {
+                // Step 01 â€” Cleanup Previous Runs
                 powershell '''
                     $ErrorActionPreference = 'Continue'
                     $env:PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;$env:PATH"
@@ -34,11 +34,8 @@ pipeline {
                     docker system prune -af --volumes | Out-Null
                     $global:LASTEXITCODE = 0
                 '''
-            }
-        }
-        
-        stage('Step 02 â€” Checkout') {
-            steps {
+
+                // Step 02 â€” Checkout
                 // Parent repo only â€” submodules handled manually below to
                 // recover from stale .git/modules caches and ensure the
                 // pinned gitlink SHAs are actually fetched.
@@ -50,7 +47,7 @@ pipeline {
                     ],
                     userRemoteConfigs: scm.userRemoteConfigs
                 )
-                
+
                 powershell '''
                     $ErrorActionPreference = 'Stop'
 
@@ -80,13 +77,8 @@ pipeline {
                     git submodule update --init --recursive --force --depth=1 --single-branch
                     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                 '''
-            }
-        }
 
-
-
-        stage('Step 02b â€” Patch cal.diy ui build-icons script') {
-            steps {
+                // Step 02b â€” Patch cal.diy ui build-icons script
                 dir('cal.diy') {
                     powershell '''
                         $f = 'packages/ui/scripts/build-icons.mjs'
@@ -104,21 +96,14 @@ pipeline {
                         }
                     '''
                 }
-            }
-        }
 
-        stage('Step 03 â€” Node Setup') {
-            steps {
+                // Step 03 â€” Node Setup
                 // Use the Node already installed on the agent's PATH (matches
                 // how the other runners build cal.diy). Requires Node â‰¥ 22.12
                 // so the embed-react vite config can require() ESM plugins.
                 powershell 'node --version; npm --version'
-            }
-        }
 
-
-        stage('Step 04 â€” Corepack Enable') {
-            steps {
+                // Step 04 â€” Corepack Enable
                 dir('cal.diy') {
                     powershell '''
                         corepack enable
@@ -126,19 +111,13 @@ pipeline {
                         corepack install
                     '''
                 }
-            }
-        }
 
-        stage('Step 05 â€” Yarn Install') {
-            steps {
+                // Step 05 â€” Yarn Install
                 dir('cal.diy') {
                     powershell 'yarn install'
                 }
-            }
-        }
 
-        stage('Step 06 â€” Environment Setup') {
-            steps {
+                // Step 06 â€” Environment Setup
                 dir('cal.diy') {
                     powershell '''
                         Copy-Item .env.example .env -Force
@@ -155,38 +134,25 @@ pipeline {
                         Copy-Item .env packages/prisma/.env -Force
                     '''
                 }
-            }
-        }
 
-        stage('Step 07 â€” Lint') {
-            steps {
+                // Step 07 â€” Lint
                 dir('cal.diy') {
                     powershell 'yarn lint'
                 }
-            }
-        }
 
-        stage('Step 08 â€” Type Check') {
-            environment {
-                NODE_OPTIONS = '--max-old-space-size=6144'
-            }
-            steps {
-                dir('cal.diy') {
-                    powershell 'yarn turbo run type-check --env-mode=loose'
+                // Step 08 â€” Type Check
+                withEnv(['NODE_OPTIONS=--max-old-space-size=6144']) {
+                    dir('cal.diy') {
+                        powershell 'yarn turbo run type-check --env-mode=loose'
+                    }
                 }
-            }
-        }
 
-        stage('Step 10 â€” Prisma Validate') {
-            steps {
+                // Step 10 â€” Prisma Validate
                 dir('cal.diy') {
                     powershell 'yarn workspace @calcom/prisma prisma validate'
                 }
-            }
-        }
 
-        stage('Step 11 â€” Start Database') {
-            steps {
+                // Step 11 â€” Start Database
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
@@ -196,27 +162,18 @@ pipeline {
                         Start-Sleep -Seconds 5
                     '''
                 }
-            }
-        }
 
-        stage('Step 12 â€” Build') {
-            environment {
-                NODE_OPTIONS = '--max-old-space-size=6144'
-            }
-            steps {
-                dir('cal.diy') {
-                    powershell 'yarn turbo run build --env-mode=loose --filter=!@calcom/base'
+                // Step 12 â€” Build
+                withEnv(['NODE_OPTIONS=--max-old-space-size=6144']) {
+                    dir('cal.diy') {
+                        powershell 'yarn turbo run build --env-mode=loose --filter=!@calcom/base'
+                    }
                 }
-            }
-        }
 
-        stage('Step 13 â€” Stop Database') {
-            // Mirrors `if: always()` from the GH workflow.
-            // Declarative pipelines don't allow per-stage post-conditions to
-            // bypass earlier failures by default, so we run this in `post.always`
-            // of the parent pipeline as well (see below). Here we still run it
-            // when the previous stages succeeded.
-            steps {
+                // Step 13 â€” Stop Database
+                // Mirrors `if: always()` from the GH workflow.
+                // We still keep the pipeline-level `post.always` below as a
+                // failure-safe teardown path if an earlier step aborts first.
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
@@ -225,11 +182,8 @@ pipeline {
                         $global:LASTEXITCODE = 0
                     '''
                 }
-            }
-        }
 
-        stage('Step 14 â€” Docker Build') {
-            steps {
+                // Step 14 â€” Docker Build
                 dir('cal.diy') {
                     powershell '''
                         $ErrorActionPreference = 'Continue'
