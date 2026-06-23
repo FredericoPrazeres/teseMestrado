@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - applications/calcoms
+      - applications/calcom
 
 variables:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
@@ -61,6 +61,36 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           corepack install
         displayName: 'Step 04 — Corepack Enable'
+        workingDirectory: cal.diy
+
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          $targets = @(
+            'node_modules',
+            '.yarn/cache',
+            '.yarn/install-state.gz',
+            '.yarn/unplugged',
+            '.yarn/build-state.yml',
+            '.next',
+            '.turbo'
+          )
+          foreach ($t in $targets) {
+            if (Test-Path $t) {
+              Write-Host "Removing $t"
+              Remove-Item -Recurse -Force $t -ErrorAction SilentlyContinue
+            }
+          }
+          # Also wipe nested workspace node_modules / .next / .turbo
+          Get-ChildItem -Path . -Directory -Recurse -Force `
+            -Include node_modules, .next, .turbo `
+            -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+            ForEach-Object {
+              Write-Host "Removing $($_.FullName)"
+              Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue
+            }
+          $global:LASTEXITCODE = 0
+        displayName: 'Step 04b — Wipe submodule node_modules / yarn cache'
         workingDirectory: cal.diy
 
       - powershell: yarn install
@@ -128,9 +158,22 @@ jobs:
 
       - powershell: |
           $ErrorActionPreference = 'Continue'
+          $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+          Get-ChildItem -Path . -Recurse -Include *.sh -File |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+            ForEach-Object {
+              $bytes = [IO.File]::ReadAllBytes($_.FullName)
+              if ($bytes -contains 13) {
+                $text = [Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n" -replace "`r", "`n"
+                [IO.File]::WriteAllBytes($_.FullName, [Text.Encoding]::UTF8.GetBytes($text))
+                Write-Host "Normalized LF: $($_.FullName)"
+              }
+            }
           docker build -t cal-diy:bench -f Dockerfile .
-          if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+          $buildExit = $LASTEXITCODE
+          if ($buildExit -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
           $global:LASTEXITCODE = 0
+          if ($buildExit -ne 0) { exit $buildExit }
         displayName: 'Step 14 — Docker Build'
         workingDirectory: cal.diy
         errorActionPreference: continue
