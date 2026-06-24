@@ -3,7 +3,7 @@ name: "Cal.diy — Step Overhead Benchmark"
 on:
   push:
     branches:
-      - applications/calcoms
+      - applications/calcom
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
@@ -22,7 +22,6 @@ jobs:
       - name: "Step 01 — Cleanup Previous Runs"
         working-directory: .
         run: |
-          # Native stderr from docker would trip the runner's injected $ErrorActionPreference='stop'.
           $ErrorActionPreference = 'Continue'
           $ids = docker ps -q
           if ($ids) { docker stop $ids | Out-Null }
@@ -67,7 +66,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           corepack install
 
-      - name: Step 04 - Clean dependencies
+      - name: "Step 04b — Wipe submodule node_modules / yarn cache"
         run: |
           $ErrorActionPreference = 'Continue'
           $targets = @(
@@ -120,7 +119,6 @@ jobs:
         run: yarn lint
 
       - name: "Step 08 — Type Check"
-        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches tsc child processes.
         run: yarn turbo run type-check --env-mode=loose
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
@@ -137,8 +135,6 @@ jobs:
           Start-Sleep -Seconds 5
 
       - name: "Step 12 — Build"
-        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches the Next.js build worker.
-        # Exclude @calcom/base demo app (upstream dayjs module-augmentation type error, not part of deliverable).
         run: yarn turbo run build --env-mode=loose --filter=!@calcom/base
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
