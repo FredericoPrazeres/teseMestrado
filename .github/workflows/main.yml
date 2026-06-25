@@ -150,7 +150,6 @@ jobs:
           
           Write-Host "Running frontend tests..." -ForegroundColor Cyan
           Push-Location "$env:TOOLJET_DIR/frontend"
-          npm install --save-dev jest-environment-jsdom
           npm run test
           if ($LASTEXITCODE -eq 0) { Write-Host "Frontend tests passed" -ForegroundColor Green } else { Write-Host "Frontend tests completed with failures" -ForegroundColor Yellow }
           Pop-Location
