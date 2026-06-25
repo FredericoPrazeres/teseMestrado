@@ -29,8 +29,14 @@ jobs:
       # ──────────────────────────────────────────────────────────────
       - name: Stop containers and prune Docker resources
         run: |
-          docker stop tooljet 2>$null; if ($?) { Write-Host "Container stopped" } else { Write-Host "Container not running" }
-          docker rm tooljet 2>$null; if ($?) { Write-Host "Container removed" } else { Write-Host "Container doesn't exist" }
+          $containerId = docker ps -aq --filter "name=^tooljet$"
+          if ([string]::IsNullOrWhiteSpace($containerId)) {
+            Write-Host "Container not found, skipping stop/remove"
+          } else {
+            docker stop $containerId | Out-Null
+            docker rm $containerId | Out-Null
+            Write-Host "Container stopped and removed"
+          }
           docker image prune -f
           docker volume prune -f
           docker network prune -f
