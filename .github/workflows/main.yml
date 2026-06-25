@@ -51,14 +51,20 @@ jobs:
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
+
           Push-Location "$env:TOOLJET_DIR/plugins"
-          npm ci --ignore-scripts --no-audit --no-fund
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          npm install --ignore-scripts --no-audit --no-fund
           Pop-Location
+
           Push-Location "$env:TOOLJET_DIR/server"
-          npm ci --ignore-scripts --no-audit --no-fund
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          npm install --production=false --ignore-scripts --no-audit --no-fund
           Pop-Location
+
           Push-Location "$env:TOOLJET_DIR/frontend"
-          npm ci --ignore-scripts --no-audit --no-fund
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          npm install --production=false --ignore-scripts --no-audit --no-fund
           Pop-Location
 
       # ──────────────────────────────────────────────────────────────
