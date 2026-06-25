@@ -99,12 +99,14 @@ jobs:
           
           Write-Host "Building plugins..." -ForegroundColor Cyan
           Push-Location "$env:TOOLJET_DIR/plugins"
+          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
           
           Write-Host "Building frontend..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=8096"
           Push-Location "$env:TOOLJET_DIR/frontend"
+          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
           
@@ -112,6 +114,7 @@ jobs:
           $env:NODE_OPTIONS="--max-old-space-size=4096"
           npm install -g @nestjs/cli
           Push-Location "$env:TOOLJET_DIR/server"
+          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
 
