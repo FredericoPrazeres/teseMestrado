@@ -8,6 +8,8 @@ on:
 env:
   NODE_VERSION: "22.15.1"
   TOOLJET_DIR: "ToolJet"
+  CI: "true"
+  HUSKY: "0"
 
 jobs:
   pipeline:
@@ -46,6 +48,8 @@ jobs:
       # ──────────────────────────────────────────────────────────────
       - name: Install all npm dependencies
         run: |
+          $env:CI="true"
+          $env:HUSKY="0"
           cd $env:TOOLJET_DIR
           npm --prefix plugins install
           npm --prefix server install --production=false
