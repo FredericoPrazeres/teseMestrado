@@ -93,18 +93,26 @@ jobs:
       # ──────────────────────────────────────────────────────────────
       - name: Build plugins, frontend, and server
         run: |
-          cd $env:TOOLJET_DIR
-          Write-Host "Building plugins..." -ForegroundColor Cyan
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
-          npm --prefix plugins run build
+          
+          Write-Host "Building plugins..." -ForegroundColor Cyan
+          Push-Location "$env:TOOLJET_DIR/plugins"
+          npm run build
+          Pop-Location
+          
           Write-Host "Building frontend..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=8096"
-          npm --prefix frontend run build
+          Push-Location "$env:TOOLJET_DIR/frontend"
+          npm run build
+          Pop-Location
+          
           Write-Host "Building server..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=4096"
           npm install -g @nestjs/cli
-          npm --prefix server run build
+          Push-Location "$env:TOOLJET_DIR/server"
+          npm run build
+          Pop-Location
 
       # ──────────────────────────────────────────────────────────────
       # Step 6: Run tests
@@ -113,12 +121,16 @@ jobs:
         run: |
           $env:NODE_ENV="test"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
+          
           Write-Host "Running server tests..." -ForegroundColor Cyan
-          cd $env:TOOLJET_DIR/server
-          npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules'
-          if ($?) { Write-Host "Server tests passed" } else { Write-Host "Server tests completed with failures" }
+          Push-Location "$env:TOOLJET_DIR/server"
+          npm run test
+          if ($LASTEXITCODE -eq 0) { Write-Host "Server tests passed" -ForegroundColor Green } else { Write-Host "Server tests completed with failures" -ForegroundColor Yellow }
+          Pop-Location
+          
           Write-Host "Running frontend tests..." -ForegroundColor Cyan
-          cd ../frontend
-          npm install --save-dev jest-environment-jsdom; if ($?) { Write-Host "Dependency installed" }
-          npx jest --passWithNoTests --forceExit
-          if ($?) { Write-Host "Frontend tests passed" } else { Write-Host "Frontend tests completed with failures" }
+          Push-Location "$env:TOOLJET_DIR/frontend"
+          npm install --save-dev jest-environment-jsdom
+          npm run test
+          if ($LASTEXITCODE -eq 0) { Write-Host "Frontend tests passed" -ForegroundColor Green } else { Write-Host "Frontend tests completed with failures" -ForegroundColor Yellow }
+          Pop-Location
