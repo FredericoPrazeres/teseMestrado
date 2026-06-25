@@ -26,6 +26,16 @@ jobs:
         with:
           submodules: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Print Node.js and npm versions
+        run: |
+          node --version
+          npm --version
+
       # ──────────────────────────────────────────────────────────────
       # Step 2: Cleanup previous deployment
       # ──────────────────────────────────────────────────────────────
