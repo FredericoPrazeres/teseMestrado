@@ -50,10 +50,11 @@ jobs:
         run: |
           $env:CI="true"
           $env:HUSKY="0"
+          $env:npm_config_ignore_scripts="true"
           cd $env:TOOLJET_DIR
-          npm --prefix plugins install
-          npm --prefix server install --production=false
-          npm --prefix frontend install --production=false
+          npm --prefix plugins install --ignore-scripts --no-audit --no-fund
+          npm --prefix server install --production=false --ignore-scripts --no-audit --no-fund
+          npm --prefix frontend install --production=false --ignore-scripts --no-audit --no-fund
 
       # ──────────────────────────────────────────────────────────────
       # Step 4: Lint & Code Quality
