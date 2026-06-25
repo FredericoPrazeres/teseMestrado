@@ -95,6 +95,7 @@ jobs:
         run: |
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
+          $env:npm_config_scripts_prepend_node_path="true"
           
           Write-Host "Building plugins..." -ForegroundColor Cyan
           Push-Location "$env:TOOLJET_DIR/plugins"
