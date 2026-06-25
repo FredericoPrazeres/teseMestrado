@@ -22,21 +22,7 @@ jobs:
       - name: Checkout and print environment info
         uses: actions/checkout@v4
         with:
-          submodules: false
-
-      - name: Initialize ToolJet submodule (fast, fail-fast)
-        timeout-minutes: 4
-        run: |
-          $ErrorActionPreference = "Stop"
-          git config --global core.longpaths true
-          git config --global submodule.fetchJobs 8
-          git submodule sync -- ToolJet
-          if (Test-Path "ToolJet") { Remove-Item -Recurse -Force "ToolJet" }
-          if (Test-Path ".git/modules/ToolJet") { Remove-Item -Recurse -Force ".git/modules/ToolJet" }
-          $submoduleSha = (git ls-tree HEAD ToolJet).Split()[2]
-          Write-Host "Initializing ToolJet submodule at commit $submoduleSha"
-          git -c protocol.version=2 submodule update --init --depth=1 --recommend-shallow --jobs 8 ToolJet
-          Write-Host "ToolJet checked out: $(git -C ToolJet rev-parse --short HEAD)"
+          submodules: true
 
       # ──────────────────────────────────────────────────────────────
       # Step 2: Cleanup previous deployment
