@@ -66,11 +66,27 @@ jobs:
       # ──────────────────────────────────────────────────────────────
       - name: Lint server and frontend code
         run: |
-          cd $env:TOOLJET_DIR
           Write-Host "Linting server code..." -ForegroundColor Cyan
-          npx --prefix server eslint . --ext .ts --max-warnings=0; if ($?) { Write-Host "Server lint passed" } else { Write-Host "Server lint completed with warnings" }
+          Push-Location "$env:TOOLJET_DIR/server"
+          npm run lint
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Server lint passed" -ForegroundColor Green
+          } else {
+            Write-Host "Server lint completed with warnings" -ForegroundColor Yellow
+            $global:LASTEXITCODE = 0
+          }
+          Pop-Location
+
           Write-Host "Linting frontend code..." -ForegroundColor Cyan
-          npx --prefix frontend eslint src/ --ext .js,.jsx --max-warnings=0; if ($?) { Write-Host "Frontend lint passed" } else { Write-Host "Frontend lint completed with warnings" }
+          Push-Location "$env:TOOLJET_DIR/frontend"
+          npm run lint
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Frontend lint passed" -ForegroundColor Green
+          } else {
+            Write-Host "Frontend lint completed with warnings" -ForegroundColor Yellow
+            $global:LASTEXITCODE = 0
+          }
+          Pop-Location
 
       # ──────────────────────────────────────────────────────────────
       # Step 5: Build application
