@@ -52,13 +52,13 @@ jobs:
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
           Push-Location "$env:TOOLJET_DIR/plugins"
-          npm install --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
           Pop-Location
           Push-Location "$env:TOOLJET_DIR/server"
-          npm install --production=false --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
           Pop-Location
           Push-Location "$env:TOOLJET_DIR/frontend"
-          npm install --production=false --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
           Pop-Location
 
       # ──────────────────────────────────────────────────────────────
