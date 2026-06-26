@@ -1,47 +1,40 @@
-name: ToolJet CI/CD Pipeline
+trigger:
+  branches:
+    include:
+      - applications/tooljet
 
-on:
-  push:
-    branches:
-      - applications/tooljets
-
-env:
+variables:
   NODE_VERSION: "22.15.1"
   TOOLJET_DIR: "ToolJet"
   CI: "true"
   HUSKY: "0"
 
+pool:
+  name: TeseMestradoPool
+
 jobs:
-  checkout_and_environment:
-    runs-on: self-hosted
-    defaults:
-      run:
-        shell: powershell
+  - job: CheckoutAndEnvironment
+    displayName: "Checkout and Environment"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
+      - checkout: self
+        submodules: true
+        displayName: "Checkout repository"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(NODE_VERSION)"
+        displayName: "Set up Node.js"
 
-      - name: Print Node.js and npm versions
-        run: |
+      - pwsh: |
           node --version
           npm --version
+        displayName: "Print Node.js and npm versions"
 
-  cleanup_previous_deployment:
-    runs-on: self-hosted
-    needs: checkout_and_environment
-    defaults:
-      run:
-        shell: powershell
+  - job: CleanupPreviousDeployment
+    displayName: "Cleanup previous deployment"
+    dependsOn: CheckoutAndEnvironment
     steps:
-      - name: Stop containers and prune Docker resources
-        run: |
+      - pwsh: |
           $containerId = docker ps -aq --filter "name=^tooljet$"
           if ([string]::IsNullOrWhiteSpace($containerId)) {
             Write-Host "Container not found, skipping stop/remove"
@@ -53,84 +46,76 @@ jobs:
           docker image prune -f
           docker volume prune -f
           docker network prune -f
+        displayName: "Stop containers and prune Docker resources"
 
-  install_dependencies:
-    runs-on: self-hosted
-    needs: cleanup_previous_deployment
-    defaults:
-      run:
-        shell: powershell
+  - job: InstallDependencies
+    displayName: "Install dependencies"
+    dependsOn: CleanupPreviousDeployment
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
+      - checkout: self
+        submodules: true
+        displayName: "Checkout repository"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(NODE_VERSION)"
+        displayName: "Set up Node.js"
 
-      - name: Install all npm dependencies
-        run: |
+      - pwsh: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
 
-          Push-Location "$env:TOOLJET_DIR/plugins"
+          Push-Location "$(TOOLJET_DIR)/plugins"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
-          Push-Location "$env:TOOLJET_DIR/server"
+          Push-Location "$(TOOLJET_DIR)/server"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
-          Push-Location "$env:TOOLJET_DIR/frontend"
+          Push-Location "$(TOOLJET_DIR)/frontend"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
+        displayName: "Install all npm dependencies"
 
-  lint_code:
-    runs-on: self-hosted
-    needs: install_dependencies
-    defaults:
-      run:
-        shell: powershell
+  - job: LintCode
+    displayName: "Lint code"
+    dependsOn: InstallDependencies
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
+      - checkout: self
+        submodules: true
+        displayName: "Checkout repository"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(NODE_VERSION)"
+        displayName: "Set up Node.js"
 
-      - name: Install all npm dependencies
-        run: |
+      - pwsh: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
 
-          Push-Location "$env:TOOLJET_DIR/plugins"
+          Push-Location "$(TOOLJET_DIR)/plugins"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
-          Push-Location "$env:TOOLJET_DIR/server"
+          Push-Location "$(TOOLJET_DIR)/server"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
-          Push-Location "$env:TOOLJET_DIR/frontend"
+          Push-Location "$(TOOLJET_DIR)/frontend"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
+        displayName: "Install all npm dependencies"
 
-      - name: Lint server and frontend code
-        run: |
+      - pwsh: |
           Write-Host "Linting server code..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/server"
+          Push-Location "$(TOOLJET_DIR)/server"
           npm run lint
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Server lint passed" -ForegroundColor Green
@@ -141,7 +126,7 @@ jobs:
           Pop-Location
 
           Write-Host "Linting frontend code..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/frontend"
+          Push-Location "$(TOOLJET_DIR)/frontend"
           npm run lint
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Frontend lint passed" -ForegroundColor Green
@@ -150,77 +135,70 @@ jobs:
             $global:LASTEXITCODE = 0
           }
           Pop-Location
+        displayName: "Lint server and frontend code"
 
-  build_application:
-    runs-on: self-hosted
-    needs: lint_code
-    defaults:
-      run:
-        shell: powershell
+  - job: BuildApplication
+    displayName: "Build application"
+    dependsOn: LintCode
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
+      - checkout: self
+        submodules: true
+        displayName: "Checkout repository"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(NODE_VERSION)"
+        displayName: "Set up Node.js"
 
-      - name: Install all npm dependencies
-        run: |
+      - pwsh: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
 
-          Push-Location "$env:TOOLJET_DIR/plugins"
+          Push-Location "$(TOOLJET_DIR)/plugins"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
-          Push-Location "$env:TOOLJET_DIR/server"
+          Push-Location "$(TOOLJET_DIR)/server"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
-          Push-Location "$env:TOOLJET_DIR/frontend"
+          Push-Location "$(TOOLJET_DIR)/frontend"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
+        displayName: "Install all npm dependencies"
 
-      - name: Build plugins, frontend, and server
-        run: |
+      - pwsh: |
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
           $env:npm_config_scripts_prepend_node_path="true"
-          
+
           Write-Host "Building plugins..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/plugins"
-          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
-          npm run build
-          Pop-Location
-          
-          Write-Host "Building frontend..." -ForegroundColor Cyan
-          $env:NODE_OPTIONS="--max-old-space-size=8096"
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
-          npm run build
-          Pop-Location
-          
-          Write-Host "Building server..." -ForegroundColor Cyan
-          $env:NODE_OPTIONS="--max-old-space-size=4096"
-          npm install -g @nestjs/cli
-          Push-Location "$env:TOOLJET_DIR/server"
+          Push-Location "$(TOOLJET_DIR)/plugins"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
 
-  skip_tests:
-    runs-on: self-hosted
-    needs: build_application
-    defaults:
-      run:
-        shell: powershell
+          Write-Host "Building frontend..." -ForegroundColor Cyan
+          $env:NODE_OPTIONS="--max-old-space-size=8096"
+          Push-Location "$(TOOLJET_DIR)/frontend"
+          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
+          npm run build
+          Pop-Location
+
+          Write-Host "Building server..." -ForegroundColor Cyan
+          $env:NODE_OPTIONS="--max-old-space-size=4096"
+          npm install -g @nestjs/cli
+          Push-Location "$(TOOLJET_DIR)/server"
+          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
+          npm run build
+          Pop-Location
+        displayName: "Build plugins, frontend, and server"
+
+  - job: SkipTests
+    displayName: "Skip tests"
+    dependsOn: BuildApplication
     steps:
-      - name: Skip server and frontend tests
-        run: |
+      - pwsh: |
           Write-Host "Skipping server and frontend tests by request." -ForegroundColor Yellow
-          
+        displayName: "Skip server and frontend tests"
