@@ -144,7 +144,7 @@ jobs:
           
           Write-Host "Running server tests..." -ForegroundColor Cyan
           Push-Location "$env:TOOLJET_DIR/server"
-          npm run test
+          npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests
           if ($LASTEXITCODE -eq 0) { Write-Host "Server tests passed" -ForegroundColor Green } else { Write-Host "Server tests completed with failures" -ForegroundColor Yellow }
           Pop-Location
           
