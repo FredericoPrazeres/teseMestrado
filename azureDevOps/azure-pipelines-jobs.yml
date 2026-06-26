@@ -25,17 +25,16 @@ jobs:
           versionSpec: "$(NODE_VERSION)"
         displayName: "Set up Node.js"
 
-      - script: |
+      - powershell: |
           node --version
-          npm --version
-        shell: powershell
+          npm --version
         displayName: "Print Node.js and npm versions"
 
   - job: CleanupPreviousDeployment
     displayName: "Cleanup previous deployment"
     dependsOn: CheckoutAndEnvironment
     steps:
-      - script: |
+      - powershell: |
           $containerId = docker ps -aq --filter "name=^tooljet$"
           if ([string]::IsNullOrWhiteSpace($containerId)) {
             Write-Host "Container not found, skipping stop/remove"
@@ -46,8 +45,7 @@ jobs:
           }
           docker image prune -f
           docker volume prune -f
-          docker network prune -f
-        shell: powershell
+          docker network prune -f
         displayName: "Stop containers and prune Docker resources"
 
   - job: InstallDependencies
@@ -63,7 +61,7 @@ jobs:
           versionSpec: "$(NODE_VERSION)"
         displayName: "Set up Node.js"
 
-      - script: |
+      - powershell: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
@@ -81,8 +79,7 @@ jobs:
           Push-Location "$(TOOLJET_DIR)/frontend"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-        shell: powershell
+          Pop-Location
         displayName: "Install all npm dependencies"
 
   - job: LintCode
@@ -98,7 +95,7 @@ jobs:
           versionSpec: "$(NODE_VERSION)"
         displayName: "Set up Node.js"
 
-      - script: |
+      - powershell: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
@@ -113,11 +110,10 @@ jobs:
 
           Push-Location "$(TOOLJET_DIR)/frontend"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-        shell: powershell
+          Pop-Location
         displayName: "Install all npm dependencies"
 
-      - script: |
+      - powershell: |
           Write-Host "Linting server code..." -ForegroundColor Cyan
           Push-Location "$(TOOLJET_DIR)/server"
           npm run lint
@@ -138,8 +134,7 @@ jobs:
             Write-Host "Frontend lint completed with warnings" -ForegroundColor Yellow
             $global:LASTEXITCODE = 0
           }
-          Pop-Location
-        shell: powershell
+          Pop-Location
         displayName: "Lint server and frontend code"
 
   - job: BuildApplication
@@ -155,7 +150,7 @@ jobs:
           versionSpec: "$(NODE_VERSION)"
         displayName: "Set up Node.js"
 
-      - script: |
+      - powershell: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
@@ -170,11 +165,10 @@ jobs:
 
           Push-Location "$(TOOLJET_DIR)/frontend"
           npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-        shell: powershell
+          Pop-Location
         displayName: "Install all npm dependencies"
 
-      - script: |
+      - powershell: |
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
           $env:npm_config_scripts_prepend_node_path="true"
@@ -198,15 +192,13 @@ jobs:
           Push-Location "$(TOOLJET_DIR)/server"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
-          Pop-Location
-        shell: powershell
+          Pop-Location
         displayName: "Build plugins, frontend, and server"
 
   - job: SkipTests
     displayName: "Skip tests"
     dependsOn: BuildApplication
     steps:
-      - script: |
-          Write-Host "Skipping server and frontend tests by request." -ForegroundColor Yellow
-        shell: powershell
+      - powershell: |
+          Write-Host "Skipping server and frontend tests by request." -ForegroundColor Yellow
         displayName: "Skip server and frontend tests"
