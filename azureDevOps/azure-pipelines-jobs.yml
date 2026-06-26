@@ -27,7 +27,8 @@ jobs:
 
       - powershell: |
           node --version
-          npm --version
+          npm --version
+
         displayName: "Print Node.js and npm versions"
 
   - job: CleanupPreviousDeployment
@@ -45,22 +46,14 @@ jobs:
           }
           docker image prune -f
           docker volume prune -f
-          docker network prune -f
+          docker network prune -f
+
         displayName: "Stop containers and prune Docker resources"
 
   - job: InstallDependencies
     displayName: "Install dependencies"
     dependsOn: CleanupPreviousDeployment
     steps:
-      - checkout: self
-        submodules: true
-        displayName: "Checkout repository"
-
-      - task: NodeTool@0
-        inputs:
-          versionSpec: "$(NODE_VERSION)"
-        displayName: "Set up Node.js"
-
       - powershell: |
           $env:CI="true"
           $env:HUSKY="0"
@@ -79,40 +72,14 @@ jobs:
           Push-Location "$(TOOLJET_DIR)/frontend"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
+          Pop-Location
+
         displayName: "Install all npm dependencies"
 
   - job: LintCode
     displayName: "Lint code"
     dependsOn: InstallDependencies
     steps:
-      - checkout: self
-        submodules: true
-        displayName: "Checkout repository"
-
-      - task: NodeTool@0
-        inputs:
-          versionSpec: "$(NODE_VERSION)"
-        displayName: "Set up Node.js"
-
-      - powershell: |
-          $env:CI="true"
-          $env:HUSKY="0"
-          $env:npm_config_ignore_scripts="true"
-
-          Push-Location "$(TOOLJET_DIR)/plugins"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$(TOOLJET_DIR)/server"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$(TOOLJET_DIR)/frontend"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-        displayName: "Install all npm dependencies"
-
       - powershell: |
           Write-Host "Linting server code..." -ForegroundColor Cyan
           Push-Location "$(TOOLJET_DIR)/server"
@@ -134,40 +101,14 @@ jobs:
             Write-Host "Frontend lint completed with warnings" -ForegroundColor Yellow
             $global:LASTEXITCODE = 0
           }
-          Pop-Location
+          Pop-Location
+
         displayName: "Lint server and frontend code"
 
   - job: BuildApplication
     displayName: "Build application"
     dependsOn: LintCode
     steps:
-      - checkout: self
-        submodules: true
-        displayName: "Checkout repository"
-
-      - task: NodeTool@0
-        inputs:
-          versionSpec: "$(NODE_VERSION)"
-        displayName: "Set up Node.js"
-
-      - powershell: |
-          $env:CI="true"
-          $env:HUSKY="0"
-          $env:npm_config_ignore_scripts="true"
-
-          Push-Location "$(TOOLJET_DIR)/plugins"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$(TOOLJET_DIR)/server"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$(TOOLJET_DIR)/frontend"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-        displayName: "Install all npm dependencies"
-
       - powershell: |
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
@@ -192,7 +133,8 @@ jobs:
           Push-Location "$(TOOLJET_DIR)/server"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
-          Pop-Location
+          Pop-Location
+
         displayName: "Build plugins, frontend, and server"
 
   - job: SkipTests
@@ -200,5 +142,6 @@ jobs:
     dependsOn: BuildApplication
     steps:
       - powershell: |
-          Write-Host "Skipping server and frontend tests by request." -ForegroundColor Yellow
+          Write-Host "Skipping server and frontend tests by request." -ForegroundColor Yellow
+
         displayName: "Skip server and frontend tests"
