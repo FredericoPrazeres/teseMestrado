@@ -25,7 +25,6 @@ jobs:
           versionSpec: "$(NODE_VERSION)"
         displayName: "Set up Node.js"
 
-
       - pwsh: |
           node --version
           npm --version
