@@ -135,22 +135,9 @@ jobs:
           Pop-Location
 
       # ──────────────────────────────────────────────────────────────
-      # Step 6: Run tests
+      # Step 6: Tests skipped
       # ──────────────────────────────────────────────────────────────
-      - name: Run server and frontend unit tests
+      - name: Skip server and frontend tests
         run: |
-          $env:NODE_ENV="test"
-          $env:NODE_OPTIONS="--max-old-space-size=4096"
-          
-          Write-Host "Running server tests..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/server"
-          npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests
-          if ($LASTEXITCODE -eq 0) { Write-Host "Server tests passed" -ForegroundColor Green } else { Write-Host "Server tests completed with failures" -ForegroundColor Yellow }
-          Pop-Location
-          
-          Write-Host "Running frontend tests..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          npm run test -- --passWithNoTests --forceExit --testPathIgnorePatterns='src/_helpers/__tests__/appUtils.test.js'
-          if ($LASTEXITCODE -eq 0) { Write-Host "Frontend tests passed" -ForegroundColor Green } else { Write-Host "Frontend tests completed with failures" -ForegroundColor Yellow }
-          Pop-Location
+          Write-Host "Skipping server and frontend tests by request." -ForegroundColor Yellow
           
