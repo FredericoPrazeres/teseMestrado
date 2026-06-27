@@ -61,27 +61,11 @@ jobs:
       run:
         shell: powershell
     steps:
-
       - name: Install all npm dependencies
         run: |
-          $env:CI="true"
-          $env:HUSKY="0"
-          $env:npm_config_ignore_scripts="true"
-
-          Push-Location "$env:TOOLJET_DIR/plugins"
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/server"
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
+          npm --prefix "$env:TOOLJET_DIR/plugins" install
+          npm --prefix "$env:TOOLJET_DIR/server" install --include=dev
+          npm --prefix "$env:TOOLJET_DIR/frontend" install --include=dev
 
   lint_code:
     runs-on: self-hosted
@@ -90,25 +74,6 @@ jobs:
       run:
         shell: powershell
     steps:
-
-      - name: Install all npm dependencies
-        run: |
-          $env:CI="true"
-          $env:HUSKY="0"
-          $env:npm_config_ignore_scripts="true"
-
-          Push-Location "$env:TOOLJET_DIR/plugins"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/server"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
       - name: Lint server and frontend code
         run: |
           Write-Host "Linting server code..." -ForegroundColor Cyan
@@ -140,25 +105,6 @@ jobs:
       run:
         shell: powershell
     steps:
-
-      - name: Install all npm dependencies
-        run: |
-          $env:CI="true"
-          $env:HUSKY="0"
-          $env:npm_config_ignore_scripts="true"
-
-          Push-Location "$env:TOOLJET_DIR/plugins"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/server"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
       - name: Build plugins, frontend, and server
         run: |
           $env:NODE_ENV="production"
