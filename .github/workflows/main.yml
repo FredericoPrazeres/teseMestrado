@@ -12,16 +12,13 @@ env:
   HUSKY: "0"
 
 jobs:
-  pipeline:
+  checkout_and_environment:
     runs-on: self-hosted
     defaults:
       run:
         shell: powershell
     steps:
-      # ──────────────────────────────────────────────────────────────
-      # Step 1: Checkout & Environment Info
-      # ──────────────────────────────────────────────────────────────
-      - name: Checkout and print environment info
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: true
@@ -35,10 +32,13 @@ jobs:
         run: |
           node --version
           npm --version
-
-      # ──────────────────────────────────────────────────────────────
-      # Step 2: Cleanup previous deployment
-      # ──────────────────────────────────────────────────────────────
+  cleanup_previous_deployment:
+    runs-on: self-hosted
+    needs: checkout_and_environment
+    defaults:
+      run:
+        shell: powershell
+    steps:
       - name: Stop containers and prune Docker resources
         run: |
           $containerId = docker ps -aq --filter "name=^tooljet$"
@@ -52,34 +52,39 @@ jobs:
           docker image prune -f
           docker volume prune -f
           docker network prune -f
-
-      # ──────────────────────────────────────────────────────────────
-      # Step 3: Install dependencies
-      # ──────────────────────────────────────────────────────────────
+  install_dependencies:
+    runs-on: self-hosted
+    needs: cleanup_previous_deployment
+    defaults:
+      run:
+        shell: powershell
+    steps:
       - name: Install all npm dependencies
         run: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
-
+          $env:npm_config_engine_strict="false"
           Push-Location "$env:TOOLJET_DIR/plugins"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
-
           Push-Location "$env:TOOLJET_DIR/server"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
-
           Push-Location "$env:TOOLJET_DIR/frontend"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
-
-      # ──────────────────────────────────────────────────────────────
-      # Step 4: Lint & Code Quality
-      # ──────────────────────────────────────────────────────────────
+          
+  lint_code:
+    runs-on: self-hosted
+    needs: install_dependencies
+    defaults:
+      run:
+        shell: powershell
+    steps:
       - name: Lint server and frontend code
         run: |
           Write-Host "Linting server code..." -ForegroundColor Cyan
@@ -104,31 +109,40 @@ jobs:
           }
           Pop-Location
 
-      # ──────────────────────────────────────────────────────────────
-      # Step 5: Build application
-      # ──────────────────────────────────────────────────────────────
+  build_application:
+    runs-on: self-hosted
+    needs: install_dependencies
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Patch server tsconfig to remove restrictive types array
+        run: |
+          $tsconfigPath = "$env:TOOLJET_DIR/server/tsconfig.json"
+          $content = Get-Content $tsconfigPath -Raw
+          # Remove the entire "types" array so TypeScript auto-discovers all
+          # installed @types/* packages instead of failing on named entries
+          $content = $content -replace '"types"\s*:\s*\[[^\]]*\],?\s*', ''
+          $content | Set-Content $tsconfigPath -NoNewline
+          Write-Host "Patched tsconfig.json: removed restrictive 'types' array"
       - name: Build plugins, frontend, and server
         run: |
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
           $env:npm_config_scripts_prepend_node_path="true"
-          
           Write-Host "Building plugins..." -ForegroundColor Cyan
           Push-Location "$env:TOOLJET_DIR/plugins"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
-          
           Write-Host "Building frontend..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=8096"
           Push-Location "$env:TOOLJET_DIR/frontend"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
-          
           Write-Host "Building server..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=4096"
-          npm install -g @nestjs/cli
           Push-Location "$env:TOOLJET_DIR/server"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
