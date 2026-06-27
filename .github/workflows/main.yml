@@ -63,16 +63,23 @@ jobs:
     steps:
       - name: Install all npm dependencies
         run: |
+          $env:CI="true"
+          $env:HUSKY="0"
+          $env:npm_config_ignore_scripts="true"
+
           Push-Location "$env:TOOLJET_DIR/plugins"
-          npm install
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
           Push-Location "$env:TOOLJET_DIR/server"
-          npm install --include=dev
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
           Push-Location "$env:TOOLJET_DIR/frontend"
-          npm install --include=dev
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
 
