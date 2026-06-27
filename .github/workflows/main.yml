@@ -63,9 +63,17 @@ jobs:
     steps:
       - name: Install all npm dependencies
         run: |
-          npm --prefix "$env:TOOLJET_DIR/plugins" install
-          npm --prefix "$env:TOOLJET_DIR/server" install --include=dev
-          npm --prefix "$env:TOOLJET_DIR/frontend" install --include=dev
+          Push-Location "$env:TOOLJET_DIR/plugins"
+          npm install
+          Pop-Location
+
+          Push-Location "$env:TOOLJET_DIR/server"
+          npm install --include=dev
+          Pop-Location
+
+          Push-Location "$env:TOOLJET_DIR/frontend"
+          npm install --include=dev
+          Pop-Location
 
   lint_code:
     runs-on: self-hosted
