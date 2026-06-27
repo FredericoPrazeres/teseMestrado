@@ -114,13 +114,15 @@ jobs:
       run:
         shell: powershell
     steps:
-      - name: Patch server tsconfig to remove missing type definitions
+      - name: Patch server tsconfig to remove restrictive types array
         run: |
           $tsconfigPath = "$env:TOOLJET_DIR/server/tsconfig.json"
           $content = Get-Content $tsconfigPath -Raw
-          $content = $content -replace ',?\s*"rxjs"', ''
+          # Remove the entire "types" array so TypeScript auto-discovers all
+          # installed @types/* packages instead of failing on named entries
+          $content = $content -replace '"types"\s*:\s*\[[^\]]*\],?\s*', ''
           $content | Set-Content $tsconfigPath -NoNewline
-          Write-Host "Patched tsconfig.json: removed 'rxjs' from types array"
+          Write-Host "Patched tsconfig.json: removed restrictive 'types' array"
 
       - name: Build plugins, frontend, and server
         run: |
