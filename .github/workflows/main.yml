@@ -12,13 +12,16 @@ env:
   HUSKY: "0"
 
 jobs:
-  checkout_and_environment:
+  pipeline:
     runs-on: self-hosted
     defaults:
       run:
         shell: powershell
     steps:
-      - name: Checkout repository
+      # ──────────────────────────────────────────────────────────────
+      # Step 1: Checkout & Environment Info
+      # ──────────────────────────────────────────────────────────────
+      - name: Checkout and print environment info
         uses: actions/checkout@v4
         with:
           submodules: true
@@ -33,13 +36,9 @@ jobs:
           node --version
           npm --version
 
-  cleanup_previous_deployment:
-    runs-on: self-hosted
-    needs: checkout_and_environment
-    defaults:
-      run:
-        shell: powershell
-    steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 2: Cleanup previous deployment
+      # ──────────────────────────────────────────────────────────────
       - name: Stop containers and prune Docker resources
         run: |
           $containerId = docker ps -aq --filter "name=^tooljet$"
@@ -54,19 +53,14 @@ jobs:
           docker volume prune -f
           docker network prune -f
 
-  install_dependencies:
-    runs-on: self-hosted
-    needs: cleanup_previous_deployment
-    defaults:
-      run:
-        shell: powershell
-    steps:
+      # ──────────────────────────────────────────────────────────────
+      # Step 3: Install dependencies
+      # ──────────────────────────────────────────────────────────────
       - name: Install all npm dependencies
         run: |
           $env:CI="true"
           $env:HUSKY="0"
           $env:npm_config_ignore_scripts="true"
-          $env:npm_config_engine_strict="false"
 
           Push-Location "$env:TOOLJET_DIR/plugins"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
@@ -83,76 +77,58 @@ jobs:
           npm install --include=dev --ignore-scripts --no-audit --no-fund
           Pop-Location
 
-
-#  lint_code:
-#    runs-on: self-hosted
-#    needs: install_dependencies
-#    defaults:
-#      run:
-#        shell: powershell
-#    steps:
-#      - name: Lint server and frontend code
-#        run: |
-#          Write-Host "Linting server code..." -ForegroundColor Cyan
-#          Push-Location "$env:TOOLJET_DIR/server"
-#          npm run lint
-#          if ($LASTEXITCODE -eq 0) {
-#            Write-Host "Server lint passed" -ForegroundColor Green
-#          } else {
-#            Write-Host "Server lint completed with warnings" -ForegroundColor Yellow
-#            $global:LASTEXITCODE = 0
-#          }
-#          Pop-Location
-#
-#          Write-Host "Linting frontend code..." -ForegroundColor Cyan
-#          Push-Location "$env:TOOLJET_DIR/frontend"
-#          npm run lint
-#          if ($LASTEXITCODE -eq 0) {
-#            Write-Host "Frontend lint passed" -ForegroundColor Green
-#          } else {
-#            Write-Host "Frontend lint completed with warnings" -ForegroundColor Yellow
-#            $global:LASTEXITCODE = 0
-#          }
-#          Pop-Location
-#
-  build_application:
-    runs-on: self-hosted
-    needs: install_dependencies
-    defaults:
-      run:
-        shell: powershell
-    steps:
-      - name: Patch server tsconfig to remove restrictive types array
+      # ──────────────────────────────────────────────────────────────
+      # Step 4: Lint & Code Quality
+      # ──────────────────────────────────────────────────────────────
+      - name: Lint server and frontend code
         run: |
-          $tsconfigPath = "$env:TOOLJET_DIR/server/tsconfig.json"
-          $content = Get-Content $tsconfigPath -Raw
-          # Remove the entire "types" array so TypeScript auto-discovers all
-          # installed @types/* packages instead of failing on named entries
-          $content = $content -replace '"types"\s*:\s*\[[^\]]*\],?\s*', ''
-          $content | Set-Content $tsconfigPath -NoNewline
-          Write-Host "Patched tsconfig.json: removed restrictive 'types' array"
+          Write-Host "Linting server code..." -ForegroundColor Cyan
+          Push-Location "$env:TOOLJET_DIR/server"
+          npm run lint
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Server lint passed" -ForegroundColor Green
+          } else {
+            Write-Host "Server lint completed with warnings" -ForegroundColor Yellow
+            $global:LASTEXITCODE = 0
+          }
+          Pop-Location
 
+          Write-Host "Linting frontend code..." -ForegroundColor Cyan
+          Push-Location "$env:TOOLJET_DIR/frontend"
+          npm run lint
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Frontend lint passed" -ForegroundColor Green
+          } else {
+            Write-Host "Frontend lint completed with warnings" -ForegroundColor Yellow
+            $global:LASTEXITCODE = 0
+          }
+          Pop-Location
+
+      # ──────────────────────────────────────────────────────────────
+      # Step 5: Build application
+      # ──────────────────────────────────────────────────────────────
       - name: Build plugins, frontend, and server
         run: |
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
           $env:npm_config_scripts_prepend_node_path="true"
-
+          
           Write-Host "Building plugins..." -ForegroundColor Cyan
           Push-Location "$env:TOOLJET_DIR/plugins"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
-
+          
           Write-Host "Building frontend..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=8096"
           Push-Location "$env:TOOLJET_DIR/frontend"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
-
+          
           Write-Host "Building server..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=4096"
+          npm install -g @nestjs/cli
           Push-Location "$env:TOOLJET_DIR/server"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
