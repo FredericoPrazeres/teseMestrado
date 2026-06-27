@@ -114,28 +114,35 @@ jobs:
       run:
         shell: powershell
     steps:
+      - name: Patch server tsconfig to remove missing type definitions
+        run: |
+          $tsconfigPath = "$env:TOOLJET_DIR/server/tsconfig.json"
+          $content = Get-Content $tsconfigPath -Raw
+          $content = $content -replace ',?\s*"rxjs"', ''
+          $content | Set-Content $tsconfigPath -NoNewline
+          Write-Host "Patched tsconfig.json: removed 'rxjs' from types array"
+
       - name: Build plugins, frontend, and server
         run: |
           $env:NODE_ENV="production"
           $env:NODE_OPTIONS="--max-old-space-size=4096"
           $env:npm_config_scripts_prepend_node_path="true"
-          
+
           Write-Host "Building plugins..." -ForegroundColor Cyan
           Push-Location "$env:TOOLJET_DIR/plugins"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
-          
+
           Write-Host "Building frontend..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=8096"
           Push-Location "$env:TOOLJET_DIR/frontend"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
-          
+
           Write-Host "Building server..." -ForegroundColor Cyan
           $env:NODE_OPTIONS="--max-old-space-size=4096"
-          npm install -g @nestjs/cli
           Push-Location "$env:TOOLJET_DIR/server"
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
