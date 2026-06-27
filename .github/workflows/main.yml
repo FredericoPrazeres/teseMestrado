@@ -3,7 +3,7 @@ name: ToolJet CI/CD Pipeline
 on:
   push:
     branches:
-      - applications/tooljets
+      - applications/tooljet
 
 env:
   NODE_VERSION: "22.15.1"
@@ -61,15 +61,6 @@ jobs:
       run:
         shell: powershell
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install all npm dependencies
         run: |
@@ -99,15 +90,6 @@ jobs:
       run:
         shell: powershell
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install all npm dependencies
         run: |
@@ -158,15 +140,6 @@ jobs:
       run:
         shell: powershell
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install all npm dependencies
         run: |
@@ -212,15 +185,3 @@ jobs:
           $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
           npm run build
           Pop-Location
-
-  skip_tests:
-    runs-on: self-hosted
-    needs: build_application
-    defaults:
-      run:
-        shell: powershell
-    steps:
-      - name: Skip server and frontend tests
-        run: |
-          Write-Host "Skipping server and frontend tests by request." -ForegroundColor Yellow
-          
