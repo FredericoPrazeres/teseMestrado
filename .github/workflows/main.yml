@@ -74,7 +74,7 @@ jobs:
 
           Push-Location "$env:TOOLJET_DIR/server"
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
+          npm install --include=dev --ignore-scripts --no-audit --no-fund --ignore-engines
           Pop-Location
 
           Push-Location "$env:TOOLJET_DIR/frontend"
