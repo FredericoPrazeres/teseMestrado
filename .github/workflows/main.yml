@@ -6,75 +6,22 @@ on:
       - applications/directus
 
 jobs:
-  checkout:
+  build:
     runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: directus
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: true
 
-  install-dependencies:
-    runs-on: self-hosted
-    needs: checkout
-    defaults:
-      run:
-        working-directory: directus
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Clean dependencies
-        run: |
-          rm -rf node_modules
-          pnpm store prune
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-  lint:
-    runs-on: self-hosted
-    needs: install-dependencies
-    defaults:
-      run:
-        working-directory: directus
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Lint
         run: pnpm lint
-
-  build:
-    runs-on: self-hosted
-    needs: lint
-    defaults:
-      run:
-        working-directory: directus
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Build
         run: pnpm build
