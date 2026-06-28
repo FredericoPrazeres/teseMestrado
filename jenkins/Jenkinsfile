@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout and Environment') {
             steps {
                 checkout scm
-                powershell 'git submodule update --init --recurse-submodules'
+                powershell 'git submodule update --init --recursive'
                 powershell '''
                     node --version
                     npm --version
