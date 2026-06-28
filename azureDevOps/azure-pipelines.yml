@@ -1,13 +1,13 @@
 trigger:
   branches:
     include:
-      - applications/directu2
+      - applications/directus
 
 pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: RunPipeline
+  - job: Checkout
     displayName: 'Checkout repository'
     steps:
       - checkout: self
@@ -15,6 +15,10 @@ jobs:
         submodules: true
         displayName: 'Checkout repository'
 
+  - job: InstallDependencies
+    displayName: 'Install dependencies'
+    dependsOn: Checkout
+    steps:
       - script: |
           cd directus && rm -rf node_modules
         displayName: 'Clean dependencies'
@@ -23,18 +27,20 @@ jobs:
           cd directus && pnpm install --frozen-lockfile
         displayName: 'Install dependencies'
 
-      - task: UseNode@1
-        inputs:
-          version: '22.x'
-        displayName: 'Setup Node.js'
+  - job: Lint
+    displayName: 'Lint'
+    dependsOn: InstallDependencies
+    steps:
+
       - script: |
           cd directus && pnpm lint
         displayName: 'Lint'
 
-      - task: UseNode@1
-        inputs:
-          version: '22.x'
-        displayName: 'Setup Node.js'
+  - job: Build
+    displayName: 'Build'
+    dependsOn: Lint
+    steps:
+
       - script: |
           cd directus && pnpm build
         displayName: 'Build'
