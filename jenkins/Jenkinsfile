@@ -95,7 +95,7 @@ pipeline {
                     $content = Get-Content $tsconfigPath -Raw
                     # Remove the entire "types" array so TypeScript auto-discovers all
                     # installed @types/* packages instead of failing on named entries
-                    $content = $content -replace '"types"\s*:\s*\[[^\]]*\],?\s*', ''
+                    $content = $content -replace '"types"\\s*:\\s*\\[[^\\]]*\\],?\\s*', ''
                     $content | Set-Content $tsconfigPath -NoNewline
                     Write-Host "Patched tsconfig.json: removed restrictive 'types' array"
                 '''
