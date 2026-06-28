@@ -15,15 +15,10 @@ jobs:
         submodules: true
         displayName: 'Checkout repository'
 
-      - task: UseNode@1
-        inputs:
-          version: '22.x'
-        displayName: 'Setup Node.js'
+      - script: |
+          cd directus && rm -rf node_modules
+        displayName: 'Clean dependencies'
 
-      - task: UseNode@1
-        inputs:
-          version: '22.x'
-        displayName: 'Setup Node.js'
       - script: |
           cd directus && pnpm install --frozen-lockfile
         displayName: 'Install dependencies'
