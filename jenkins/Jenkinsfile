@@ -11,7 +11,8 @@ pipeline {
         stage('Checkout and Environment') {
             steps {
                 checkout scm
-                powershell 'git submodule update --init --recursive --depth 1'
+                powershell 'git submodule deinit -f ToolJet'
+                powershell 'git submodule update --init --recursive --depth 1 --force'
                 powershell '''
                     node --version
                     npm --version
