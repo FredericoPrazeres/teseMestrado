@@ -14,23 +14,9 @@ jobs:
         with:
           submodules: true
 
-  setup-node:
-    runs-on: self-hosted
-    needs: checkout
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
   install-dependencies:
     runs-on: self-hosted
-    needs: setup-node
+    needs: checkout
     defaults:
       run:
         working-directory: directus

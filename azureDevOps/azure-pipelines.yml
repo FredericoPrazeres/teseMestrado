@@ -20,10 +20,6 @@ jobs:
           version: '22.x'
         displayName: 'Setup Node.js'
 
-      - script: |
-          npm install -g pnpm@10 --force
-        displayName: 'Install pnpm'
-
       - task: UseNode@1
         inputs:
           version: '22.x'
