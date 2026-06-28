@@ -9,51 +9,26 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Build') {
             steps {
                 checkout scm
                 sh 'git submodule update --init --recursive'
-            }
-        }
 
-        stage('Clean dependencies') {
-            steps {
                 dir('directus') {
                     sh 'rm -rf node_modules'
                 }
-            }
-        }
 
-        stage('Npm install') {
-            steps {
                 sh 'npm install -g pnpm@10 --force'
-            }
-        }
-
-        stage('Npm list') {
-            steps {
                 sh 'npm list -g pnpm'
-            }
-        }
 
-        stage('Install pnpm') {
-            steps {
                 dir('directus') {
                     sh 'pnpm install --frozen-lockfile'
                 }
-            }
-        }
 
-        stage('Lint') {
-            steps {
                 dir('directus') {
                     sh 'pnpm lint'
                 }
-            }
-        }
 
-        stage('Build') {
-            steps {
                 dir('directus') {
                     sh 'pnpm build'
                 }
