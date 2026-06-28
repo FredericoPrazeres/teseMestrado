@@ -1,8 +1,11 @@
 pipeline {
     agent any
 
-    environment {
-        PATH = 'C:\\Program Files\\Git\\cmd;C:\\nvm4w\\nodejs;C:\\ProgramData\\npm;${PATH}'
+ environment {
+        NODE_HOME = '/Users/fredericoprazeres/.nvm/versions/node/v22.22.3'
+        PATH = "${NODE_HOME}/bin:${env.PATH}"
+        COREPACK_ENABLE_STRICT = '0'
+        COREPACK_ENABLE_AUTO_PIN = '0'
     }
 
     stages {
