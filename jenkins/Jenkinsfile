@@ -105,19 +105,19 @@ pipeline {
                     $env:npm_config_scripts_prepend_node_path="true"
                     Write-Host "Building plugins..." -ForegroundColor Cyan
                     Push-Location "$env:TOOLJET_DIR/plugins"
-                    $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
+                    $env:PATH = "$pwd\\node_modules\\.bin;$env:PATH"
                     npm run build
                     Pop-Location
                     Write-Host "Building frontend..." -ForegroundColor Cyan
                     $env:NODE_OPTIONS="--max-old-space-size=8096"
                     Push-Location "$env:TOOLJET_DIR/frontend"
-                    $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
+                    $env:PATH = "$pwd\\node_modules\\.bin;$env:PATH"
                     npm run build
                     Pop-Location
                     Write-Host "Building server..." -ForegroundColor Cyan
                     $env:NODE_OPTIONS="--max-old-space-size=4096"
                     Push-Location "$env:TOOLJET_DIR/server"
-                    $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
+                    $env:PATH = "$pwd\\node_modules\\.bin;$env:PATH"
                     npm run build
                     Pop-Location
                 '''
