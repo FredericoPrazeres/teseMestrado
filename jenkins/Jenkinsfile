@@ -9,34 +9,34 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
-                bat 'git submodule update --init --recursive'
+                sh 'git submodule update --init --recursive'
             }
         }
 
         stage('Clean dependencies') {
             steps {
                 dir('directus') {
-                    bat 'rmdir /s /q node_modules'
+                    sh 'rm -rf node_modules'
                 }
             }
         }
 
         stage('Npm install') {
             steps {
-                bat 'npm install -g pnpm@10 --force'
+                sh 'npm install -g pnpm@10 --force'
             }
         }
 
         stage('Npm list') {
             steps {
-                bat 'npm list -g pnpm'
+                sh 'npm list -g pnpm'
             }
         }
 
         stage('Install pnpm') {
             steps {
                 dir('directus') {
-                    bat 'pnpm install --frozen-lockfile'
+                    sh 'pnpm install --frozen-lockfile'
                 }
             }
         }
@@ -44,7 +44,7 @@ pipeline {
         stage('Lint') {
             steps {
                 dir('directus') {
-                    bat 'pnpm lint'
+                    sh 'pnpm lint'
                 }
             }
         }
@@ -52,7 +52,7 @@ pipeline {
         stage('Build') {
             steps {
                 dir('directus') {
-                    bat 'pnpm build'
+                    sh 'pnpm build'
                 }
             }
         }
