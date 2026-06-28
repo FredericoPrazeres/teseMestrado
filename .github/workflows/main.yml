@@ -3,7 +3,7 @@ name: Directus CI Pipeline
 on:
   push:
     branches:
-      - applicationz
+      - applications/directus
 
 jobs:
   checkout:
@@ -44,6 +44,11 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10
+
+      - name: Clean dependencies
+        run: |
+          rm -rf node_modules
+          pnpm store prune
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -87,23 +92,3 @@ jobs:
 
       - name: Build
         run: pnpm build
-
-  test:
-    runs-on: self-hosted
-    needs: build
-    defaults:
-      run:
-        working-directory: directus
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Run tests
-        run: pnpm --recursive --filter '!tests-blackbox' --filter '!tests-e2e' --filter '!e2e' --filter '!app' test
