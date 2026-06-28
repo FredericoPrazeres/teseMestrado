@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - applications/directus
+      - applications/directu2
 
 pool:
   name: TeseMestradoPool

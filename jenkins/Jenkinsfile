@@ -13,6 +13,14 @@ pipeline {
             }
         }
 
+        stage('Clean dependencies') {
+            steps {
+                dir('directus') {
+                    bat 'rmdir /s /q node_modules'
+                }
+            }
+        }
+
         stage('Npm install') {
             steps {
                 bat 'npm install -g pnpm@10 --force'
