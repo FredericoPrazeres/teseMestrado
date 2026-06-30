@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout and Environment') {
             steps {
                 checkout scm
-                bat 'git submodule update --init --recursive'
+                bat 'git submodule update --init'
             }
         }
 
