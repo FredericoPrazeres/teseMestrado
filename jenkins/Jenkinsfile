@@ -5,6 +5,7 @@ pipeline {
     environment {
         NODE_VERSION = '22.15.1'
         TOOLJET_DIR  = 'ToolJet'
+        PATH         = "C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
     }
 
     stages {
@@ -32,7 +33,7 @@ pipeline {
                 '''
             }
         }
-        
+
         
         stage('Install Dependencies') {
             steps {
