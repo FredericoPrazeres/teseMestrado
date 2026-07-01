@@ -9,15 +9,11 @@ pipeline {
     }
 
     stages {
-        stage('Checkout and Environment') {
+        stage('Build') {
             steps {
                 checkout scm
                 bat 'git submodule update --init'
-            }
-        }
 
-        stage('Cleanup Previous Deployment') {
-            steps {
                 powershell '''
                     $containerId = docker ps -aq --filter "name=^tooljet$"
                     if ([string]::IsNullOrWhiteSpace($containerId)) {
@@ -31,12 +27,7 @@ pipeline {
                     docker volume prune -f
                     docker network prune -f
                 '''
-            }
-        }
 
-        
-        stage('Install Dependencies') {
-            steps {
                 powershell '''
                     $env:CI="true"
                     $env:HUSKY="0"
@@ -55,11 +46,7 @@ pipeline {
                     npm install --include=dev --ignore-scripts --no-audit --no-fund
                     Pop-Location
                 '''
-            }
-        }
 
-        stage('Lint Code') {
-            steps {
                 powershell '''
                     Write-Host "Linting server code..." -ForegroundColor Cyan
                     Push-Location "$env:TOOLJET_DIR/server"
@@ -83,11 +70,7 @@ pipeline {
                     }
                     Pop-Location
                 '''
-            }
-        }
 
-        stage('Build Application') {
-            steps {
                 powershell '''
                     $tsconfigPath = "$env:TOOLJET_DIR/server/tsconfig.json"
                     $content = Get-Content $tsconfigPath -Raw
@@ -97,6 +80,7 @@ pipeline {
                     $content | Set-Content $tsconfigPath -NoNewline
                     Write-Host "Patched tsconfig.json: removed restrictive 'types' array"
                 '''
+
                 powershell '''
                     $env:NODE_ENV="production"
                     $env:NODE_OPTIONS="--max-old-space-size=4096"
