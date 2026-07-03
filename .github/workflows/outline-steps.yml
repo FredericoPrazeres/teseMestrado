@@ -1,28 +1,23 @@
-name: Outline Build Pipeline (Windows)
+name: Outline Build Pipeline - Steps (Windows)
 
 on:
   push:
     branches:
-      - applications/outlined
+      - applications/outline
 
 jobs:
-  checkout:
-    name: Checkout code
+  build-and-run:
+    name: Build and Run Outline
     runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: outline
     steps:
       - name: Checkout code with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-  generate-env:
-    name: Generate .env file
-    runs-on: self-hosted
-    needs: checkout
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Generate .env file
         shell: powershell
         run: |
@@ -53,11 +48,6 @@ jobs:
           "@ | Set-Content -Path .env -Encoding UTF8
           Write-Host "[OK] .env file created"
 
-  verify-dependencies:
-    name: Verify dependencies
-    runs-on: self-hosted
-    needs: generate-env
-    steps:
       - name: Verify dependencies
         shell: powershell
         run: |
@@ -67,11 +57,6 @@ jobs:
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
           cmd /c "C:\tools\redis\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"
 
-  start-services:
-    name: Start services
-    runs-on: self-hosted
-    needs: verify-dependencies
-    steps:
       - name: Start services
         shell: powershell
         run: |
@@ -96,14 +81,6 @@ jobs:
           cmd /c "C:\tools\redis\redis-cli.exe ping"
           if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
 
-  install-dependencies:
-    name: Install Node.js dependencies
-    runs-on: self-hosted
-    needs: start-services
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Install Node.js dependencies
         shell: powershell
         run: |
@@ -114,14 +91,6 @@ jobs:
           $env:NODE_ENV = "development"
           yarn install --immutable
 
-  build-outline:
-    name: Build Outline
-    runs-on: self-hosted
-    needs: install-dependencies
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Build Outline
         shell: powershell
         run: |
@@ -129,14 +98,6 @@ jobs:
           $env:NODE_ENV = "production"
           yarn build
 
-  reset-database:
-    name: Reset database
-    runs-on: self-hosted
-    needs: build-outline
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Reset database
         shell: powershell
         run: |
@@ -156,14 +117,6 @@ jobs:
           cmd /c "C:\tools\pgsql\bin\createdb.exe -U postgres -O outline_user outline"
           if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Database recreated" } else { Write-Host "[WARN] Database may not have existed" }
 
-  run-migrations:
-    name: Run database migrations
-    runs-on: self-hosted
-    needs: reset-database
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Run database migrations
         shell: powershell
         run: |
@@ -193,14 +146,6 @@ jobs:
           cmd /c "taskkill /f /im node.exe 2>nul"
           Write-Host "Migrations complete"
 
-  verify-build:
-    name: Verify build output
-    runs-on: self-hosted
-    needs: run-migrations
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Verify build output
         shell: powershell
         run: |
@@ -209,14 +154,6 @@ jobs:
           if (Test-Path "build\app" -PathType Container) { Write-Host "[OK] Client build OK" } else { Write-Host "[FAIL] Client build missing"; exit 1 }
           Write-Host "Outline build completed successfully!"
 
-  start-outline:
-    name: Start Outline
-    runs-on: self-hosted
-    needs: verify-build
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Start Outline
         shell: powershell
         run: |
