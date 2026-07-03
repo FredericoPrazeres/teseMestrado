@@ -1,4 +1,4 @@
-﻿name: Outline Build Pipeline (Windows)
+name: Outline Build Pipeline (Windows)
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
           UTILS_SECRET=$UTILS_SECRET
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
           "@ | Set-Content -Path .env -Encoding UTF8
-          Write-Host "âœ… .env file created"
+          Write-Host "[OK] .env file created"
 
   verify-dependencies:
     name: Verify dependencies
@@ -154,7 +154,7 @@ jobs:
           Write-Host "=== Resetting database ==="
           cmd /c "C:\tools\pgsql\bin\dropdb.exe -U postgres --if-exists outline"
           cmd /c "C:\tools\pgsql\bin\createdb.exe -U postgres -O outline_user outline"
-          if ($LASTEXITCODE -eq 0) { Write-Host "âœ… Database recreated" } else { Write-Host "âš ï¸ Database may not have existed" }
+          if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Database recreated" } else { Write-Host "[WARN] Database may not have existed" }
 
   run-migrations:
     name: Run database migrations
@@ -205,9 +205,9 @@ jobs:
         shell: powershell
         run: |
           Write-Host "=== Verifying build ==="
-          if (Test-Path "build\server\index.js") { Write-Host "âœ… Server build OK" } else { Write-Host "âŒ Server build missing"; exit 1 }
-          if (Test-Path "build\app" -PathType Container) { Write-Host "âœ… Client build OK" } else { Write-Host "âŒ Client build missing"; exit 1 }
-          Write-Host "ðŸŽ‰ Outline build completed successfully!"
+          if (Test-Path "build\server\index.js") { Write-Host "[OK] Server build OK" } else { Write-Host "[FAIL] Server build missing"; exit 1 }
+          if (Test-Path "build\app" -PathType Container) { Write-Host "[OK] Client build OK" } else { Write-Host "[FAIL] Client build missing"; exit 1 }
+          Write-Host "Outline build completed successfully!"
 
   start-outline:
     name: Start Outline
@@ -239,14 +239,14 @@ jobs:
           try {
             $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
             if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
-              Write-Host "âœ… Outline is running at http://localhost:3000"
+              Write-Host "[OK] Outline is running at http://localhost:3000"
             } else {
-              Write-Host "âš ï¸ Server started but may still be initializing"
+              Write-Host "[WARN] Server started but may still be initializing"
             }
           } catch {
             if ($_.Exception.Response.StatusCode.value__ -eq 302) {
-              Write-Host "âœ… Outline is running at http://localhost:3000"
+              Write-Host "[OK] Outline is running at http://localhost:3000"
             } else {
-              Write-Host "âš ï¸ Server started but may still be initializing"
+              Write-Host "[WARN] Server started but may still be initializing"
             }
           }
