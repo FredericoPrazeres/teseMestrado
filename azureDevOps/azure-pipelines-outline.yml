@@ -111,6 +111,7 @@ jobs:
             cmd /c "start /b C:\tools\redis\redis-server.exe C:\tools\redis\redis.windows.conf > C:\tools\redis\redis.log 2>&1"
             Start-Sleep -Seconds 2
           }
+          cd outline
           Write-Host "=== Resetting database ==="
           cmd /c "C:\tools\pgsql\bin\dropdb.exe -U postgres --if-exists outline"
           cmd /c "C:\tools\pgsql\bin\createdb.exe -U postgres -O outline_user outline"
@@ -130,6 +131,7 @@ jobs:
             cmd /c "start /b C:\tools\redis\redis-server.exe C:\tools\redis\redis.windows.conf > C:\tools\redis\redis.log 2>&1"
             Start-Sleep -Seconds 2
           }
+          cd outline
           Write-Host "=== Running database migrations ==="
           $prevEAP = $ErrorActionPreference
           $ErrorActionPreference = 'SilentlyContinue'
@@ -168,6 +170,7 @@ jobs:
             cmd /c "start /b C:\tools\redis\redis-server.exe C:\tools\redis\redis.windows.conf > C:\tools\redis\redis.log 2>&1"
             Start-Sleep -Seconds 2
           }
+          cd outline
           Write-Host "=== Starting Outline ==="
           $env:NODE_ENV = "development"
           cmd /c "start /b node build\server\index.js > C:\tools\outline-server.log 2>&1"
