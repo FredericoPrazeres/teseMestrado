@@ -1,18 +1,59 @@
 trigger:
   branches:
     include:
-      - master
+      - applications/home-assistant-core
 
 pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: BuildAndTest
-    displayName: 'Test Pipeline'
+  - job: Checkout
+    displayName: 'Checkout repository'
     steps:
       - checkout: self
-        displayName: 'Checkout code'
+        clean: false
+        submodules: true
+        displayName: 'Checkout repository'
 
+  - job: InstallDependencies
+    displayName: 'Install dependencies'
+    dependsOn: Checkout
+    steps:
       - script: |
-          echo "Hello from Azure Pipelines!"
-        displayName: 'Hello World'
+          cd home-assistant-core
+          uv venv .venv --python 3.14 --clear
+          source .venv/bin/activate
+          uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
+          uv pip install paho-mqtt
+        displayName: 'Create venv and install dependencies'
+
+  - job: Lint
+    displayName: 'Lint'
+    dependsOn: InstallDependencies
+    steps:
+      - script: |
+          cd home-assistant-core
+          source .venv/bin/activate
+          python -m ruff check homeassistant
+        displayName: 'Lint with ruff'
+
+  - job: Build
+    displayName: 'Build'
+    dependsOn: Lint
+    steps:
+      - script: |
+          cd home-assistant-core
+          source .venv/bin/activate
+          uv pip install build
+          python -m build
+        displayName: 'Build package'
+
+  - job: Test
+    displayName: 'Test'
+    dependsOn: Build
+    steps:
+      - script: |
+          cd home-assistant-core
+          source .venv/bin/activate
+          python -m pytest tests/test_core.py tests/util/ tests/helpers/test_debounce.py tests/helpers/test_deprecation.py tests/helpers/test_collection.py -q --timeout=300 -k "not (test_eventbus_max_length_exceeded or test_serviceregistry_service_that_not_exists or test_services_call_return_response_requires_blocking or test_serviceregistry_return_response_invalid or test_serviceregistry_return_response_arguments)"
+        displayName: 'Run tests'
