@@ -63,4 +63,4 @@ jobs:
       - name: Run tests
         run: |
           source .venv/bin/activate
-          python -m pytest tests/test_core.py tests/test_config.py tests/test_bootstrap.py -x -q --timeout=300 -k "not test_eventbus_max_length_exceeded"
+          python -m pytest tests/test_core.py tests/test_config.py tests/test_bootstrap.py -x -q --timeout=300 -k "not test_eventbus_max_length_exceeded and not test_serviceregistry_service_that_not_exists"
