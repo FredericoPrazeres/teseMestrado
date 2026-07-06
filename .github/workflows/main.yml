@@ -1,17 +1,53 @@
-name: Microservices CI/CD Pipeline
+name: Home Assistant Core CI Pipeline
 
 on:
   push:
     branches:
-      - master
+      - applications/home-assistant-core
 
 jobs:
-  remove-containers:
+  checkout:
     runs-on: self-hosted
     steps:
-      - name: Hello World
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
-      - name: Stop and remove existing microservices
+  install-dependencies:
+    runs-on: self-hosted
+    needs: checkout
+    defaults:
+      run:
+        working-directory: home-assistant-core
+    steps:
+      - name: Create virtual environment and install dependencies
         run: |
-          echo "Hello, World!"
+          uv venv .venv --python 3.14
+          source .venv/bin/activate
+          uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
+          uv pip install paho-mqtt
+
+  lint:
+    runs-on: self-hosted
+    needs: install-dependencies
+    defaults:
+      run:
+        working-directory: home-assistant-core
+    steps:
+      - name: Lint with ruff
+        run: |
+          source .venv/bin/activate
+          python -m ruff check homeassistant
+
+  test:
+    runs-on: self-hosted
+    needs: install-dependencies
+    defaults:
+      run:
+        working-directory: home-assistant-core
+    steps:
+      - name: Run tests
+        run: |
+          source .venv/bin/activate
+          python -m pytest tests/test_core.py tests/test_config.py tests/test_loader.py -x -q --timeout=300
