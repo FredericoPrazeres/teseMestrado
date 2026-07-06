@@ -40,9 +40,22 @@ jobs:
           source .venv/bin/activate
           python -m ruff check homeassistant
 
+  build:
+    runs-on: self-hosted
+    needs: lint
+    defaults:
+      run:
+        working-directory: home-assistant-core
+    steps:
+      - name: Build package
+        run: |
+          source .venv/bin/activate
+          uv pip install build
+          python -m build
+
   test:
     runs-on: self-hosted
-    needs: install-dependencies
+    needs: build
     defaults:
       run:
         working-directory: home-assistant-core
@@ -50,4 +63,4 @@ jobs:
       - name: Run tests
         run: |
           source .venv/bin/activate
-          python -m pytest tests/test_core.py tests/test_config.py tests/test_loader.py -x -q --timeout=300
+          python -m pytest tests/test_core.py tests/test_config.py tests/test_bootstrap.py -x -q --timeout=300
