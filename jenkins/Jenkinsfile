@@ -6,18 +6,14 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Build and Test') {
             steps {
                 checkout scmGit(
                     branches: [[name: 'applications/home-assistant-core']],
                     extensions: [submodule(recursiveSubmodules: true)],
                     userRemoteConfigs: [[url: 'https://github.com/FredericoPrazeres/teseMestrado.git']]
                 )
-            }
-        }
 
-        stage('Install Dependencies') {
-            steps {
                 sh '''
                     cd home-assistant-core
                     uv venv .venv --python 3.14 --clear
@@ -25,32 +21,20 @@ pipeline {
                     uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
                     uv pip install paho-mqtt
                 '''
-            }
-        }
 
-        stage('Lint') {
-            steps {
                 sh '''
                     cd home-assistant-core
                     source .venv/bin/activate
                     python -m ruff check homeassistant
                 '''
-            }
-        }
 
-        stage('Build') {
-            steps {
                 sh '''
                     cd home-assistant-core
                     source .venv/bin/activate
                     uv pip install build
                     python -m build
                 '''
-            }
-        }
 
-        stage('Test') {
-            steps {
                 sh '''
                     cd home-assistant-core
                     source .venv/bin/activate
