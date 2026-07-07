@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - applications/home-assistant-cores
+      - applications/home-assistant-core
 
 pool:
   name: TeseMestradoPool

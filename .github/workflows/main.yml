@@ -3,7 +3,7 @@ name: Home Assistant Core CI Pipeline
 on:
   push:
     branches:
-      - applications/home-assistant-core
+      - applications/home-assistant-cores
 
 jobs:
   build-and-test:
