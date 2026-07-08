@@ -3,7 +3,7 @@ name: Outline Build Pipeline (Windows)
 on:
   push:
     branches:
-      - applications/outlined
+      - applications/outlines
 
 jobs:
   checkout:
@@ -109,7 +109,7 @@ jobs:
         run: |
           Write-Host "=== Cleaning previous build ==="
           yarn clean 2>$null; $true
-          if (Test-Path "node_modules\.cache") { Remove-Item -Recurse -Force "node_modules\.cache" }
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           Write-Host "=== Installing dependencies ==="
           $env:NODE_ENV = "development"
           yarn install --immutable
