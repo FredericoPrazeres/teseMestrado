@@ -45,7 +45,7 @@ jobs:
           SECRET_KEY=$SECRET_KEY
           UTILS_SECRET=$UTILS_SECRET
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
-          "@ | Set-Content -Path .env -Encoding UTF8
+          "@ | Set-Content -Path outline\.env -Encoding UTF8
           Write-Host "✅ .env file created"
         displayName: 'Generate .env file'
 
@@ -149,17 +149,16 @@ jobs:
       - checkout: none
       - powershell: |
           Write-Host "=== Ensuring services are running ==="
-          cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
+          cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
-            cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
+            cmd /c "C:\tools\pgsql\bin\pg_ctl.exe start -D C:\tools\pgsql\data -l C:\tools\pgsql\log.txt"
             Start-Sleep -Seconds 3
           }
-          cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
+          cmd /c "C:\tools\redis\redis-cli.exe ping 2>nul"
           if ($LASTEXITCODE -ne 0) {
-            cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
+            cmd /c "start /b C:\tools\redis\redis-server.exe C:\tools\redis\redis.windows.conf > C:\tools\redis\redis.log 2>&1"
             Start-Sleep -Seconds 2
           }
-          cd outline
           Write-Host "=== Running database migrations ==="
           $prevEAP = $ErrorActionPreference
           $ErrorActionPreference = 'SilentlyContinue'
@@ -167,11 +166,11 @@ jobs:
           $ErrorActionPreference = $prevEAP
           Write-Host "Database create step done (may already exist)"
           $env:NODE_ENV = "development"
-          cmd /c "start /b node build\server\index.js > D:\tools\outline-migrations.log 2>&1"
+          cmd /c "start /b node build\server\index.js > C:\tools\outline-migrations.log 2>&1"
           Write-Host "Waiting for server to start and run migrations..."
           Start-Sleep -Seconds 15
           Write-Host "=== Migration log output ==="
-          if (Test-Path "D:\tools\outline-migrations.log") { Get-Content "D:\tools\outline-migrations.log" -Tail 30 }
+          if (Test-Path "C:\tools\outline-migrations.log") { Get-Content "C:\tools\outline-migrations.log" -Tail 30 }
           cmd /c "taskkill /f /im node.exe 2>nul"
           Write-Host "Migrations complete"
         displayName: 'Run database migrations'

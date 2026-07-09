@@ -3,7 +3,7 @@ name: Outline Build Pipeline - Steps (Windows)
 on:
   push:
     branches:
-      - applications/outline
+      - applications/outlines
 
 jobs:
   build-and-run:
