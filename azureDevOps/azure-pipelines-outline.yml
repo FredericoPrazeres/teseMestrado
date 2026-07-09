@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - applications/outlined
+      - applications/outline
 
 pool:
   name: TeseMestradoPool
