@@ -83,7 +83,6 @@ jobs:
       - powershell: |
           cd outline
           Write-Host "=== Cleaning previous build ==="
-          yarn clean 2>$null; $true
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           Write-Host "=== Installing dependencies ==="
           $env:NODE_ENV = "development"
