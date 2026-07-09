@@ -1,25 +1,22 @@
 trigger:
   branches:
     include:
-    - applications/outline
+      - applications/outline
+
 pool:
   name: TeseMestradoPool
-stages:
-- stage: default
-  jobs:
-  
+
+jobs:
   - job: BuildOutline
     displayName: 'Build and Run Outline'
     steps:
-      displayName: 'Step 1 - Checkout code'
-      inputs:
-        repository: self
+      # Step 1: Checkout
+      - checkout: self
+        displayName: 'Step 1 - Checkout code'
         submodules: recursive
-    - task: PowerShell@2
-      displayName: 'Step 2 - Generate .env file'
-      inputs:
-        targetType: inline
-        script: |
+
+      # Step 2: Generate .env
+      - powershell: |
           Write-Host "=== Generating .env file ==="
           $SECRET_KEY = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
           $UTILS_SECRET = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
@@ -44,23 +41,22 @@ stages:
           SECRET_KEY=$SECRET_KEY
           UTILS_SECRET=$UTILS_SECRET
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
-          "@ | Set-Content -Path outline\.env -Encoding UTF8
+          "@ | Set-Content -Path .env -Encoding UTF8
           Write-Host "[OK] .env file created"
-    - task: PowerShell@2
-      displayName: 'Step 3 - Verify dependencies'
-      inputs:
-        targetType: inline
-        script: |
+
+        displayName: 'Step 2 - Generate .env file'
+
+      # Step 3: Verify dependencies
+      - powershell: |
           Write-Host "=== Verifying system dependencies ==="
           node --version
           yarn --version
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
           cmd /c "C:\tools\redis\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"
-    - task: PowerShell@2
-      displayName: 'Step 4 - Start services'
-      inputs:
-        targetType: inline
-        script: |
+        displayName: 'Step 3 - Verify dependencies'
+
+      # Step 4: Start services
+      - powershell: |
           Write-Host "=== Starting PostgreSQL ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -81,32 +77,29 @@ stages:
           if ($LASTEXITCODE -eq 0) { Write-Host "PostgreSQL: OK" } else { Write-Host "PostgreSQL: FAILED"; exit 1 }
           cmd /c "C:\tools\redis\redis-cli.exe ping"
           if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
-    - task: PowerShell@2
-      displayName: 'Step 5 - Install dependencies'
-      inputs:
-        targetType: inline
-        script: |
+        displayName: 'Step 4 - Start services'
+
+      # Step 5: Install dependencies
+      - powershell: |
           cd outline
           Write-Host "=== Cleaning previous build ==="
           yarn clean 2>$null; $true
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
+          if (Test-Path "node_modules\.cache") { Remove-Item -Recurse -Force "node_modules\.cache" }
           Write-Host "=== Installing dependencies ==="
           $env:NODE_ENV = "development"
           yarn install --immutable
-    - task: PowerShell@2
-      displayName: 'Step 6 - Build Outline'
-      inputs:
-        targetType: inline
-        script: |
+        displayName: 'Step 5 - Install dependencies'
+
+      # Step 6: Build Outline
+      - powershell: |
           cd outline
           Write-Host "=== Building Outline ==="
           $env:NODE_ENV = "production"
           yarn build
-    - task: PowerShell@2
-      displayName: 'Step 7 - Reset database'
-      inputs:
-        targetType: inline
-        script: |
+        displayName: 'Step 6 - Build Outline'
+
+      # Step 7: Reset database
+      - powershell: |
           Write-Host "=== Ensuring services are running ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -123,11 +116,10 @@ stages:
           cmd /c "C:\tools\pgsql\bin\dropdb.exe -U postgres --if-exists outline"
           cmd /c "C:\tools\pgsql\bin\createdb.exe -U postgres -O outline_user outline"
           if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Database recreated" } else { Write-Host "[WARN] Database may not have existed" }
-    - task: PowerShell@2
-      displayName: 'Step 8 - Run database migrations'
-      inputs:
-        targetType: inline
-        script: |
+        displayName: 'Step 7 - Reset database'
+
+      # Step 8: Run database migrations
+      - powershell: |
           Write-Host "=== Ensuring services are running ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -154,21 +146,19 @@ stages:
           if (Test-Path "C:\tools\outline-migrations.log") { Get-Content "C:\tools\outline-migrations.log" -Tail 30 }
           cmd /c "taskkill /f /im node.exe 2>nul"
           Write-Host "Migrations complete"
-    - task: PowerShell@2
-      displayName: 'Step 9 - Verify build'
-      inputs:
-        targetType: inline
-        script: |
+        displayName: 'Step 8 - Run database migrations'
+
+      # Step 9: Verify build
+      - powershell: |
           cd outline
           Write-Host "=== Verifying build ==="
           if (Test-Path "build\server\index.js") { Write-Host "[OK] Server build OK" } else { Write-Host "[FAIL] Server build missing"; exit 1 }
           if (Test-Path "build\app" -PathType Container) { Write-Host "[OK] Client build OK" } else { Write-Host "[FAIL] Client build missing"; exit 1 }
           Write-Host "Outline build completed successfully!"
-    - task: PowerShell@2
-      displayName: 'Step 10 - Start Outline'
-      inputs:
-        targetType: inline
-        script: |
+        displayName: 'Step 9 - Verify build'
+
+      # Step 10: Start Outline
+      - powershell: |
           Write-Host "=== Ensuring services are running ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -200,3 +190,4 @@ stages:
               Write-Host "[WARN] Server started but may still be initializing"
             }
           }
+        displayName: 'Step 10 - Start Outline'
