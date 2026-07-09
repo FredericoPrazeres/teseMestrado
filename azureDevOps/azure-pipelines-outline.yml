@@ -44,8 +44,8 @@ jobs:
           SECRET_KEY=$SECRET_KEY
           UTILS_SECRET=$UTILS_SECRET
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
-          "@ | Set-Content -Path .env -Encoding UTF8
-          Write-Host "[OK] .env file created"
+          "@ | Set-Content -Path outline\.env -Encoding UTF8
+          Write-Host "[OK] .env file created at outline\.env"
         displayName: 'Generate .env file'
 
   - job: VerifyDependencies
@@ -159,11 +159,6 @@ jobs:
           }
           cd outline
           Write-Host "=== Running database migrations ==="
-          $prevEAP = $ErrorActionPreference
-          $ErrorActionPreference = 'SilentlyContinue'
-          cmd /c "yarn db:create --env=production-ssl-disabled 2>&1"
-          $ErrorActionPreference = $prevEAP
-          Write-Host "Database create step done (may already exist)"
           $env:NODE_ENV = "development"
           cmd /c "start /b node build\server\index.js > C:\tools\outline-migrations.log 2>&1"
           Write-Host "Waiting for server to start and run migrations..."
