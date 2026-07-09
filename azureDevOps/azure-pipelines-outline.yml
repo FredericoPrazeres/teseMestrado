@@ -118,7 +118,15 @@ jobs:
           cd outline
           Write-Host "=== Building Outline ==="
           $env:NODE_ENV = "production"
+          $env:NODE_OPTIONS = "--max-old-space-size=4096"
           yarn build
+          if ($LASTEXITCODE -ne 0) { Write-Host "##[error] yarn build failed with exit code $LASTEXITCODE"; exit 1 }
+          if (-not (Test-Path "build\server\index.js")) {
+            Write-Host "##[error] Build incomplete: build\server\index.js not found"
+            if (Test-Path "build") { Get-ChildItem "build" -Recurse -File | Select-Object -ExpandProperty FullName }
+            exit 1
+          }
+          Write-Host "[OK] Build verified"
         displayName: 'Build Outline'
 
   # Job 7: Reset database
@@ -166,18 +174,18 @@ jobs:
           }
           cd outline
           Write-Host "=== Running database migrations ==="
-          $prevEAP = $ErrorActionPreference
-          $ErrorActionPreference = 'SilentlyContinue'
-          cmd /c "yarn db:create --env=production-ssl-disabled 2>&1"
-          $ErrorActionPreference = $prevEAP
-          Write-Host "Database create step done (may already exist)"
-          $env:NODE_ENV = "development"
-          cmd /c "start /b node build\server\index.js > C:\tools\outline-migrations.log 2>&1"
-          Write-Host "Waiting for server to start and run migrations..."
-          Start-Sleep -Seconds 15
-          Write-Host "=== Migration log output ==="
-          if (Test-Path "C:\tools\outline-migrations.log") { Get-Content "C:\tools\outline-migrations.log" -Tail 30 }
-          cmd /c "taskkill /f /im node.exe 2>nul"
+          if (-not (Test-Path "node_modules\.yarn-state.yml")) {
+            Write-Host "Yarn state file missing - restoring node_modules..."
+            yarn install
+            if ($LASTEXITCODE -ne 0) { Write-Host "##[error] yarn install failed"; exit 1 }
+          }
+          if (-not (Test-Path "build\server\index.js")) {
+            Write-Host "##[error] build\server\index.js not found - Job 6 (Build) may have failed"
+            exit 1
+          }
+          Write-Host "Running sequelize migrations..."
+          yarn db:migrate
+          if ($LASTEXITCODE -ne 0) { Write-Host "##[error] db:migrate failed with exit code $LASTEXITCODE"; exit 1 }
           Write-Host "Migrations complete"
         displayName: 'Run database migrations'
 
