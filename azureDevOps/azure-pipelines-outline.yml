@@ -41,7 +41,7 @@ jobs:
           SECRET_KEY=$SECRET_KEY
           UTILS_SECRET=$UTILS_SECRET
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
-          "@ | Set-Content -Path .env -Encoding UTF8
+          "@ | Set-Content -Path outline\.env -Encoding UTF8
           Write-Host "[OK] .env file created"
 
         displayName: 'Step 2 - Generate .env file'
