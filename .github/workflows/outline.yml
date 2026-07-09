@@ -3,7 +3,7 @@ name: Outline Build Pipeline (Windows)
 on:
   push:
     branches:
-      - applications/outline
+      - applications/outlines
 
 jobs:
   checkout:
