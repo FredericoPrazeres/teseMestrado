@@ -63,14 +63,14 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     Write-Host "=== Starting PostgreSQL ==="
                     cmd /c "C:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        cmd /c "C:\\tools\\pgsql\\bin\\pg_ctl.exe start -D C:\\tools\\pgsql\\data -l C:\\tools\\pgsql\\log.txt"
+                        $null = (wmic process call create "C:\\tools\\pgsql\\bin\\pg_ctl.exe start -D C:\\tools\\pgsql\\data -l C:\\tools\\pgsql\\log.txt") 2>&1
                     } else {
                         Write-Host "PostgreSQL is already running"
                     }
                     Write-Host "=== Starting Redis ==="
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        $null = (wmic process call create "C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf")
+                        $null = (wmic process call create "C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf") 2>&1
                     } else {
                         Write-Host "Redis is already running"
                     }
