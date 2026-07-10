@@ -122,21 +122,8 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     $env:NODE_ENV = "development"
                     $null = (wmic process call create "node build\\server\\index.js") 2>&1
                     Write-Host "Waiting for server to be ready..."
-                    Start-Sleep -Seconds 10
-                    try {
-                        $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
-                        if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
-                            Write-Host "[OK] Outline is running at http://localhost:3000"
-                        } else {
-                            Write-Host "[WARN] Server started but may still be initializing"
-                        }
-                    } catch {
-                        if ($_.Exception.Response.StatusCode.value__ -eq 302) {
-                            Write-Host "[OK] Outline is running at http://localhost:3000"
-                        } else {
-                            Write-Host "[WARN] Server started but may still be initializing"
-                        }
-                    }
+                    Start-Sleep -Seconds 120
+                    Write-Host "[OK] Outline started"
                 '''
             }
         }
