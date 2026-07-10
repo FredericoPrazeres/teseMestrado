@@ -103,7 +103,8 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     Start-Sleep -Seconds 15
                     Write-Host "=== Migration log output ==="
                     if (Test-Path "C:\\tools\\outline-migrations.log") { Get-Content "C:\\tools\\outline-migrations.log" -Tail 30 }
-                    cmd /c "taskkill /f /im node.exe 2>nul"; $true
+                    cmd /c "taskkill /f /im node.exe 2>nul"
+                    $global:LASTEXITCODE = 0
                     Write-Host "Migrations complete"
                 '''
 
