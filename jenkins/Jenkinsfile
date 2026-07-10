@@ -70,7 +70,12 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     Write-Host "=== Starting Redis ==="
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
+                        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                        $pinfo.FileName = "C:\\tools\\redis\\redis-server.exe"
+                        $pinfo.Arguments = "C:\\tools\\redis\\redis.windows.conf"
+                        $pinfo.UseShellExecute = $true
+                        $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+                        [System.Diagnostics.Process]::Start($pinfo) | Out-Null
                     } else {
                         Write-Host "Redis is already running"
                     }
@@ -120,7 +125,12 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     }
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
+                        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                        $pinfo.FileName = "C:\\tools\\redis\\redis-server.exe"
+                        $pinfo.Arguments = "C:\\tools\\redis\\redis.windows.conf"
+                        $pinfo.UseShellExecute = $true
+                        $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+                        [System.Diagnostics.Process]::Start($pinfo) | Out-Null
                         Start-Sleep -Seconds 2
                     }
                     cd outline
@@ -143,13 +153,23 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     }
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
+                        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                        $pinfo.FileName = "C:\\tools\\redis\\redis-server.exe"
+                        $pinfo.Arguments = "C:\\tools\\redis\\redis.windows.conf"
+                        $pinfo.UseShellExecute = $true
+                        $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+                        [System.Diagnostics.Process]::Start($pinfo) | Out-Null
                         Start-Sleep -Seconds 2
                     }
                     cd outline
                     Write-Host "=== Running database migrations ==="
                     $env:NODE_ENV = "development"
-                    Start-Process -FilePath "node" -ArgumentList "build\\server\\index.js" -WindowStyle Hidden
+                    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                    $pinfo.FileName = "node"
+                    $pinfo.Arguments = "build\\server\\index.js"
+                    $pinfo.UseShellExecute = $true
+                    $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+                    [System.Diagnostics.Process]::Start($pinfo) | Out-Null
                     Write-Host "Waiting for server to start and run migrations..."
                     Start-Sleep -Seconds 15
                     Write-Host "=== Migration log output ==="
@@ -183,13 +203,23 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     }
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
+                        $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                        $pinfo.FileName = "C:\\tools\\redis\\redis-server.exe"
+                        $pinfo.Arguments = "C:\\tools\\redis\\redis.windows.conf"
+                        $pinfo.UseShellExecute = $true
+                        $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+                        [System.Diagnostics.Process]::Start($pinfo) | Out-Null
                         Start-Sleep -Seconds 2
                     }
                     cd outline
                     Write-Host "=== Starting Outline ==="
                     $env:NODE_ENV = "development"
-                    Start-Process -FilePath "node" -ArgumentList "build\\server\\index.js" -WindowStyle Hidden
+                    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                    $pinfo.FileName = "node"
+                    $pinfo.Arguments = "build\\server\\index.js"
+                    $pinfo.UseShellExecute = $true
+                    $pinfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+                    [System.Diagnostics.Process]::Start($pinfo) | Out-Null
                     Write-Host "Waiting for server to be ready..."
                     Start-Sleep -Seconds 10
                     try {
