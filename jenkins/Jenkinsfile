@@ -70,7 +70,7 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     Write-Host "=== Starting Redis ==="
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -RedirectStandardOutput "C:\\tools\\redis\\redis.log" -RedirectStandardError "C:\\tools\\redis\\redis-error.log" -NoNewWindow
+                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
                     } else {
                         Write-Host "Redis is already running"
                     }
@@ -120,7 +120,7 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     }
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        cmd /c "start /b C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf > C:\\tools\\redis\\redis.log 2>&1"
+                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
                         Start-Sleep -Seconds 2
                     }
                     cd outline
@@ -143,13 +143,13 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     }
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        cmd /c "start /b C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf > C:\\tools\\redis\\redis.log 2>&1"
+                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
                         Start-Sleep -Seconds 2
                     }
                     cd outline
                     Write-Host "=== Running database migrations ==="
                     $env:NODE_ENV = "development"
-                    cmd /c "start /b node build\\server\\index.js > C:\\tools\\outline-migrations.log 2>&1"
+                    Start-Process -FilePath "node" -ArgumentList "build\\server\\index.js" -WindowStyle Hidden
                     Write-Host "Waiting for server to start and run migrations..."
                     Start-Sleep -Seconds 15
                     Write-Host "=== Migration log output ==="
@@ -183,13 +183,13 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     }
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        cmd /c "start /b C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf > C:\\tools\\redis\\redis.log 2>&1"
+                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -WindowStyle Hidden
                         Start-Sleep -Seconds 2
                     }
                     cd outline
                     Write-Host "=== Starting Outline ==="
                     $env:NODE_ENV = "development"
-                    cmd /c "start /b node build\\server\\index.js > C:\\tools\\outline-server.log 2>&1"
+                    Start-Process -FilePath "node" -ArgumentList "build\\server\\index.js" -WindowStyle Hidden
                     Write-Host "Waiting for server to be ready..."
                     Start-Sleep -Seconds 10
                     try {
