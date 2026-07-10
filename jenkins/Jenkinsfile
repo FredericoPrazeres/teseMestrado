@@ -70,7 +70,7 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     Write-Host "=== Starting Redis ==="
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
                     if ($LASTEXITCODE -ne 0) {
-                        cmd /c "start /b C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf > C:\\tools\\redis\\redis.log 2>&1"
+                        Start-Process -FilePath "C:\\tools\\redis\\redis-server.exe" -ArgumentList "C:\\tools\\redis\\redis.windows.conf" -RedirectStandardOutput "C:\\tools\\redis\\redis.log" -RedirectStandardError "C:\\tools\\redis\\redis-error.log" -NoNewWindow
                     } else {
                         Write-Host "Redis is already running"
                     }
