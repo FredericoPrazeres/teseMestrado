@@ -2,18 +2,14 @@ pipeline {
     agent any
 
     stages {
-        stage('Step 1 - Checkout code') {
+        stage('Build Outline') {
             steps {
                 checkout scmGit(
                     branches: [[name: '*/applications/outline']],
                     extensions: [submodule(recursiveSubmodules: true)],
                     userRemoteConfigs: scm.userRemoteConfigs
                 )
-            }
-        }
 
-        stage('Step 2 - Generate .env file') {
-            steps {
                 powershell '''
                     Write-Host "=== Generating .env file ==="
                     $SECRET_KEY = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
@@ -42,11 +38,7 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
 "@ | Set-Content -Path outline\\.env -Encoding UTF8
                     Write-Host "[OK] .env file created at outline\\.env"
                 '''
-            }
-        }
 
-        stage('Step 3 - Verify dependencies') {
-            steps {
                 powershell '''
                     Write-Host "=== Verifying system dependencies ==="
                     node --version
@@ -54,11 +46,7 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     cmd /c "C:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"
                 '''
-            }
-        }
 
-        stage('Step 4 - Start services') {
-            steps {
                 powershell '''
                     Write-Host "=== Starting PostgreSQL ==="
                     cmd /c "C:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul"
@@ -81,11 +69,7 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     cmd /c "C:\\tools\\redis\\redis-cli.exe ping"
                     if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
                 '''
-            }
-        }
 
-        stage('Step 5 - Install dependencies') {
-            steps {
                 powershell '''
                     cd outline
                     Write-Host "=== Cleaning previous build ==="
@@ -95,61 +79,26 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     $env:NODE_ENV = "development"
                     yarn install --immutable
                 '''
-            }
-        }
 
-        stage('Step 6 - Build Outline') {
-            steps {
                 powershell '''
                     cd outline
                     Write-Host "=== Building Outline ==="
                     $env:NODE_ENV = "production"
                     yarn build
                 '''
-            }
-        }
 
-        stage('Step 7 - Reset database') {
-            steps {
                 powershell '''
-                    Write-Host "=== Ensuring services are running ==="
-                    cmd /c "C:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul"
-                    if ($LASTEXITCODE -ne 0) {
-                        cmd /c "C:\\tools\\pgsql\\bin\\pg_ctl.exe start -D C:\\tools\\pgsql\\data -l C:\\tools\\pgsql\\log.txt"
-                        Start-Sleep -Seconds 3
-                    }
-                    cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
-                    if ($LASTEXITCODE -ne 0) {
-                        cmd /c "start /b C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf > C:\\tools\\redis\\redis.log 2>&1"
-                        Start-Sleep -Seconds 2
-                    }
-                    cd outline
                     Write-Host "=== Resetting database ==="
                     cmd /c "C:\\tools\\pgsql\\bin\\dropdb.exe -U postgres --if-exists outline"
                     cmd /c "C:\\tools\\pgsql\\bin\\createdb.exe -U postgres -O outline_user outline"
                     if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Database recreated" } else { Write-Host "[WARN] Database may not have existed" }
                 '''
-            }
-        }
 
-        stage('Step 8 - Run database migrations') {
-            steps {
                 powershell '''
-                    Write-Host "=== Ensuring services are running ==="
-                    cmd /c "C:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul"
-                    if ($LASTEXITCODE -ne 0) {
-                        cmd /c "C:\\tools\\pgsql\\bin\\pg_ctl.exe start -D C:\\tools\\pgsql\\data -l C:\\tools\\pgsql\\log.txt"
-                        Start-Sleep -Seconds 3
-                    }
-                    cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
-                    if ($LASTEXITCODE -ne 0) {
-                        cmd /c "start /b C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf > C:\\tools\\redis\\redis.log 2>&1"
-                        Start-Sleep -Seconds 2
-                    }
                     cd outline
                     Write-Host "=== Running database migrations ==="
                     $env:NODE_ENV = "development"
-                    cmd /c "start /b node build\\server\\index.js > C:\\tools\\outline-migrations.log 2>&1"
+                    $null = (wmic process call create "node build\\server\\index.js") 2>&1
                     Write-Host "Waiting for server to start and run migrations..."
                     Start-Sleep -Seconds 15
                     Write-Host "=== Migration log output ==="
@@ -157,11 +106,7 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     cmd /c "taskkill /f /im node.exe 2>nul"
                     Write-Host "Migrations complete"
                 '''
-            }
-        }
 
-        stage('Step 9 - Verify build') {
-            steps {
                 powershell '''
                     cd outline
                     Write-Host "=== Verifying build ==="
@@ -169,27 +114,12 @@ DEVELOPMENT_UNSAFE_INLINE_CSP=true
                     if (Test-Path "build\\app" -PathType Container) { Write-Host "[OK] Client build OK" } else { Write-Host "[FAIL] Client build missing"; exit 1 }
                     Write-Host "Outline build completed successfully!"
                 '''
-            }
-        }
 
-        stage('Step 10 - Start Outline') {
-            steps {
                 powershell '''
-                    Write-Host "=== Ensuring services are running ==="
-                    cmd /c "C:\\tools\\pgsql\\bin\\pg_isready.exe 2>nul"
-                    if ($LASTEXITCODE -ne 0) {
-                        cmd /c "C:\\tools\\pgsql\\bin\\pg_ctl.exe start -D C:\\tools\\pgsql\\data -l C:\\tools\\pgsql\\log.txt"
-                        Start-Sleep -Seconds 3
-                    }
-                    cmd /c "C:\\tools\\redis\\redis-cli.exe ping 2>nul"
-                    if ($LASTEXITCODE -ne 0) {
-                        cmd /c "start /b C:\\tools\\redis\\redis-server.exe C:\\tools\\redis\\redis.windows.conf > C:\\tools\\redis\\redis.log 2>&1"
-                        Start-Sleep -Seconds 2
-                    }
                     cd outline
                     Write-Host "=== Starting Outline ==="
                     $env:NODE_ENV = "development"
-                    cmd /c "start /b node build\\server\\index.js > C:\\tools\\outline-server.log 2>&1"
+                    $null = (wmic process call create "node build\\server\\index.js") 2>&1
                     Write-Host "Waiting for server to be ready..."
                     Start-Sleep -Seconds 10
                     try {
