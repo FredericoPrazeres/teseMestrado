@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - applications/outlines
+      - applications/outline
 
 pool:
   name: TeseMestradoPool
@@ -204,19 +204,33 @@ jobs:
           $env:NODE_ENV = "development"
           cmd /c "start /b node build\server\index.js > C:\tools\outline-server.log 2>&1"
           Write-Host "Waiting for server to be ready..."
-          Start-Sleep -Seconds 10
-          try {
-            $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
-            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
-              Write-Host "[OK] Outline is running at http://localhost:3000"
-            } else {
-              Write-Host "[WARN] Server started but may still be initializing"
-            }
-          } catch {
-            if ($_.Exception.Response.StatusCode.value__ -eq 302) {
-              Write-Host "[OK] Outline is running at http://localhost:3000"
-            } else {
-              Write-Host "[WARN] Server started but may still be initializing"
+          $timeout = 120
+          $interval = 10
+          $elapsed = 0
+          $ready = $false
+          while ($elapsed -lt $timeout) {
+            Start-Sleep -Seconds $interval
+            $elapsed += $interval
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop
+              if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
+                Write-Host "[OK] Outline is running at http://localhost:3000 (${elapsed}s)"
+                $ready = $true
+                break
+              }
+            } catch {
+              $code = $_.Exception.Response.StatusCode.value__
+              if ($code -eq 302 -or $code -eq 200) {
+                Write-Host "[OK] Outline is running at http://localhost:3000 (${elapsed}s)"
+                $ready = $true
+                break
+              }
+              Write-Host "Not ready yet (${elapsed}s)..."
             }
           }
+          if (-not $ready) { Write-Host "[FAIL] Outline did not start within ${timeout}s"; exit 1 }
+          Write-Host "=== Stopping Outline server (cleanup) ==="
+          cmd /c "taskkill /f /im node.exe 2>nul"
+          $global:LASTEXITCODE = 0
+          Write-Host "Cleanup complete"
         displayName: 'Start Outline'
