@@ -1,4 +1,4 @@
-trigger:
+﻿trigger:
   branches:
     include:
       - applications/outline
@@ -7,66 +7,54 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: Checkout
-    displayName: 'Step 1 - Checkout code'
+  - job: OutlinePipeline
+    displayName: 'Outline Pipeline'
     steps:
+
       - checkout: self
-        displayName: 'Checkout code'
+        displayName: 'Step 1 - Checkout code'
         submodules: recursive
 
-  - job: GenerateEnv
-    displayName: 'Step 2 - Generate .env file'
-    dependsOn: Checkout
-    steps:
-      - checkout: none
       - powershell: |
-          Write-Host "=== Generating .env file ==="
+          Write-Host "=== Step 2 - Generating .env file ==="
           $SECRET_KEY = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
           $UTILS_SECRET = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
-          @"
-          NODE_ENV=development
-          URL=http://localhost:3000
-          PORT=3000
-          WEB_CONCURRENCY=1
-          DEFAULT_LANGUAGE=en_US
-          DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
-          PGSSLMODE=disable
-          REDIS_URL=redis://127.0.0.1:6379
-          FILE_STORAGE=local
-          FILE_STORAGE_LOCAL_ROOT_DIR=C:\tools\outline-data
-          FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
-          FORCE_HTTPS=false
-          RATE_LIMITER_ENABLED=false
-          ENABLE_UPDATES=false
-          DEBUG=http
-          LOG_LEVEL=debug
-          SMTP_FROM_EMAIL=hello@example.com
-          SECRET_KEY=$SECRET_KEY
-          UTILS_SECRET=$UTILS_SECRET
-          DEVELOPMENT_UNSAFE_INLINE_CSP=true
-          "@ | Set-Content -Path outline\.env -Encoding UTF8
+          $envLines = @(
+            "NODE_ENV=development",
+            "URL=http://localhost:3000",
+            "PORT=3000",
+            "WEB_CONCURRENCY=1",
+            "DEFAULT_LANGUAGE=en_US",
+            "DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline",
+            "PGSSLMODE=disable",
+            "REDIS_URL=redis://127.0.0.1:6379",
+            "FILE_STORAGE=local",
+            "FILE_STORAGE_LOCAL_ROOT_DIR=C:\tools\outline-data",
+            "FILE_STORAGE_UPLOAD_MAX_SIZE=262144000",
+            "FORCE_HTTPS=false",
+            "RATE_LIMITER_ENABLED=false",
+            "ENABLE_UPDATES=false",
+            "DEBUG=http",
+            "LOG_LEVEL=debug",
+            "SMTP_FROM_EMAIL=hello@example.com",
+            "SECRET_KEY=$SECRET_KEY",
+            "UTILS_SECRET=$UTILS_SECRET",
+            "DEVELOPMENT_UNSAFE_INLINE_CSP=true"
+          )
+          $envLines -join "`n" | Set-Content -Path outline\.env -Encoding UTF8
           Write-Host "[OK] .env file created at outline\.env"
-        displayName: 'Generate .env file'
+        displayName: 'Step 2 - Generate .env file'
 
-  - job: VerifyDependencies
-    displayName: 'Step 3 - Verify dependencies'
-    dependsOn: GenerateEnv
-    steps:
-      - checkout: none
       - powershell: |
-          Write-Host "=== Verifying system dependencies ==="
+          Write-Host "=== Step 3 - Verifying system dependencies ==="
           node --version
           yarn --version
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
           cmd /c "C:\tools\redis\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"
-        displayName: 'Verify dependencies'
+        displayName: 'Step 3 - Verify dependencies'
 
-  - job: StartServices
-    displayName: 'Step 4 - Start services'
-    dependsOn: VerifyDependencies
-    steps:
-      - checkout: none
       - powershell: |
+          Write-Host "=== Step 4 - Starting services ==="
           Write-Host "=== Starting PostgreSQL ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -87,41 +75,30 @@ jobs:
           if ($LASTEXITCODE -eq 0) { Write-Host "PostgreSQL: OK" } else { Write-Host "PostgreSQL: FAILED"; exit 1 }
           cmd /c "C:\tools\redis\redis-cli.exe ping"
           if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
-        displayName: 'Start services'
+        displayName: 'Step 4 - Start services'
 
-  - job: InstallDependencies
-    displayName: 'Step 5 - Install dependencies'
-    dependsOn: StartServices
-    steps:
-      - checkout: none
       - powershell: |
+          Write-Host "=== Step 5 - Installing dependencies ==="
           cd outline
           Write-Host "=== Cleaning previous build ==="
           yarn clean 2>$null; $true
-          if (Test-Path "node_modules\.cache") { Remove-Item -Recurse -Force "node_modules\.cache" }
+          Write-Host "=== Removing node_modules for clean install ==="
+          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           Write-Host "=== Installing dependencies ==="
           $env:NODE_ENV = "development"
-          yarn install --immutable
-        displayName: 'Install dependencies'
+          yarn install
+        displayName: 'Step 5 - Install dependencies'
 
-  - job: BuildOutline
-    displayName: 'Step 6 - Build Outline'
-    dependsOn: InstallDependencies
-    steps:
-      - checkout: none
       - powershell: |
+          Write-Host "=== Step 6 - Building Outline ==="
           cd outline
-          Write-Host "=== Building Outline ==="
           $env:NODE_ENV = "production"
           yarn build
-        displayName: 'Build Outline'
+        displayName: 'Step 6 - Build Outline'
 
-  - job: ResetDatabase
-    displayName: 'Step 7 - Reset database'
-    dependsOn: BuildOutline
-    steps:
-      - checkout: none
+      # â”€â”€ Step 7 - Reset database 
       - powershell: |
+          Write-Host "=== Step 7 - Resetting database ==="
           Write-Host "=== Ensuring services are running ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -138,14 +115,10 @@ jobs:
           cmd /c "C:\tools\pgsql\bin\dropdb.exe -U postgres --if-exists outline"
           cmd /c "C:\tools\pgsql\bin\createdb.exe -U postgres -O outline_user outline"
           if ($LASTEXITCODE -eq 0) { Write-Host "[OK] Database recreated" } else { Write-Host "[WARN] Database may not have existed" }
-        displayName: 'Reset database'
+        displayName: 'Step 7 - Reset database'
 
-  - job: RunMigrations
-    displayName: 'Step 8 - Run database migrations'
-    dependsOn: ResetDatabase
-    steps:
-      - checkout: none
       - powershell: |
+          Write-Host "=== Step 8 - Running database migrations ==="
           Write-Host "=== Ensuring services are running ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -167,27 +140,18 @@ jobs:
           if (Test-Path "C:\tools\outline-migrations.log") { Get-Content "C:\tools\outline-migrations.log" -Tail 30 }
           cmd /c "taskkill /f /im node.exe 2>nul"
           Write-Host "Migrations complete"
-        displayName: 'Run database migrations'
+        displayName: 'Step 8 - Run database migrations'
 
-  - job: VerifyBuild
-    displayName: 'Step 9 - Verify build'
-    dependsOn: RunMigrations
-    steps:
-      - checkout: none
       - powershell: |
+          Write-Host "=== Step 9 - Verifying build ==="
           cd outline
-          Write-Host "=== Verifying build ==="
           if (Test-Path "build\server\index.js") { Write-Host "[OK] Server build OK" } else { Write-Host "[FAIL] Server build missing"; exit 1 }
           if (Test-Path "build\app" -PathType Container) { Write-Host "[OK] Client build OK" } else { Write-Host "[FAIL] Client build missing"; exit 1 }
           Write-Host "Outline build completed successfully!"
-        displayName: 'Verify build'
+        displayName: 'Step 9 - Verify build'
 
-  - job: StartOutline
-    displayName: 'Step 10 - Start Outline'
-    dependsOn: VerifyBuild
-    steps:
-      - checkout: none
       - powershell: |
+          Write-Host "=== Step 10 - Starting Outline ==="
           Write-Host "=== Ensuring services are running ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -233,4 +197,5 @@ jobs:
           cmd /c "taskkill /f /im node.exe 2>nul"
           $global:LASTEXITCODE = 0
           Write-Host "Cleanup complete"
-        displayName: 'Start Outline'
+        displayName: 'Step 10 - Start Outline'
+
