@@ -3,7 +3,7 @@ name: Outline Build Pipeline (Windows)
 on:
   push:
     branches:
-      - applications/outlines
+      - applications/outline
 
 jobs:
   checkout:
@@ -26,32 +26,33 @@ jobs:
       - name: Generate .env file
         shell: powershell
         run: |
-          Write-Host "=== Generating .env file ==="
+          Write-Host "=== Step 2 - Generating .env file ==="
           $SECRET_KEY = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
           $UTILS_SECRET = -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Minimum 0 -Maximum 256) })
-          @"
-          NODE_ENV=development
-          URL=http://localhost:3000
-          PORT=3000
-          WEB_CONCURRENCY=1
-          DEFAULT_LANGUAGE=en_US
-          DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
-          PGSSLMODE=disable
-          REDIS_URL=redis://127.0.0.1:6379
-          FILE_STORAGE=local
-          FILE_STORAGE_LOCAL_ROOT_DIR=C:\tools\outline-data
-          FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
-          FORCE_HTTPS=false
-          RATE_LIMITER_ENABLED=false
-          ENABLE_UPDATES=false
-          DEBUG=http
-          LOG_LEVEL=debug
-          SMTP_FROM_EMAIL=hello@example.com
-          SECRET_KEY=$SECRET_KEY
-          UTILS_SECRET=$UTILS_SECRET
-          DEVELOPMENT_UNSAFE_INLINE_CSP=true
-          "@ | Set-Content -Path .env -Encoding UTF8
-          Write-Host "[OK] .env file created"
+          $envLines = @(
+            "NODE_ENV=development",
+            "URL=http://localhost:3000",
+            "PORT=3000",
+            "WEB_CONCURRENCY=1",
+            "DEFAULT_LANGUAGE=en_US",
+            "DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline",
+            "PGSSLMODE=disable",
+            "REDIS_URL=redis://127.0.0.1:6379",
+            "FILE_STORAGE=local",
+            "FILE_STORAGE_LOCAL_ROOT_DIR=C:\tools\outline-data",
+            "FILE_STORAGE_UPLOAD_MAX_SIZE=262144000",
+            "FORCE_HTTPS=false",
+            "RATE_LIMITER_ENABLED=false",
+            "ENABLE_UPDATES=false",
+            "DEBUG=http",
+            "LOG_LEVEL=debug",
+            "SMTP_FROM_EMAIL=hello@example.com",
+            "SECRET_KEY=$SECRET_KEY",
+            "UTILS_SECRET=$UTILS_SECRET",
+            "DEVELOPMENT_UNSAFE_INLINE_CSP=true"
+          )
+          $envLines -join "`n" | Set-Content -Path outline\.env -Encoding UTF8
+          Write-Host "[OK] .env file created at outline\.env"
 
   verify-dependencies:
     name: Verify dependencies
@@ -61,7 +62,7 @@ jobs:
       - name: Verify dependencies
         shell: powershell
         run: |
-          Write-Host "=== Verifying system dependencies ==="
+          Write-Host "=== Step 3 - Verifying system dependencies ==="
           node --version
           yarn --version
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"
@@ -75,6 +76,7 @@ jobs:
       - name: Start services
         shell: powershell
         run: |
+          Write-Host "=== Step 4 - Starting services ==="
           Write-Host "=== Starting PostgreSQL ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -107,12 +109,14 @@ jobs:
       - name: Install Node.js dependencies
         shell: powershell
         run: |
+          Write-Host "=== Step 5 - Installing dependencies ==="
           Write-Host "=== Cleaning previous build ==="
           yarn clean 2>$null; $true
+          Write-Host "=== Removing node_modules for clean install ==="
           if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
           Write-Host "=== Installing dependencies ==="
           $env:NODE_ENV = "development"
-          yarn install --immutable
+          yarn install
 
   build-outline:
     name: Build Outline
@@ -235,18 +239,32 @@ jobs:
           $env:NODE_ENV = "development"
           cmd /c "start /b node build\server\index.js > C:\tools\outline-server.log 2>&1"
           Write-Host "Waiting for server to be ready..."
-          Start-Sleep -Seconds 10
-          try {
-            $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
-            if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
-              Write-Host "[OK] Outline is running at http://localhost:3000"
-            } else {
-              Write-Host "[WARN] Server started but may still be initializing"
-            }
-          } catch {
-            if ($_.Exception.Response.StatusCode.value__ -eq 302) {
-              Write-Host "[OK] Outline is running at http://localhost:3000"
-            } else {
-              Write-Host "[WARN] Server started but may still be initializing"
+          $timeout = 120
+          $interval = 10
+          $elapsed = 0
+          $ready = $false
+          while ($elapsed -lt $timeout) {
+            Start-Sleep -Seconds $interval
+            $elapsed += $interval
+            try {
+              $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction Stop
+              if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
+                Write-Host "[OK] Outline is running at http://localhost:3000 (${elapsed}s)"
+                $ready = $true
+                break
+              }
+            } catch {
+              $code = $_.Exception.Response.StatusCode.value__
+              if ($code -eq 302 -or $code -eq 200) {
+                Write-Host "[OK] Outline is running at http://localhost:3000 (${elapsed}s)"
+                $ready = $true
+                break
+              }
+              Write-Host "Not ready yet (${elapsed}s)..."
             }
           }
+          if (-not $ready) { Write-Host "[FAIL] Outline did not start within ${timeout}s"; exit 1 }
+          Write-Host "=== Stopping Outline server (cleanup) ==="
+          cmd /c "taskkill /f /im node.exe 2>nul"
+          $global:LASTEXITCODE = 0
+          Write-Host "Cleanup complete"
