@@ -47,6 +47,8 @@ jobs:
           SMTP_PASSWORD=password
           SMTP_FROM_EMAIL=noreply@example.com
           SMTP_SECURE=false
+          FORCE_MIGRATE=0
+          AUTO_INSTALL_PLUGINS=false
           SECRET_KEY=$SECRET_KEY
           UTILS_SECRET=$UTILS_SECRET
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
@@ -204,6 +206,7 @@ jobs:
           $env:SMTP_PASSWORD = "password"
           $env:SMTP_FROM_EMAIL = "noreply@example.com"
           $env:SMTP_SECURE = "false"
+          $env:FORCE_MIGRATE = "0"
           if (Test-Path "C:\tools\outline-server.log") { Remove-Item "C:\tools\outline-server.log" -Force }
           cmd /c "start /b node build\server\index.js > C:\tools\outline-server.log 2>&1"
           Write-Host "Waiting for server to be ready..."
