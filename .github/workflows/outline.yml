@@ -189,6 +189,13 @@ jobs:
             cmd /c "start /b C:\tools\redis\redis-server.exe C:\tools\redis\redis.windows.conf > C:\tools\redis\redis.log 2>&1"
             Start-Sleep -Seconds 2
           }
+          Write-Host "=== Clearing Redis cache and locks ==="
+          cmd /c "C:\tools\redis\redis-cli.exe FLUSHALL"
+          if ($LASTEXITCODE -eq 0) { 
+            Write-Host "[OK] Redis cache cleared" 
+          } else { 
+            Write-Host "[WARN] Failed to clear Redis cache" 
+          }
           Write-Host "=== Starting Outline ==="
           $env:NODE_ENV = "development"
           $env:SMTP_HOST = "localhost"
