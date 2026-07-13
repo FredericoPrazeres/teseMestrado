@@ -160,6 +160,19 @@ jobs:
       - name: Start Outline
         shell: powershell
         run: |
+          Write-Host "=== Cleaning up any existing node processes ==="
+          cmd /c "taskkill /f /im node.exe 2>nul"
+          Start-Sleep -Seconds 5
+          Write-Host "=== Checking if port 3000 is available ==="
+          $portCheck = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue
+          if ($portCheck) {
+            Write-Host "[WARN] Port 3000 is still in use, attempting to free it..."
+            $processId = $portCheck.OwningProcess
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 3
+          } else {
+            Write-Host "[OK] Port 3000 is available"
+          }
           Write-Host "=== Ensuring services are running ==="
           cmd /c "C:\tools\pgsql\bin\pg_isready.exe 2>nul"
           if ($LASTEXITCODE -ne 0) {
@@ -173,6 +186,7 @@ jobs:
           }
           Write-Host "=== Starting Outline ==="
           $env:NODE_ENV = "development"
+          if (Test-Path "C:\tools\outline-server.log") { Remove-Item "C:\tools\outline-server.log" -Force }
           cmd /c "start /b node build\server\index.js > C:\tools\outline-server.log 2>&1"
           Write-Host "Waiting for server to be ready..."
           $timeout = 120
@@ -196,10 +210,18 @@ jobs:
                 $ready = $true
                 break
               }
-              Write-Host "Not ready yet (${elapsed}s)..."
+              Write-Host "Not ready yet (${elapsed}s)... Checking server log:"
+              if (Test-Path "C:\tools\outline-server.log") { 
+                Get-Content "C:\tools\outline-server.log" -Tail 10 
+              }
             }
           }
-          if (-not $ready) { Write-Host "[FAIL] Outline did not start within ${timeout}s"; exit 1 }
+          if (-not $ready) { 
+            Write-Host "[FAIL] Outline did not start within ${timeout}s"
+            Write-Host "=== Final server log output ==="
+            if (Test-Path "C:\tools\outline-server.log") { Get-Content "C:\tools\outline-server.log" }
+            exit 1 
+          }
           Write-Host "=== Stopping Outline server (cleanup) ==="
           cmd /c "taskkill /f /im node.exe 2>nul"
           $global:LASTEXITCODE = 0
