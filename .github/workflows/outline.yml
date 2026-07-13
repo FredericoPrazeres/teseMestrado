@@ -41,7 +41,12 @@ jobs:
           ENABLE_UPDATES=false
           DEBUG=http
           LOG_LEVEL=debug
-          SMTP_FROM_EMAIL=hello@example.com
+          SMTP_HOST=localhost
+          SMTP_PORT=25
+          SMTP_USERNAME=noreply@example.com
+          SMTP_PASSWORD=password
+          SMTP_FROM_EMAIL=noreply@example.com
+          SMTP_SECURE=false
           SECRET_KEY=$SECRET_KEY
           UTILS_SECRET=$UTILS_SECRET
           DEVELOPMENT_UNSAFE_INLINE_CSP=true
@@ -186,6 +191,12 @@ jobs:
           }
           Write-Host "=== Starting Outline ==="
           $env:NODE_ENV = "development"
+          $env:SMTP_HOST = "localhost"
+          $env:SMTP_PORT = "25"
+          $env:SMTP_USERNAME = "noreply@example.com"
+          $env:SMTP_PASSWORD = "password"
+          $env:SMTP_FROM_EMAIL = "noreply@example.com"
+          $env:SMTP_SECURE = "false"
           if (Test-Path "C:\tools\outline-server.log") { Remove-Item "C:\tools\outline-server.log" -Force }
           cmd /c "start /b node build\server\index.js > C:\tools\outline-server.log 2>&1"
           Write-Host "Waiting for server to be ready..."
