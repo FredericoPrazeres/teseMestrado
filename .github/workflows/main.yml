@@ -18,6 +18,10 @@ jobs:
         with:
           submodules: true
 
+      - name: Apply Windows compatibility patches
+        run: |
+          git apply "${{ github.workspace }}\windows-compat.patch"
+
       - name: Add uv to PATH
         shell: powershell
         run: |
