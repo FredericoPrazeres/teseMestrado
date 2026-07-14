@@ -19,7 +19,7 @@ jobs:
           submodules: true
 
       - name: Add uv to PATH
-        shell: pwsh
+        shell: powershell
         run: |
           "$env:USERPROFILE\.local\bin" | Out-File -Append $env:GITHUB_PATH
 
