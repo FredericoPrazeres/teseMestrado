@@ -25,7 +25,7 @@ jobs:
       - name: Add uv to PATH
         shell: powershell
         run: |
-          "$env:USERPROFILE\.local\bin" | Out-File -Append $env:GITHUB_PAT
+          "$env:USERPROFILE\.local\bin" | Out-File -Append $env:GITHUB_PATH
           
   install:
     runs-on: self-hosted
