@@ -7,6 +7,7 @@ on:
 
 jobs:
   checkout:
+    runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,7 +61,7 @@ jobs:
         run: |
           uv pip install build
           .venv\Scripts\python.exe -m build
-          
+
   test:
     runs-on: self-hosted
     defaults:
