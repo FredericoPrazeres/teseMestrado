@@ -5,17 +5,16 @@ trigger:
     include:
       - applications/home-assistant-core
 
+pool: 
+  name: TeseMestradoPool
+
 jobs:
   - job: checkout
-    pool:
-      name: TeseMestradoPool
     steps:
       - checkout: self
         submodules: true
 
   - job: environment
-    pool:
-      name: TeseMestradoPool
     dependsOn: checkout
     steps:
       - powershell: |
@@ -23,8 +22,6 @@ jobs:
         displayName: Add uv to PATH
 
   - job: install
-    pool:
-      name: TeseMestradoPool
     dependsOn: environment
     steps:
       - checkout: none
@@ -36,8 +33,6 @@ jobs:
         workingDirectory: home-assistant-core
 
   - job: lint
-    pool:
-      name: TeseMestradoPool
     dependsOn: install
     steps:
       - checkout: none
@@ -47,8 +42,6 @@ jobs:
         workingDirectory: home-assistant-core
 
   - job: build
-    pool:
-      name: TeseMestradoPool
     dependsOn: lint
     steps:
       - checkout: none
@@ -59,8 +52,6 @@ jobs:
         workingDirectory: home-assistant-core
 
   - job: test
-    pool:
-      name: TeseMestradoPool
     dependsOn: build
     steps:
       - checkout: none
