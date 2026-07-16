@@ -9,7 +9,7 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: build-and-test
+  - job: BuildAndTest
     steps:
       - checkout: self
         submodules: true
@@ -18,7 +18,6 @@ jobs:
           Write-Host "##vso[task.prependpath]$env:USERPROFILE\.local\bin"
         displayName: Add uv to PATH
 
-      - checkout: none
       - powershell: |
           uv venv .venv --python 3.14 --clear
           uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
@@ -31,7 +30,6 @@ jobs:
         displayName: Lint with ruff
         workingDirectory: home-assistant-core
 
-      - checkout: none
       - powershell: |
           uv pip install build
           .venv\Scripts\python.exe -m build
