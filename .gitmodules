@@ -1,3 +1,4 @@
 [submodule "home-assistant-core"]
 	path = home-assistant-core
 	url = https://github.com/FredericoPrazeres/core.git
+	branch = windows-compat
