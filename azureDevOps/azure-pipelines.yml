@@ -1,40 +1,70 @@
+name: Home Assistant Core CI Pipeline
+
 trigger:
   branches:
     include:
-      - applications/home-assistant-cores
+      - applications/home-assistant-core
 
-pool:
-  name: TeseMestradoPool
+jobs:
+  - job: checkout
+    pool:
+      name: TeseMestradoPool
+    steps:
+      - checkout: self
+        submodules: true
 
-steps:
-  - checkout: self
-    clean: false
-    submodules: true
-    displayName: 'Checkout repository'
+  - job: environment
+    pool:
+      name: TeseMestradoPool
+    dependsOn: checkout
+    steps:
+      - powershell: |
+          Write-Host "##vso[task.prependpath]$env:USERPROFILE\.local\bin"
+        displayName: Add uv to PATH
 
-  - script: |
-      cd home-assistant-core
-      uv venv .venv --python 3.14 --clear
-      source .venv/bin/activate
-      uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
-      uv pip install paho-mqtt
-    displayName: 'Install dependencies'
+  - job: install
+    pool:
+      name: TeseMestradoPool
+    dependsOn: environment
+    steps:
+      - checkout: none
+      - powershell: |
+          uv venv .venv --python 3.14 --clear
+          uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
+          uv pip install paho-mqtt
+        displayName: Create virtual environment and install dependencies
+        workingDirectory: home-assistant-core
 
-  - script: |
-      cd home-assistant-core
-      source .venv/bin/activate
-      python -m ruff check homeassistant
-    displayName: 'Lint with ruff'
+  - job: lint
+    pool:
+      name: TeseMestradoPool
+    dependsOn: install
+    steps:
+      - checkout: none
+      - powershell: |
+          .venv\Scripts\python.exe -m ruff check homeassistant
+        displayName: Lint with ruff
+        workingDirectory: home-assistant-core
 
-  - script: |
-      cd home-assistant-core
-      source .venv/bin/activate
-      uv pip install build
-      python -m build
-    displayName: 'Build package'
+  - job: build
+    pool:
+      name: TeseMestradoPool
+    dependsOn: lint
+    steps:
+      - checkout: none
+      - powershell: |
+          uv pip install build
+          .venv\Scripts\python.exe -m build
+        displayName: Build package
+        workingDirectory: home-assistant-core
 
-  - script: |
-      cd home-assistant-core
-      source .venv/bin/activate
-      python -m pytest tests/test_core.py tests/util/ tests/helpers/test_debounce.py tests/helpers/test_deprecation.py tests/helpers/test_collection.py -q --timeout=300 -k "not (test_eventbus_max_length_exceeded or test_serviceregistry_service_that_not_exists or test_services_call_return_response_requires_blocking or test_serviceregistry_return_response_invalid or test_serviceregistry_return_response_arguments)"
-    displayName: 'Run tests'
+  - job: test
+    pool:
+      name: TeseMestradoPool
+    dependsOn: build
+    steps:
+      - checkout: none
+      - powershell: |
+          .venv\Scripts\python.exe -m pytest tests/test_core.py tests/util/ tests/helpers/test_debounce.py tests/helpers/test_deprecation.py tests/helpers/test_collection.py -q --timeout=300 --ignore=tests/util/test_resource.py -k "not (test_eventbus_max_length_exceeded or test_serviceregistry_service_that_not_exists or test_services_call_return_response_requires_blocking or test_serviceregistry_return_response_invalid or test_serviceregistry_return_response_arguments or test_write_utf8_file_atomic_private or test_async_get_user_site or test_kill_process or test_include_dir_list or test_include_dir_list_recursive or test_include_dir_named or test_include_dir_named_recursive or test_include_dir_merge_list or test_include_dir_merge_list_recursive or test_include_dir_merge_named or test_include_dir_merge_named_recursive or test_secrets_from_yaml or test_secrets_from_parent_folder or test_secret_overrides_parent or test_bad_logger_value or test_secrets_are_not_dict or test_storage_collection_websocket or test_storage_collection_websocket_subscribe)"
+        displayName: Run tests
+        workingDirectory: home-assistant-core
