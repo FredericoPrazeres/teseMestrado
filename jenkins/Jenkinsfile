@@ -6,48 +6,21 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Pipeline') {
             steps {
                 checkout scm
                 powershell 'git submodule update --init --recursive'
-            }
-        }
-
-        stage('Install') {
-            steps {
                 dir('home-assistant-core') {
                     powershell '''
                         uv venv .venv --python 3.14 --clear
                         uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
                         uv pip install paho-mqtt
-                    '''
-                }
-            }
-        }
 
-        stage('Lint') {
-            steps {
-                dir('home-assistant-core') {
-                    powershell '.venv\\Scripts\\python.exe -m ruff check homeassistant'
-                }
-            }
-        }
+                        .venv\\Scripts\\python.exe -m ruff check homeassistant
 
-        stage('Build') {
-            steps {
-                dir('home-assistant-core') {
-                    powershell '''
                         uv pip install build
                         .venv\\Scripts\\python.exe -m build
-                    '''
-                }
-            }
-        }
 
-        stage('Test') {
-            steps {
-                dir('home-assistant-core') {
-                    powershell '''
                         .venv\\Scripts\\python.exe -m pytest tests/test_core.py tests/util/ tests/helpers/test_debounce.py tests/helpers/test_deprecation.py tests/helpers/test_collection.py -q --timeout=300 --ignore=tests/util/test_resource.py -k "not (test_eventbus_max_length_exceeded or test_serviceregistry_service_that_not_exists or test_services_call_return_response_requires_blocking or test_serviceregistry_return_response_invalid or test_serviceregistry_return_response_arguments or test_write_utf8_file_atomic_private or test_async_get_user_site or test_kill_process or test_include_dir_list or test_include_dir_list_recursive or test_include_dir_named or test_include_dir_named_recursive or test_include_dir_merge_list or test_include_dir_merge_list_recursive or test_include_dir_merge_named or test_include_dir_merge_named_recursive or test_secrets_from_yaml or test_secrets_from_parent_folder or test_secret_overrides_parent or test_bad_logger_value or test_secrets_are_not_dict or test_storage_collection_websocket or test_storage_collection_websocket_subscribe)"
                     '''
                 }
