@@ -82,3 +82,4 @@ log "- Job Postings: http://localhost:8081"
 log "- Job Reviews: http://localhost:8084"
 log "- Data Access: http://localhost:8083"
 log "- Jenkins: http://localhost:8089"
+
