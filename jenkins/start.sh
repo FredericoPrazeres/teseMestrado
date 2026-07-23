@@ -7,4 +7,4 @@ set -e
   --docker_only=true \
   --housekeeping_interval=30s &
 
-exec java $JAVA_OPTS -jar /usr/share/jenkins.war
+exec java $JAVA_OPTS -jar /usr/share/jenkins.war --httpPort=8089

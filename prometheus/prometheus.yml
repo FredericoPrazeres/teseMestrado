@@ -5,7 +5,7 @@ scrape_configs:
   - job_name: 'jenkins_service'
     metrics_path: /prometheus
     static_configs:
-      - targets: ['host.docker.internal:8080']
+      - targets: ['host.docker.internal:8089']
     
   - job_name: 'github-runner-node-exporter'
     static_configs:
