@@ -28,12 +28,12 @@ DOCKER_COMPOSE_FILE="microservices/docker-compose-microservices.yml"
 log "=== STOPPING CURRENT MICROSERVICES ==="
 log "Stopping microservices: $MICROSERVICES"
 for service in $MICROSERVICES; do
-    docker-compose -f $DOCKER_COMPOSE_FILE stop $service || true
+    docker compose -f $DOCKER_COMPOSE_FILE stop $service || true
 done
 
 log "Removing microservice containers: $MICROSERVICES"
 for service in $MICROSERVICES; do
-    docker-compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
+    docker compose -f $DOCKER_COMPOSE_FILE rm -f $service || true
 done
 
 # Clean up unused images
@@ -44,7 +44,7 @@ docker image prune -f || true
 log "=== BUILDING AND DEPLOYING SERVICES ==="
 log "Running docker-compose up --build for all services..."
 
-docker-compose -f $DOCKER_COMPOSE_FILE up --build -d
+docker compose -f $DOCKER_COMPOSE_FILE up --build -d
 
 if [ $? -eq 0 ]; then
     log "Services built and started successfully"
@@ -73,7 +73,7 @@ docker exec api-interface bash -c "pytest test_api_interface_integration.py"
 
 # Stage 5: Show status
 log "=== DEPLOYMENT COMPLETE ==="
-docker-compose -f $DOCKER_COMPOSE_FILE ps
+docker compose -f $DOCKER_COMPOSE_FILE ps
 log "🎉 Deployment successful!"
 log "Services status:"
 log "- Database: http://localhost:5432"
