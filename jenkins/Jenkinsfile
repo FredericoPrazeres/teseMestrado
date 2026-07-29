@@ -19,7 +19,6 @@ pipeline {
 
                 dir('directus') {
                     sh '''
-                        export NVM_DIR="$HOME/.nvm"
                         . "$NVM_DIR/nvm.sh"
                         nvm use 22
                         pnpm install --frozen-lockfile
@@ -28,7 +27,6 @@ pipeline {
 
                 dir('directus') {
                     sh '''
-                        export NVM_DIR="$HOME/.nvm"
                         . "$NVM_DIR/nvm.sh"
                         nvm use 22
                         pnpm lint
@@ -37,7 +35,6 @@ pipeline {
 
                 dir('directus') {
                     sh '''
-                        export NVM_DIR="$HOME/.nvm"
                         . "$NVM_DIR/nvm.sh"
                         nvm use 22
                         pnpm build
