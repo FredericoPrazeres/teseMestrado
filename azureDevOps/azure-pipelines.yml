@@ -24,6 +24,9 @@ jobs:
         displayName: 'Clean dependencies'
 
       - script: |
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
           cd directus && pnpm install --frozen-lockfile
         displayName: 'Install dependencies'
 
@@ -33,6 +36,9 @@ jobs:
     steps:
 
       - script: |
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
           cd directus && pnpm lint
         displayName: 'Lint'
 
@@ -42,5 +48,8 @@ jobs:
     steps:
 
       - script: |
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
           cd directus && pnpm build
         displayName: 'Build'

@@ -3,7 +3,7 @@ name: Directus CI Pipeline
 on:
   push:
     branches:
-      - applications/directus
+      - applications/directuss
 
 jobs:
 
