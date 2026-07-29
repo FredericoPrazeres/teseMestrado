@@ -1,9 +1,7 @@
 pipeline {
     agent any
 
- environment {
-        NODE_HOME = '/Users/fredericoprazeres/.nvm/versions/node/v22.22.3'
-        PATH = "${NODE_HOME}/bin:${env.PATH}"
+    environment {
         COREPACK_ENABLE_STRICT = '0'
         COREPACK_ENABLE_AUTO_PIN = '0'
     }
@@ -18,19 +16,31 @@ pipeline {
                     sh 'rm -rf node_modules'
                 }
 
-                sh 'npm install -g pnpm@10 --force'
-                sh 'npm list -g pnpm'
-
                 dir('directus') {
-                    sh 'pnpm install --frozen-lockfile'
+                    sh '''
+                        export NVM_DIR="$HOME/.nvm"
+                        . "$NVM_DIR/nvm.sh"
+                        nvm use 22
+                        pnpm install --frozen-lockfile
+                    '''
                 }
 
                 dir('directus') {
-                    sh 'pnpm lint'
+                    sh '''
+                        export NVM_DIR="$HOME/.nvm"
+                        . "$NVM_DIR/nvm.sh"
+                        nvm use 22
+                        pnpm lint
+                    '''
                 }
 
                 dir('directus') {
-                    sh 'pnpm build'
+                    sh '''
+                        export NVM_DIR="$HOME/.nvm"
+                        . "$NVM_DIR/nvm.sh"
+                        nvm use 22
+                        pnpm build
+                    '''
                 }
             }
         }
