@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  checkout:
+  build:
     runs-on: self-hosted
     defaults:
       run:
@@ -18,23 +18,9 @@ jobs:
         with:
           submodules: true
 
-  clean:
-    runs-on: self-hosted
-    needs: checkout
-    defaults:
-      run:
-        working-directory: directus
-    steps:
       - name: Clean dependencies
         run: rm -rf node_modules
 
-  install:
-    runs-on: self-hosted
-    needs: clean
-    defaults:
-      run:
-        working-directory: directus
-    steps:
       - name: Install dependencies
         run: |
           export NVM_DIR="$HOME/.nvm"
@@ -43,32 +29,8 @@ jobs:
           echo "$(dirname $(which node))" >> $GITHUB_PATH
           pnpm install --frozen-lockfile
 
-  lint:
-    runs-on: self-hosted
-    needs: install
-    defaults:
-      run:
-        working-directory: directus
-    steps:
       - name: Lint
-        run: |
-          export NVM_DIR="$HOME/.nvm"
-          . "$NVM_DIR/nvm.sh"
-          nvm use 22
-          echo "$(dirname $(which node))" >> $GITHUB_PATH
-          pnpm lint
+        run: pnpm lint
 
-  build:
-    runs-on: self-hosted
-    needs: lint
-    defaults:
-      run:
-        working-directory: directus
-    steps:
       - name: Build
-        run: |
-          export NVM_DIR="$HOME/.nvm"
-          . "$NVM_DIR/nvm.sh"
-          nvm use 22
-          echo "$(dirname $(which node))" >> $GITHUB_PATH
-          pnpm build
+        run: pnpm build
