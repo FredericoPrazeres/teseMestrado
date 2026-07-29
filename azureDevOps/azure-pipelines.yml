@@ -7,18 +7,14 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: Checkout
-    displayName: 'Checkout repository'
+  - job: Build
+    displayName: 'Directus CI Pipeline'
     steps:
       - checkout: self
         clean: false
         submodules: true
         displayName: 'Checkout repository'
 
-  - job: InstallDependencies
-    displayName: 'Install dependencies'
-    dependsOn: Checkout
-    steps:
       - script: |
           cd directus && rm -rf node_modules
         displayName: 'Clean dependencies'
@@ -27,29 +23,13 @@ jobs:
           export NVM_DIR="$HOME/.nvm"
           . "$NVM_DIR/nvm.sh"
           nvm use 22
-          cd directus && pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile
         displayName: 'Install dependencies'
 
-  - job: Lint
-    displayName: 'Lint'
-    dependsOn: InstallDependencies
-    steps:
-
       - script: |
-          export NVM_DIR="$HOME/.nvm"
-          . "$NVM_DIR/nvm.sh"
-          nvm use 22
-          cd directus && pnpm lint
+          pnpm lint
         displayName: 'Lint'
 
-  - job: Build
-    displayName: 'Build'
-    dependsOn: Lint
-    steps:
-
       - script: |
-          export NVM_DIR="$HOME/.nvm"
-          . "$NVM_DIR/nvm.sh"
-          nvm use 22
-          cd directus && pnpm build
+          pnpm build
         displayName: 'Build'
