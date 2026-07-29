@@ -27,9 +27,15 @@ jobs:
         displayName: 'Install dependencies'
 
       - script: |
-          pnpm lint
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
+          cd directus && pnpm lint
         displayName: 'Lint'
 
       - script: |
-          pnpm build
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
+          cd directus && pnpm build
         displayName: 'Build'
