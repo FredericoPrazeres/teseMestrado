@@ -21,7 +21,9 @@ pipeline {
                     sh '''
                         . "$NVM_DIR/nvm.sh"
                         nvm use 22
+                        echo 'ignored-built-dependencies[]=isolated-vm' >> .npmrc
                         pnpm install --frozen-lockfile
+                        sed -i '/^ignored-built-dependencies/d' .npmrc
                     '''
                 }
 
