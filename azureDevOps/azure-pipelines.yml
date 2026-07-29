@@ -23,7 +23,7 @@ jobs:
           export NVM_DIR="$HOME/.nvm"
           . "$NVM_DIR/nvm.sh"
           nvm use 22
-          pnpm install --frozen-lockfile
+          cd directus && pnpm install --frozen-lockfile
         displayName: 'Install dependencies'
 
       - script: |
