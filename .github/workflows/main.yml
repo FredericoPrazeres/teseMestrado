@@ -17,12 +17,16 @@ jobs:
         with:
           submodules: true
 
-      - name : clean dependencies
-        run: |
-          rm -rf node_modules
+      - name: Clean dependencies
+        run: rm -rf node_modules
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
+          echo "$(dirname $(which node))" >> $GITHUB_PATH
+          pnpm install --frozen-lockfile
 
       - name: Lint
         run: pnpm lint
