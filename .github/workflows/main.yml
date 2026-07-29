@@ -51,7 +51,12 @@ jobs:
         working-directory: directus
     steps:
       - name: Lint
-        run: pnpm lint
+        run: |
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
+          echo "$(dirname $(which node))" >> $GITHUB_PATH
+          pnpm lint
 
   build:
     runs-on: self-hosted
@@ -61,4 +66,9 @@ jobs:
         working-directory: directus
     steps:
       - name: Build
-        run: pnpm build
+        run: |
+          export NVM_DIR="$HOME/.nvm"
+          . "$NVM_DIR/nvm.sh"
+          nvm use 22
+          echo "$(dirname $(which node))" >> $GITHUB_PATH
+          pnpm build
