@@ -8,15 +8,23 @@ pipeline {
     }
 
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
                 checkout scm
                 sh 'git submodule update --init --recursive'
+            }
+        }
 
+        stage('Clean') {
+            steps {
                 dir('directus') {
                     sh 'rm -rf node_modules'
                 }
+            }
+        }
 
+        stage('Install') {
+            steps {
                 dir('directus') {
                     sh '''
                         . "$NVM_DIR/nvm.sh"
@@ -26,7 +34,11 @@ pipeline {
                         sed -i '/^ignored-built-dependencies/d' .npmrc
                     '''
                 }
+            }
+        }
 
+        stage('Lint') {
+            steps {
                 dir('directus') {
                     sh '''
                         . "$NVM_DIR/nvm.sh"
@@ -34,7 +46,11 @@ pipeline {
                         pnpm lint
                     '''
                 }
+            }
+        }
 
+        stage('Build') {
+            steps {
                 dir('directus') {
                     sh '''
                         . "$NVM_DIR/nvm.sh"
