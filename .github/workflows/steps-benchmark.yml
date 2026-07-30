@@ -3,7 +3,7 @@ name: "Cal.diy — Step Overhead Benchmark"
 on:
   push:
     branches:
-      - applications/calcom
+      - applications/calcoms
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
