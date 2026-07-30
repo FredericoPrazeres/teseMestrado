@@ -1,130 +1,129 @@
-name: "Cal.diy — Step Overhead Benchmark"
+name: "Cal.diy — Job Overhead Benchmark"
 
 on:
   push:
     branches:
-      - applications/calcomx
+      - applications/calcom
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
   DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
 
 jobs:
-  all-steps:
-    name: "All Steps in One Job"
+  job-01-cleanup:
+    name: "Job 01 — Cleanup Previous Runs"
     runs-on: self-hosted
-    defaults:
-      run:
-        # Use Windows PowerShell 5.1 explicitly (avoids WSL bash collision in System32).
-        shell: powershell
-        working-directory: cal.diy
     steps:
-      - name: "Step 01 — Cleanup Previous Runs"
-        working-directory: .
-        run: |
-          # Native stderr from docker would trip the runner's injected $ErrorActionPreference='stop'.
-          $ErrorActionPreference = 'Continue'
-          $ids = docker ps -q
-          if ($ids) { docker stop $ids | Out-Null }
-          $ids = docker ps -aq
-          if ($ids) { docker rm $ids | Out-Null }
-          $ids = docker images -q
-          if ($ids) { docker rmi -f $ids | Out-Null }
-          docker system prune -af --volumes | Out-Null
-          $global:LASTEXITCODE = 0
+      - run: |
+          docker stop $(docker ps -q) 2>/dev/null || true
+          docker rm $(docker ps -aq) 2>/dev/null || true
+          docker rmi $(docker images -q) 2>/dev/null || true
+          docker system prune -af --volumes 2>/dev/null || true
 
-      - name: "Step 02 — Checkout"
-        uses: actions/checkout@v4
+  job-02-checkout:
+    name: "Job 02 — Checkout"
+    runs-on: self-hosted
+    needs: job-01-cleanup
+    steps:
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: "Step 02b — Patch cal.diy ui build-icons script"
-        # The submodule's build-icons.mjs invokes biome on apps/web/public/icons/sprite.svg,
-        # which biome.json excludes. Biome 2 exits 1 in that case. Add --no-errors-on-unmatched.
-        run: |
-          $f = 'packages/ui/scripts/build-icons.mjs'
-          if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
-          $c = Get-Content $f -Raw
-          if ($c.Contains('--no-errors-on-unmatched')) {
-            Write-Host "$f already patched"
-          } else {
-            $old = 'format --write ${filepath}'
-            $new = 'format --write --no-errors-on-unmatched ${filepath}'
-            if (-not $c.Contains($old)) { Write-Error "patch anchor not found in $f"; exit 1 }
-            $c = $c.Replace($old, $new)
-            Set-Content -Path $f -Value $c -NoNewline -Encoding UTF8
-            Write-Host "Patched $f"
-          }
-
-      - name: "Step 03 — Node Setup"
-        uses: actions/setup-node@v4
+  job-03-node-setup:
+    name: "Job 03 — Node Setup"
+    runs-on: self-hosted
+    needs: job-02-checkout
+    steps:
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: "Step 04 — Corepack Enable"
-        run: |
-          corepack enable
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          corepack install
+  job-04-corepack:
+    name: "Job 04 — Corepack Enable"
+    runs-on: self-hosted
+    needs: job-03-node-setup
+    steps:
+      - run: corepack enable && corepack install
+        working-directory: cal.diy
 
-      - name: "Step 05 — Yarn Install"
-        run: yarn install
+  job-05-install:
+    name: "Job 05 — Yarn Install"
+    runs-on: self-hosted
+    needs: job-04-corepack
+    steps:
+      - run: cd cal.diy && yarn install
 
-      - name: "Step 06 — Environment Setup"
-        run: |
-          Copy-Item .env.example .env -Force
-          $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-          $b32 = New-Object byte[] 32; $rng.GetBytes($b32); $NEXTAUTH_SECRET = [Convert]::ToBase64String($b32)
-          $b24 = New-Object byte[] 24; $rng.GetBytes($b24); $CALENDSO_ENCRYPTION_KEY = [Convert]::ToBase64String($b24)
-          (Get-Content .env) | ForEach-Object {
-            if     ($_ -match '^NEXTAUTH_SECRET=')         { "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" }
-            elseif ($_ -match '^CALENDSO_ENCRYPTION_KEY=') { "CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY" }
-            else                                           { $_ }
-          } | Set-Content .env -Encoding UTF8
-          Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
-          Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
-          # Windows git checkout materializes the repo's packages/prisma/.env symlink as a text file
-          # containing "../../.env". Replace it with a real copy so docker compose can read it.
-          Copy-Item .env packages/prisma/.env -Force
+  job-06-env-setup:
+    name: "Job 06 — Environment Setup"
+    runs-on: self-hosted
+    needs: job-05-install
+    steps:
+      - run: |
+          cd cal.diy
+          cp .env.example .env
+          NEXTAUTH_SECRET=$(openssl rand -base64 32)
+          CALENDSO_ENCRYPTION_KEY=$(openssl rand -base64 24)
+          sed -i '' "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env 2>/dev/null || \
+            sed -i "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env
+          sed -i '' "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env 2>/dev/null || \
+            sed -i "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env
+          echo "DATABASE_URL=$DATABASE_URL" >> .env
+          echo "DATABASE_DIRECT_URL=$DATABASE_DIRECT_URL" >> .env
 
-      - name: "Step 07 — Lint"
-        run: yarn lint
+  job-07-lint:
+    name: "Job 07 — Lint"
+    runs-on: self-hosted
+    needs: job-06-env-setup
+    steps:
+      - run: cd cal.diy && yarn lint
 
-      - name: "Step 08 — Type Check"
-        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches tsc child processes.
-        run: yarn turbo run type-check --env-mode=loose
-        env:
-          NODE_OPTIONS: "--max-old-space-size=6144"
+  job-08-type-check:
+    name: "Job 08 — Type Check"
+    runs-on: self-hosted
+    needs: job-07-lint
+    steps:
+      - run: cd cal.diy && NODE_OPTIONS="--max-old-space-size=8192" yarn type-check
 
-      - name: "Step 10 — Prisma Validate"
-        run: yarn workspace @calcom/prisma prisma validate
+  job-09-test:
+    name: "Job 09 — Unit Tests"
+    runs-on: self-hosted
+    needs: job-08-type-check
+    steps:
+      - run: cd cal.diy && TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors
 
-      - name: "Step 11 — Start Database"
-        run: |
-          $ErrorActionPreference = 'Continue'
-          docker compose -f packages/prisma/docker-compose.yml up -d
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Start-Sleep -Seconds 5
+  job-10-prisma-validate:
+    name: "Job 10 — Prisma Validate"
+    runs-on: self-hosted
+    needs: job-09-test
+    steps:
+      - run: cd cal.diy && yarn workspace @calcom/prisma prisma validate
 
-      - name: "Step 12 — Build"
-        # Bypass turbo's strict env filtering so NODE_OPTIONS reaches the Next.js build worker.
-        # Exclude @calcom/base demo app (upstream dayjs module-augmentation type error, not part of deliverable).
-        run: yarn turbo run build --env-mode=loose --filter=!@calcom/base
-        env:
-          NODE_OPTIONS: "--max-old-space-size=6144"
+  job-11-db-start:
+    name: "Job 11 — Start Database"
+    runs-on: self-hosted
+    needs: job-10-prisma-validate
+    steps:
+      - run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
 
-      - name: "Step 13 — Stop Database"
-        if: always()
-        run: |
-          $ErrorActionPreference = 'Continue'
-          docker compose -f packages/prisma/docker-compose.yml down
-          $global:LASTEXITCODE = 0
+  job-12-build:
+    name: "Job 12 — Build"
+    runs-on: self-hosted
+    needs: job-11-db-start
+    steps:
+      - run: cd cal.diy && yarn build
 
-      - name: "Step 14 — Docker Build"
-        run: |
-          $ErrorActionPreference = 'Continue'
-          docker build -t cal-diy:bench -f Dockerfile .
-          if ($LASTEXITCODE -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
-          $global:LASTEXITCODE = 0
+  job-13-db-stop:
+    name: "Job 13 — Stop Database"
+    runs-on: self-hosted
+    needs: job-12-build
+    if: always()
+    steps:
+      - run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml down || true
 
-
+  job-14-docker-build:
+    name: "Job 14 — Docker Build"
+    runs-on: self-hosted
+    needs: job-13-db-stop
+    steps:
+      - run: cd cal.diy && docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
+      
