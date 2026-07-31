@@ -28,20 +28,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-
-  job-03-node-setup:
-    name: "Job 03 — Node Setup"
+  
+  job-03-node-version:
+    name: "Job 03 — Node Version"
     runs-on: self-hosted
     needs: job-02-checkout
     steps:
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
+      - run: node -v && npm -v && yarn -v
+        
   job-04-corepack:
     name: "Job 04 — Corepack Enable"
     runs-on: self-hosted
-    needs: job-03-node-setup
+    needs: job-03-node-version
     steps:
       - run: corepack enable && corepack install
         working-directory: cal.diy
@@ -89,7 +87,7 @@ jobs:
     runs-on: self-hosted
     needs: job-08-type-check
     steps:
-      - run: cd cal.diy && TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors
+      - run: cd cal.diy && TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors
 
   job-10-prisma-validate:
     name: "Job 10 — Prisma Validate"
