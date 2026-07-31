@@ -3,7 +3,7 @@ name: "Cal.diy — Job Overhead Benchmark"
 trigger:
   branches:
     include:
-      - applications/calcoms
+      - applications/calcom
 
 variables:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
