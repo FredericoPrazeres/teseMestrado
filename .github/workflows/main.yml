@@ -108,7 +108,7 @@ jobs:
     runs-on: self-hosted
     needs: job-11-db-start
     steps:
-      - run: cd cal.diy && yarn build
+      - run: cd cal.diy && NODE_OPTIONS="--max-old-space-size=12288" yarn build
 
   job-13-db-stop:
     name: "Job 13 — Stop Database"
