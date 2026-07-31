@@ -16,7 +16,11 @@ jobs:
   - job: all_steps
     displayName: "All Steps"
     steps:
-      - checkout: none
+      
+      - checkout: self
+        submodules: true
+        displayName: "Step 02 — Checkout"
+
       - bash: |
           set +e
           docker stop $(docker ps -q) 2>/dev/null || true
@@ -25,10 +29,6 @@ jobs:
           docker system prune -af --volumes 2>/dev/null || true
           exit 0
         displayName: "Step 01 — Cleanup Previous Runs"
-
-      - checkout: self
-        submodules: true
-        displayName: "Step 02 — Checkout"
 
       - bash: |
           node -v
