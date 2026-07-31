@@ -1,7 +1,9 @@
+name: "Cal.diy — Job Overhead Benchmark"
+
 trigger:
   branches:
     include:
-      - applications/calcoms
+      - applications/calcom
 
 variables:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
@@ -11,56 +13,65 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: Job01_Cleanup
-    displayName: 'Job 01 — Cleanup Previous Runs'
+  - job: job_01_cleanup
+    displayName: "Job 01 — Cleanup Previous Runs"
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
+          set +e
           docker stop $(docker ps -q) 2>/dev/null || true
           docker rm $(docker ps -aq) 2>/dev/null || true
           docker rmi $(docker images -q) 2>/dev/null || true
           docker system prune -af --volumes 2>/dev/null || true
-        displayName: 'Cleanup'
+          exit 0
+        displayName: "Cleanup Previous Runs"
 
-  - job: Job02_Checkout
-    displayName: 'Job 02 — Checkout'
-    dependsOn: Job01_Cleanup
+  - job: job_02_checkout
+    displayName: "Job 02 — Checkout"
+    dependsOn: job_01_cleanup
     steps:
       - checkout: self
         submodules: true
-        displayName: 'Checkout'
+        displayName: "Checkout"
 
-  - job: Job03_NodeSetup
-    displayName: 'Job 03 — Node Setup'
-    dependsOn: Job02_Checkout
+  - job: job_03_node_version
+    displayName: "Job 03 — Node Version"
+    dependsOn: job_02_checkout
     steps:
-      - task: NodeTool@0
-        inputs:
-          versionSpec: '20.x'
-        displayName: 'Node Setup'
+      - checkout: none
+      - bash: |
+          node -v
+          npm -v
+          yarn -v
+        displayName: "Show Node.js, npm, and yarn versions"
 
-  - job: Job04_Corepack
-    displayName: 'Job 04 — Corepack Enable'
-    dependsOn: Job03_NodeSetup
+  - job: job_04_corepack
+    displayName: "Job 04 — Corepack Enable"
+    dependsOn: job_03_node_version
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
-          corepack enable && corepack install
-        displayName: 'Corepack Enable'
+          corepack enable
+          corepack install
+        displayName: "Enable Corepack"
 
-  - job: Job05_Install
-    displayName: 'Job 05 — Yarn Install'
-    dependsOn: Job04_Corepack
+  - job: job_05_install
+    displayName: "Job 05 — Yarn Install"
+    dependsOn: job_04_corepack
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
           yarn install
-        displayName: 'Yarn Install'
+        displayName: "Install dependencies"
 
-  - job: Job06_EnvSetup
-    displayName: 'Job 06 — Environment Setup'
-    dependsOn: Job05_Install
+  - job: job_06_env_setup
+    displayName: "Job 06 — Environment Setup"
+    dependsOn: job_05_install
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
           cp .env.example .env
           NEXTAUTH_SECRET=$(openssl rand -base64 32)
@@ -69,80 +80,95 @@ jobs:
             sed -i "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env
           sed -i '' "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env 2>/dev/null || \
             sed -i "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env
-          echo "DATABASE_URL=$(DATABASE_URL)" >> .env
-          echo "DATABASE_DIRECT_URL=$(DATABASE_DIRECT_URL)" >> .env
-        displayName: 'Environment Setup'
+          echo "DATABASE_URL=$DATABASE_URL" >> .env
+          echo "DATABASE_DIRECT_URL=$DATABASE_DIRECT_URL" >> .env
+        displayName: "Generate environment file"
+        env:
+          DATABASE_URL: $(DATABASE_URL)
+          DATABASE_DIRECT_URL: $(DATABASE_DIRECT_URL)
 
-  - job: Job07_Lint
-    displayName: 'Job 07 — Lint'
-    dependsOn: Job06_EnvSetup
+  - job: job_07_lint
+    displayName: "Job 07 — Lint"
+    dependsOn: job_06_env_setup
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
           yarn lint
-        displayName: 'Lint'
+        displayName: "Lint"
 
-  - job: Job08_TypeCheck
-    displayName: 'Job 08 — Type Check'
-    dependsOn: Job07_Lint
+  - job: job_08_type_check
+    displayName: "Job 08 — Type Check"
+    dependsOn: job_07_lint
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
-          yarn type-check
-        displayName: 'Type Check'
+          NODE_OPTIONS="--max-old-space-size=8192" yarn type-check
+        displayName: "Type Check"
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
 
-  - job: Job09_Test
-    displayName: 'Job 09 — Unit Tests'
-    dependsOn: Job08_TypeCheck
+  - job: job_09_test
+    displayName: "Job 09 — Unit Tests"
+    dependsOn: job_08_type_check
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
-          CI=true TZ=UTC yarn test --dangerouslyIgnoreUnhandledErrors --exclude 'packages/lib/OgImages.test.ts' --exclude 'apps/web/app/api/social/og/image/__tests__/route.test.ts'
-        displayName: 'Unit Tests'
+          TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors --maxWorkers=1 --testTimeout=60000 --hookTimeout=60000
+        displayName: "Unit Tests"
 
-  - job: Job10_PrismaValidate
-    displayName: 'Job 10 — Prisma Validate'
-    dependsOn: Job09_Test
+  - job: job_10_prisma_validate
+    displayName: "Job 10 — Prisma Validate"
+    dependsOn: job_09_test
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
           yarn workspace @calcom/prisma prisma validate
-        displayName: 'Prisma Validate'
+        displayName: "Prisma Validate"
 
-  - job: Job11_DbStart
-    displayName: 'Job 11 — Start Database'
-    dependsOn: Job10_PrismaValidate
+  - job: job_11_db_start
+    displayName: "Job 11 — Start Database"
+    dependsOn: job_10_prisma_validate
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
-          docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
-        displayName: 'Start Database'
+          docker compose -f packages/prisma/docker-compose.yml up -d
+          sleep 5
+        displayName: "Start Database"
 
-  - job: Job12_Build
-    displayName: 'Job 12 — Build'
-    dependsOn: Job11_DbStart
+  - job: job_12_build
+    displayName: "Job 12 — Build"
+    dependsOn: job_11_db_start
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
-          yarn build
-        displayName: 'Build'
+          NODE_OPTIONS="--max-old-space-size=12288" yarn build
+        displayName: "Build"
+        env:
+          NODE_OPTIONS: "--max-old-space-size=12288"
 
-  - job: Job13_DbStop
-    displayName: 'Job 13 — Stop Database'
-    dependsOn: Job12_Build
+  - job: job_13_db_stop
+    displayName: "Job 13 — Stop Database"
+    dependsOn: job_12_build
     condition: always()
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
           docker compose -f packages/prisma/docker-compose.yml down || true
-        displayName: 'Stop Database'
+        displayName: "Stop Database"
 
-  - job: Job14_DockerBuild
-    displayName: 'Job 14 — Docker Build'
-    dependsOn: Job13_DbStop
+  - job: job_14_docker_build
+    displayName: "Job 14 — Docker Build"
+    dependsOn: job_13_db_stop
     steps:
-      - script: |
+      - checkout: none
+      - bash: |
           cd cal.diy
           docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
-        displayName: 'Docker Build'
-        
+        displayName: "Docker Build"
