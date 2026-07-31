@@ -3,7 +3,7 @@ name: "Cal.diy — Job Overhead Benchmark"
 on:
   push:
     branches:
-      - applications/calcoms
+      - applications/calcom
 
 env:
   DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
