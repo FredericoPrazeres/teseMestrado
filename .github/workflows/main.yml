@@ -14,7 +14,24 @@ jobs:
     name: "Job 01 — Cleanup Previous Runs"
     runs-on: self-hosted
     steps:
-      - run: |
+      - name: Clean workspace and Docker state
+        shell: bash
+        run: |
+          set -e
+          echo "Cleaning workspace: $GITHUB_WORKSPACE"
+
+          find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} + 2>/dev/null || true
+
+          rm -rf "$GITHUB_WORKSPACE/cal.diy/node_modules" \
+                 "$GITHUB_WORKSPACE/cal.diy/.yarn/cache" \
+                 "$GITHUB_WORKSPACE/cal.diy/.yarn/install-state.gz" \
+                 "$GITHUB_WORKSPACE/cal.diy/.yarn/unplugged" \
+                 "$GITHUB_WORKSPACE/cal.diy/.yarn/build-state.yml" \
+                 "$GITHUB_WORKSPACE/cal.diy/.next" \
+                 "$GITHUB_WORKSPACE/cal.diy/.turbo" \
+                 "$GITHUB_WORKSPACE/cal.diy/.cache" \
+                 "$GITHUB_WORKSPACE/cal.diy/.pnpm-store" 2>/dev/null || true
+
           docker stop $(docker ps -q) 2>/dev/null || true
           docker rm $(docker ps -aq) 2>/dev/null || true
           docker rmi $(docker images -q) 2>/dev/null || true

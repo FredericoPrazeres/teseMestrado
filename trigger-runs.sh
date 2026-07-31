@@ -12,7 +12,7 @@
 # ─── Configuration ───────────────────────────────────────────────────────────
 
 NUM_RUNS=${1:-5}              # Number of pipeline runs to trigger (default: 5)
-INTERVAL_SECONDS=${2:-900}     # Seconds to wait between pushes (default: 400)
+INTERVAL_SECONDS=${2:-2800}     # Seconds to wait between pushes (default: 400)
 BRANCH="applications/calcom" # Branch to push to
 
 # ─── Script ──────────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ for i in $(seq 1 "$NUM_RUNS"); do
     echo "──────────────────────────────────────────"
 
     # Create an empty commit to trigger the pipeline
-    git commit --allow-empty -m "MacOS Azure Job Test - $i/$NUM_RUNS"
+    git commit --allow-empty -m "Linux Azure Job Test - $i/$NUM_RUNS"
 
     # Push to remote
     if git push origin "$BRANCH"; then
