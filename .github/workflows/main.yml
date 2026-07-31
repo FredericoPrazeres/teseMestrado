@@ -10,53 +10,34 @@ env:
   DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
 
 jobs:
-  job-01-cleanup:
-    name: "Job 01 — Cleanup Previous Runs"
+  benchmark:
+    name: "Benchmark — 14 Sequential Steps"
     runs-on: self-hosted
     steps:
-      - run: |
+      - name: "Step 01 — Cleanup Previous Runs"
+        run: |
           docker stop $(docker ps -q) 2>/dev/null || true
           docker rm $(docker ps -aq) 2>/dev/null || true
           docker rmi $(docker images -q) 2>/dev/null || true
           docker system prune -af --volumes 2>/dev/null || true
 
-  job-02-checkout:
-    name: "Job 02 — Checkout"
-    runs-on: self-hosted
-    needs: job-01-cleanup
-    steps:
-      - uses: actions/checkout@v4
+      - name: "Step 02 — Checkout"
+        uses: actions/checkout@v4
         with:
           submodules: true
-  
-  job-03-node-version:
-    name: "Job 03 — Node Version"
-    runs-on: self-hosted
-    needs: job-02-checkout
-    steps:
-      - run: node -v && npm -v && yarn -v
-        
-  job-04-corepack:
-    name: "Job 04 — Corepack Enable"
-    runs-on: self-hosted
-    needs: job-03-node-version
-    steps:
-      - run: corepack enable && corepack install
+
+      - name: "Step 03 — Node Version"
+        run: node -v && npm -v && yarn -v
+
+      - name: "Step 04 — Corepack Enable"
+        run: corepack enable && corepack install
         working-directory: cal.diy
 
-  job-05-install:
-    name: "Job 05 — Yarn Install"
-    runs-on: self-hosted
-    needs: job-04-corepack
-    steps:
-      - run: cd cal.diy && yarn install
+      - name: "Step 05 — Yarn Install"
+        run: cd cal.diy && yarn install
 
-  job-06-env-setup:
-    name: "Job 06 — Environment Setup"
-    runs-on: self-hosted
-    needs: job-05-install
-    steps:
-      - run: |
+      - name: "Step 06 — Environment Setup"
+        run: |
           cd cal.diy
           cp .env.example .env
           NEXTAUTH_SECRET=$(openssl rand -base64 32)
@@ -68,59 +49,28 @@ jobs:
           echo "DATABASE_URL=$DATABASE_URL" >> .env
           echo "DATABASE_DIRECT_URL=$DATABASE_DIRECT_URL" >> .env
 
-  job-07-lint:
-    name: "Job 07 — Lint"
-    runs-on: self-hosted
-    needs: job-06-env-setup
-    steps:
-      - run: cd cal.diy && yarn lint
+      - name: "Step 07 — Lint"
+        run: cd cal.diy && yarn lint
 
-  job-08-type-check:
-    name: "Job 08 — Type Check"
-    runs-on: self-hosted
-    needs: job-07-lint
-    steps:
-      - run: cd cal.diy && NODE_OPTIONS="--max-old-space-size=8192" yarn type-check
+      - name: "Step 08 — Type Check"
+        run: cd cal.diy && NODE_OPTIONS="--max-old-space-size=8192" yarn type-check
 
-  job-09-test:
-    name: "Job 09 — Unit Tests"
-    runs-on: self-hosted
-    needs: job-08-type-check
-    steps:
-      - run: cd cal.diy && TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors --maxWorkers=1 --testTimeout=60000 --hookTimeout=60000
+      - name: "Step 09 — Unit Tests"
+        run: cd cal.diy && TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors --maxWorkers=1 --testTimeout=60000 --hookTimeout=60000
 
-  job-10-prisma-validate:
-    name: "Job 10 — Prisma Validate"
-    runs-on: self-hosted
-    needs: job-09-test
-    steps:
-      - run: cd cal.diy && yarn workspace @calcom/prisma prisma validate
+      - name: "Step 10 — Prisma Validate"
+        run: cd cal.diy && yarn workspace @calcom/prisma prisma validate
 
-  job-11-db-start:
-    name: "Job 11 — Start Database"
-    runs-on: self-hosted
-    needs: job-10-prisma-validate
-    steps:
-      - run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
+      - name: "Step 11 — Start Database"
+        run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml up -d && sleep 5
 
-  job-12-build:
-    name: "Job 12 — Build"
-    runs-on: self-hosted
-    needs: job-11-db-start
-    steps:
-      - run: cd cal.diy && NODE_OPTIONS="--max-old-space-size=12288" yarn build
+      - name: "Step 12 — Build"
+        run: cd cal.diy && NODE_OPTIONS="--max-old-space-size=12288" yarn build
 
-  job-13-db-stop:
-    name: "Job 13 — Stop Database"
-    runs-on: self-hosted
-    needs: job-12-build
-    if: always()
-    steps:
-      - run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml down || true
+      - name: "Step 13 — Stop Database"
+        if: always()
+        run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml down || true
 
-  job-14-docker-build:
-    name: "Job 14 — Docker Build"
-    runs-on: self-hosted
-    needs: job-13-db-stop
-    steps:
-      - run: cd cal.diy && docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
+      - name: "Step 14 — Docker Build"
+        if: always()
+        run: cd cal.diy && docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
