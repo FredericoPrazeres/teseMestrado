@@ -72,5 +72,4 @@ jobs:
         run: cd cal.diy && docker compose -f packages/prisma/docker-compose.yml down || true
 
       - name: "Step 14 — Docker Build"
-        if: always()
         run: cd cal.diy && docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true
