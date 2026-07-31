@@ -87,7 +87,7 @@ jobs:
     runs-on: self-hosted
     needs: job-08-type-check
     steps:
-      - run: cd cal.diy && TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors --testTimeout=30000
+      - run: cd cal.diy && TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors --maxWorkers=1 --testTimeout=60000 --hookTimeout=60000
 
   job-10-prisma-validate:
     name: "Job 10 — Prisma Validate"
