@@ -112,6 +112,13 @@ pipeline {
       steps {
         dir('cal.diy') {
           sh '''
+            set -e
+            echo "Checking Docker access..."
+            if ! docker info >/dev/null 2>&1; then
+              echo "ERROR: Jenkins cannot reach the Docker daemon."
+              echo "Ensure the Jenkins agent user is in the docker group or has access to /var/run/docker.sock."
+              exit 1
+            fi
             docker compose -f packages/prisma/docker-compose.yml up -d
             sleep 5
           '''
