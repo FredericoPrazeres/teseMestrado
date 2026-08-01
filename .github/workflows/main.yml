@@ -16,11 +16,17 @@ jobs:
   checkout:
     runs-on: self-hosted
     steps:
-      - name: Checkout repository and submodules
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
+
+      - name: Initialize ToolJet submodule only
+        run: |
+          git submodule update --init --depth=1 ToolJet
+          cd "$TOOLJET_DIR"
+          git submodule deinit -f frontend/ee server/ee || true
+          git submodule foreach --recursive 'git submodule deinit -f . || true' || true
 
       - name: Verify runtime prerequisites
         run: |
