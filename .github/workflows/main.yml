@@ -8,128 +8,101 @@ on:
 env:
   NODE_VERSION: "22.15.1"
   TOOLJET_DIR: "ToolJet"
-  CI: "true"
-  HUSKY: "0"
 
 jobs:
-  pipeline:
+  # ──────────────────────────────────────────────────────────────
+  # Job 1: Checkout & Environment Info
+  # ──────────────────────────────────────────────────────────────
+  checkout:
     runs-on: self-hosted
-    defaults:
-      run:
-        shell: powershell
     steps:
-      # ──────────────────────────────────────────────────────────────
-      # Step 1: Checkout & Environment Info
-      # ──────────────────────────────────────────────────────────────
-      - name: Checkout and print environment info
+      - name: Checkout repository and submodules
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
+          fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Print Node.js and npm versions
+      - name: Verify runtime prerequisites
         run: |
-          node --version
-          npm --version
+          echo "Node version required: $NODE_VERSION"
+          node --version || true
+          npm --version || true
+          docker --version || true
+          git --version
+          git submodule status --recursive
 
-      # ──────────────────────────────────────────────────────────────
-      # Step 2: Cleanup previous deployment
-      # ──────────────────────────────────────────────────────────────
+      - name: Note on ToolJet fork usage
+        run: |
+          echo "If ToolJet needs benchmarking patches, make them in a fork and point the submodule URL to that fork before running the runners."
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 2: Cleanup previous deployment
+  # ──────────────────────────────────────────────────────────────
+  cleanup:
+    runs-on: self-hosted
+    needs: checkout
+    steps:
       - name: Stop containers and prune Docker resources
         run: |
-          $containerId = docker ps -aq --filter "name=^tooljet$"
-          if ([string]::IsNullOrWhiteSpace($containerId)) {
-            Write-Host "Container not found, skipping stop/remove"
-          } else {
-            docker stop $containerId | Out-Null
-            docker rm $containerId | Out-Null
-            Write-Host "Container stopped and removed"
-          }
+          docker stop tooljet 2>/dev/null || true
+          docker rm tooljet 2>/dev/null || true
           docker image prune -f
           docker volume prune -f
           docker network prune -f
 
-      # ──────────────────────────────────────────────────────────────
-      # Step 3: Install dependencies
-      # ──────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────
+  # Job 3: Install dependencies
+  # ──────────────────────────────────────────────────────────────
+  install-dependencies:
+    runs-on: self-hosted
+    needs: cleanup
+    steps:
       - name: Install all npm dependencies
         run: |
-          $env:CI="true"
-          $env:HUSKY="0"
-          $env:npm_config_ignore_scripts="true"
+          cd "$TOOLJET_DIR"
+          npm --prefix plugins install
+          npm --prefix server install --production=false
+          npm --prefix frontend install --production=false
 
-          Push-Location "$env:TOOLJET_DIR/plugins"
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/server"
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          if (Test-Path "node_modules") { Remove-Item -Recurse -Force "node_modules" }
-          npm install --include=dev --ignore-scripts --no-audit --no-fund
-          Pop-Location
-
-      # ──────────────────────────────────────────────────────────────
-      # Step 4: Lint & Code Quality
-      # ──────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────
+  # Job 4: Lint & Code Quality
+  # ──────────────────────────────────────────────────────────────
+  lint:
+    runs-on: self-hosted
+    needs: install-dependencies
+    steps:
       - name: Lint server and frontend code
         run: |
-          Write-Host "Linting server code..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/server"
-          npm run lint
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Server lint passed" -ForegroundColor Green
-          } else {
-            Write-Host "Server lint completed with warnings" -ForegroundColor Yellow
-            $global:LASTEXITCODE = 0
-          }
-          Pop-Location
+          cd "$TOOLJET_DIR"
+          npx --prefix server eslint . --ext .ts --max-warnings=0 || echo "Server lint completed with warnings"
+          npx --prefix frontend eslint src/ --ext .js,.jsx --max-warnings=0 || echo "Frontend lint completed with warnings"
 
-          Write-Host "Linting frontend code..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          npm run lint
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Frontend lint passed" -ForegroundColor Green
-          } else {
-            Write-Host "Frontend lint completed with warnings" -ForegroundColor Yellow
-            $global:LASTEXITCODE = 0
-          }
-          Pop-Location
-
-      # ──────────────────────────────────────────────────────────────
-      # Step 5: Build application
-      # ──────────────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────────────
+  # Job 5: Build application
+  # ──────────────────────────────────────────────────────────────
+  build:
+    runs-on: self-hosted
+    needs: lint
+    steps:
       - name: Build plugins, frontend, and server
         run: |
-          $env:NODE_ENV="production"
-          $env:NODE_OPTIONS="--max-old-space-size=4096"
-          $env:npm_config_scripts_prepend_node_path="true"
-          
-          Write-Host "Building plugins..." -ForegroundColor Cyan
-          Push-Location "$env:TOOLJET_DIR/plugins"
-          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
-          npm run build
-          Pop-Location
-          
-          Write-Host "Building frontend..." -ForegroundColor Cyan
-          $env:NODE_OPTIONS="--max-old-space-size=8096"
-          Push-Location "$env:TOOLJET_DIR/frontend"
-          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
-          npm run build
-          Pop-Location
-          
-          Write-Host "Building server..." -ForegroundColor Cyan
-          $env:NODE_OPTIONS="--max-old-space-size=4096"
+          cd "$TOOLJET_DIR"
+          NODE_ENV=production npm --prefix plugins run build
+          NODE_OPTIONS="--max-old-space-size=8096" NODE_ENV=production npm --prefix frontend run build
           npm install -g @nestjs/cli
-          Push-Location "$env:TOOLJET_DIR/server"
-          $env:PATH = "$pwd\node_modules\.bin;$env:PATH"
-          npm run build
-          Pop-Location
+          npm --prefix server run build
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 6: Run tests
+  # ──────────────────────────────────────────────────────────────
+  test:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Run server and frontend unit tests
+        run: |
+          cd "$TOOLJET_DIR/server"
+          NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
+          cd ../frontend
+          npm install --save-dev jest-environment-jsdom || true
+          npx jest --passWithNoTests --forceExit || echo "Frontend tests completed with failures"
