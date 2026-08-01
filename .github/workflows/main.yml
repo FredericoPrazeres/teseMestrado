@@ -25,12 +25,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: false
-        run : |
-          echo "Updating submodule"
-          git submodule update --init --depth=1 ToolJet
 
-      - name: Stop containers and prune Docker resources
+      - name: Update submodule, stop containers, prune images and
         run: |
+          git submodule update --init --depth=1 ToolJet
           docker stop tooljet 2>/dev/null || true
           docker rm tooljet 2>/dev/null || true
           docker image prune -f
