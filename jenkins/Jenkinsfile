@@ -7,57 +7,38 @@ pipeline {
   }
 
   stages {
-    stage('Job 01 — Cleanup Previous Runs') {
+    stage('All Steps') {
       steps {
         script {
           deleteDir()
-          sh '''
-            set +e
-            docker stop $(docker ps -q) 2>/dev/null || true
-            docker rm $(docker ps -aq) 2>/dev/null || true
-            docker rmi $(docker images -q) 2>/dev/null || true
-            docker system prune -af --volumes 2>/dev/null || true
-            exit 0
-          '''
         }
-      }
-    }
 
-    stage('Job 02 — Checkout') {
-      steps {
+        sh '''
+          set +e
+          docker stop $(docker ps -q) 2>/dev/null || true
+          docker rm $(docker ps -aq) 2>/dev/null || true
+          docker rmi $(docker images -q) 2>/dev/null || true
+          docker system prune -af --volumes 2>/dev/null || true
+          exit 0
+        '''
+
         checkout([
           $class: 'GitSCM',
           branches: scm.branches,
           userRemoteConfigs: scm.userRemoteConfigs,
           extensions: [[$class: 'SubmoduleOption', disableSubmodules: false, recursiveSubmodules: true]]
         ])
-      }
-    }
 
-    stage('Job 03 — Node Version') {
-      steps {
         sh 'node -v && npm -v && yarn -v'
-      }
-    }
 
-    stage('Job 04 — Corepack Enable') {
-      steps {
         dir('cal.diy') {
           sh 'corepack enable && corepack install'
         }
-      }
-    }
 
-    stage('Job 05 — Yarn Install') {
-      steps {
         dir('cal.diy') {
           sh 'yarn install'
         }
-      }
-    }
 
-    stage('Job 06 — Environment Setup') {
-      steps {
         dir('cal.diy') {
           sh '''
             cp .env.example .env
@@ -71,45 +52,25 @@ pipeline {
             echo "DATABASE_DIRECT_URL=$DATABASE_DIRECT_URL" >> .env
           '''
         }
-      }
-    }
 
-    stage('Job 07 — Lint') {
-      steps {
         dir('cal.diy') {
           sh 'yarn lint'
         }
-      }
-    }
 
-    stage('Job 08 — Type Check') {
-      steps {
         dir('cal.diy') {
           withEnv(['NODE_OPTIONS=--max-old-space-size=8192']) {
             sh 'yarn type-check'
           }
         }
-      }
-    }
 
-    stage('Job 09 — Unit Tests') {
-      steps {
         dir('cal.diy') {
           sh 'TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors --maxWorkers=1 --testTimeout=60000 --hookTimeout=60000'
         }
-      }
-    }
 
-    stage('Job 10 — Prisma Validate') {
-      steps {
         dir('cal.diy') {
           sh 'yarn workspace @calcom/prisma prisma validate'
         }
-      }
-    }
 
-    stage('Job 11 — Start Database') {
-      steps {
         dir('cal.diy') {
           sh '''
             set -e
@@ -123,31 +84,17 @@ pipeline {
             sleep 5
           '''
         }
-      }
-    }
 
-    stage('Job 12 — Build') {
-      steps {
-        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-          dir('cal.diy') {
-            withEnv(['NODE_OPTIONS=--max-old-space-size=12288']) {
-              sh 'yarn build'
-            }
+        dir('cal.diy') {
+          withEnv(['NODE_OPTIONS=--max-old-space-size=12288']) {
+            sh 'yarn build'
           }
         }
-      }
-    }
 
-    stage('Job 13 — Stop Database') {
-      steps {
         dir('cal.diy') {
           sh 'docker compose -f packages/prisma/docker-compose.yml down || true'
         }
-      }
-    }
 
-    stage('Job 14 — Docker Build') {
-      steps {
         dir('cal.diy') {
           sh 'docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true'
         }
