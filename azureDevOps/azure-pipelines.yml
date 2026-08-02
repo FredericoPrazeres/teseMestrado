@@ -4,146 +4,124 @@ trigger:
       - applications/tooljet
 
 variables:
-  NODE_VERSION: "22.15.1"
-  TOOLJET_DIR: "ToolJet"
+  NODE_VERSION: '22.15.1'
+  TOOLJET_DIR: 'ToolJet'
 
 pool:
   name: TeseMestradoPool
 
-jobs:
-  # ──────────────────────────────────────────────────────────────
-  # Job 1: Checkout & Cleanup
-  # ──────────────────────────────────────────────────────────────
-  - job: Checkout
-    displayName: "Checkout & Cleanup"
-    steps:
-    - checkout: self
-      submodules: false
-      displayName: "Checkout repository"
+stages:
+  - stage: CI
+    displayName: ToolJet CI/CD Pipeline
+    jobs:
+      - job: checkout
+        displayName: Checkout & Environment Info
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: '$(NODE_VERSION)'
+            displayName: Set up Node.js
 
-    - script: |
-        git submodule update --init --depth=1 ToolJet
-      displayName: "Initialize ToolJet submodule (non-recursive)"
+          - checkout: self
+            submodules: false
+            displayName: Checkout repository
 
-    - script: |
-        docker stop tooljet 2>/dev/null || true
-        docker rm tooljet 2>/dev/null || true
-        docker image prune -f
-        docker volume prune -f
-        docker network prune -f
-      displayName: "Stop containers and prune Docker resources"
+          - bash: |
+              git submodule update --init --depth=1 ToolJet
+            displayName: Initialize ToolJet submodule (non-recursive)
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 2: Install dependencies
-  # ──────────────────────────────────────────────────────────────
-  - job: Install
-    displayName: "Install Dependencies"
-    dependsOn: Checkout
-    steps:
-    - checkout: self
-      submodules: false
+          - bash: |
+              echo "Node version required: $(NODE_VERSION)"
+              node --version || true
+              npm --version || true
+              docker --version || true
+              git --version
+              git submodule status --recursive
+            displayName: Verify runtime prerequisites
 
-    - script: |
-        git submodule update --init --depth=1 ToolJet
-      displayName: "Initialize ToolJet submodule"
+          - bash: |
+              echo "If ToolJet needs benchmarking patches, make them in a fork and point the submodule URL to that fork before running the runners."
+            displayName: Note on ToolJet fork usage
 
-    - script: |
-        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
-        cd $(TOOLJET_DIR)
-        npm --prefix plugins install
-        npm --prefix server install --production=false
-        npm --prefix frontend install --production=false
-      displayName: "Install all npm dependencies"
+      - job: cleanup
+        displayName: Cleanup previous deployment
+        dependsOn: checkout
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: '$(NODE_VERSION)'
+            displayName: Set up Node.js
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 3: Lint & Code Quality
-  # ──────────────────────────────────────────────────────────────
-  - job: Lint
-    displayName: "Lint & Code Quality"
-    dependsOn: Install
-    condition: succeeded()
-    steps:
-    - checkout: self
-      submodules: false
+          - bash: |
+              docker stop tooljet 2>/dev/null || true
+              docker rm tooljet 2>/dev/null || true
+              docker image prune -f
+              docker volume prune -f
+              docker network prune -f
+            displayName: Stop containers and prune Docker resources
 
-    - script: |
-        git submodule update --init --depth=1 ToolJet
-      displayName: "Initialize ToolJet submodule"
+      - job: install_dependencies
+        displayName: Install dependencies
+        dependsOn: cleanup
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: '$(NODE_VERSION)'
+            displayName: Set up Node.js
 
-    - script: |
-        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
-        cd $(TOOLJET_DIR)
-        npm --prefix plugins install
-        npm --prefix server install --production=false
-        npm --prefix frontend install --production=false
-      displayName: "Install dependencies"
+          - bash: |
+              cd "$(TOOLJET_DIR)"
+              npm --prefix plugins install
+              npm --prefix server install --production=false
+              npm --prefix frontend install --production=false
+            displayName: Install all npm dependencies
 
-    - script: |
-        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
-        cd $(TOOLJET_DIR)
-        npx --prefix server eslint . --ext .ts --max-warnings=0 || echo "Server lint completed with warnings"
-        npx --prefix frontend eslint src/ --ext .js,.jsx --max-warnings=0 || echo "Frontend lint completed with warnings"
-      displayName: "Lint server and frontend code"
+      - job: lint
+        displayName: Lint & Code Quality
+        dependsOn: install_dependencies
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: '$(NODE_VERSION)'
+            displayName: Set up Node.js
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 4: Build application
-  # ──────────────────────────────────────────────────────────────
-  - job: Build
-    displayName: "Build Application"
-    dependsOn: Lint
-    steps:
-    - checkout: self
-      submodules: false
+          - bash: |
+              cd "$(TOOLJET_DIR)"
+              npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
+              npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
+            displayName: Lint server and frontend code
 
-    - script: |
-        git submodule update --init --depth=1 ToolJet
-      displayName: "Initialize ToolJet submodule"
+      - job: build
+        displayName: Build application
+        dependsOn: lint
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: '$(NODE_VERSION)'
+            displayName: Set up Node.js
 
-    - script: |
-        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
-        cd $(TOOLJET_DIR)
-        npm --prefix plugins install
-        npm --prefix server install --production=false
-        npm --prefix frontend install --production=false
-      displayName: "Install dependencies"
+          - bash: |
+              cd "$(TOOLJET_DIR)"
+              export NODE_OPTIONS="--max-old-space-size=8192"
+              NODE_ENV=production npm --prefix plugins run build
+              NODE_ENV=production npm --prefix frontend run build
+              npm install -g @nestjs/cli
+              npm --prefix server run build
+            displayName: Build plugins, frontend, and server
 
-    - script: |
-        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
-        cd $(TOOLJET_DIR)
-        NODE_ENV=production npm --prefix plugins run build
-        NODE_OPTIONS="--max-old-space-size=8096" NODE_ENV=production npm --prefix frontend run build
-        npm install -g @nestjs/cli
-        npm --prefix server run build
-      displayName: "Build plugins, frontend, and server"
+      - job: test
+        displayName: Run tests
+        dependsOn: build
+        steps:
+          - task: UseNode@1
+            inputs:
+              version: '$(NODE_VERSION)'
+            displayName: Set up Node.js
 
-  # ──────────────────────────────────────────────────────────────
-  # Job 5: Run tests
-  # ──────────────────────────────────────────────────────────────
-  - job: Test
-    displayName: "Run Tests"
-    dependsOn: Build
-    condition: succeeded()
-    steps:
-    - checkout: self
-      submodules: false
-
-    - script: |
-        git submodule update --init --depth=1 ToolJet
-      displayName: "Initialize ToolJet submodule"
-
-    - script: |
-        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
-        cd $(TOOLJET_DIR)
-        npm --prefix plugins install
-        npm --prefix server install --production=false
-        npm --prefix frontend install --production=false
-      displayName: "Install dependencies"
-
-    - script: |
-        export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && nvm use $(NODE_VERSION) || true
-        cd $(TOOLJET_DIR)/server
-        NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
-        cd ../frontend
-        npm install --save-dev jest-environment-jsdom || true
-        npx jest --passWithNoTests --forceExit || echo "Frontend tests completed with failures"
-      displayName: "Run server and frontend unit tests"
+          - bash: |
+              cd "$(TOOLJET_DIR)/server"
+              NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
+              cd ../frontend
+              npm install --save-dev jest-environment-jsdom || true
+              npx jest --passWithNoTests --forceExit || echo "Frontend tests completed with failures"
+            displayName: Run server and frontend unit tests
