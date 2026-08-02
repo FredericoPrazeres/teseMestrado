@@ -60,6 +60,7 @@ jobs:
       - name: Run server and frontend unit tests
         run: |
           cd "$TOOLJET_DIR"
+          cd server
           NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
           cd ../frontend
           npm install --save-dev jest-environment-jsdom || true
