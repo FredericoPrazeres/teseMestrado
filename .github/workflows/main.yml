@@ -3,7 +3,7 @@ name: ToolJet CI/CD Pipeline
 on:
   push:
     branches:
-      - applications/tooljet
+      - applications/tooljets
 
 env:
   NODE_VERSION: "22.15.1"
@@ -13,7 +13,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   # Job 1: Checkout & Environment Info
   # ──────────────────────────────────────────────────────────────
-  pipeline:
+  checkout:
     runs-on: self-hosted
     steps:
       - name: Set up Node.js
@@ -26,14 +26,54 @@ jobs:
         with:
           submodules: false
 
-      - name: Update submodule, stop containers, prune images and
+      - name: Initialize ToolJet submodule (non-recursive)
         run: |
           git submodule update --init --depth=1 ToolJet
+
+      - name: Verify runtime prerequisites
+        run: |
+          echo "Node version required: $NODE_VERSION"
+          node --version || true
+          npm --version || true
+          docker --version || true
+          git --version
+          git submodule status --recursive
+
+      - name: Note on ToolJet fork usage
+        run: |
+          echo "If ToolJet needs benchmarking patches, make them in a fork and point the submodule URL to that fork before running the runners."
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 2: Cleanup previous deployment
+  # ──────────────────────────────────────────────────────────────
+  cleanup:
+    runs-on: self-hosted
+    needs: checkout
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Stop containers and prune Docker resources
+        run: |
           docker stop tooljet 2>/dev/null || true
           docker rm tooljet 2>/dev/null || true
           docker image prune -f
           docker volume prune -f
           docker network prune -f
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 3: Install dependencies
+  # ──────────────────────────────────────────────────────────────
+  install-dependencies:
+    runs-on: self-hosted
+    needs: cleanup
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install all npm dependencies
         run: |
@@ -42,11 +82,35 @@ jobs:
           npm --prefix server install --production=false
           npm --prefix frontend install --production=false
 
+  # ──────────────────────────────────────────────────────────────
+  # Job 4: Lint & Code Quality
+  # ──────────────────────────────────────────────────────────────
+  lint:
+    runs-on: self-hosted
+    needs: install-dependencies
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
       - name: Lint server and frontend code
         run: |
           cd "$TOOLJET_DIR"
           npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
           npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 5: Build application
+  # ──────────────────────────────────────────────────────────────
+  build:
+    runs-on: self-hosted
+    needs: lint
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Build plugins, frontend, and server
         run: |
@@ -57,10 +121,21 @@ jobs:
           npm install -g @nestjs/cli
           npm --prefix server run build
 
+  # ──────────────────────────────────────────────────────────────
+  # Job 6: Run tests
+  # ──────────────────────────────────────────────────────────────
+  test:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
       - name: Run server and frontend unit tests
         run: |
-          cd "$TOOLJET_DIR"
-          cd server
+          cd "$TOOLJET_DIR/server"
           NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
           cd ../frontend
           npm install --save-dev jest-environment-jsdom || true

@@ -14,8 +14,8 @@ stages:
   - stage: CI
     displayName: ToolJet CI/CD Pipeline
     jobs:
-      - job: checkout
-        displayName: Checkout & Environment Info
+      - job: build_and_test
+        displayName: Build and Test ToolJet
         steps:
           - task: UseNode@1
             inputs:
@@ -28,46 +28,12 @@ stages:
 
           - bash: |
               git submodule update --init --depth=1 ToolJet
-            displayName: Initialize ToolJet submodule (non-recursive)
-
-          - bash: |
-              echo "Node version required: $(NODE_VERSION)"
-              node --version || true
-              npm --version || true
-              docker --version || true
-              git --version
-              git submodule status --recursive
-            displayName: Verify runtime prerequisites
-
-          - bash: |
-              echo "If ToolJet needs benchmarking patches, make them in a fork and point the submodule URL to that fork before running the runners."
-            displayName: Note on ToolJet fork usage
-
-      - job: cleanup
-        displayName: Cleanup previous deployment
-        dependsOn: checkout
-        steps:
-          - task: UseNode@1
-            inputs:
-              version: '$(NODE_VERSION)'
-            displayName: Set up Node.js
-
-          - bash: |
               docker stop tooljet 2>/dev/null || true
               docker rm tooljet 2>/dev/null || true
               docker image prune -f
               docker volume prune -f
               docker network prune -f
             displayName: Stop containers and prune Docker resources
-
-      - job: install_dependencies
-        displayName: Install dependencies
-        dependsOn: cleanup
-        steps:
-          - task: UseNode@1
-            inputs:
-              version: '$(NODE_VERSION)'
-            displayName: Set up Node.js
 
           - bash: |
               cd "$(TOOLJET_DIR)"
@@ -76,29 +42,11 @@ stages:
               npm --prefix frontend install --production=false
             displayName: Install all npm dependencies
 
-      - job: lint
-        displayName: Lint & Code Quality
-        dependsOn: install_dependencies
-        steps:
-          - task: UseNode@1
-            inputs:
-              version: '$(NODE_VERSION)'
-            displayName: Set up Node.js
-
           - bash: |
               cd "$(TOOLJET_DIR)"
               npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
               npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
             displayName: Lint server and frontend code
-
-      - job: build
-        displayName: Build application
-        dependsOn: lint
-        steps:
-          - task: UseNode@1
-            inputs:
-              version: '$(NODE_VERSION)'
-            displayName: Set up Node.js
 
           - bash: |
               cd "$(TOOLJET_DIR)"
@@ -108,15 +56,6 @@ stages:
               npm install -g @nestjs/cli
               npm --prefix server run build
             displayName: Build plugins, frontend, and server
-
-      - job: test
-        displayName: Run tests
-        dependsOn: build
-        steps:
-          - task: UseNode@1
-            inputs:
-              version: '$(NODE_VERSION)'
-            displayName: Set up Node.js
 
           - bash: |
               cd "$(TOOLJET_DIR)/server"
