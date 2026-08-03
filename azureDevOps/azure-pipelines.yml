@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - applications/tooljet
+      - applications/tooljets
 
 variables:
   NODE_VERSION: '22.15.1'

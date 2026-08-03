@@ -39,10 +39,6 @@ jobs:
           git --version
           git submodule status --recursive
 
-      - name: Note on ToolJet fork usage
-        run: |
-          echo "If ToolJet needs benchmarking patches, make them in a fork and point the submodule URL to that fork before running the runners."
-
   # ──────────────────────────────────────────────────────────────
   # Job 2: Cleanup previous deployment
   # ──────────────────────────────────────────────────────────────
