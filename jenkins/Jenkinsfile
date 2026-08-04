@@ -11,21 +11,7 @@ pipeline {
 			steps {
 				checkout scm
 				sh '''
-				  if [ -s "$HOME/.nvm/nvm.sh" ]; then
-				    . "$HOME/.nvm/nvm.sh"
-				    nvm install "$NODE_VERSION"
-				    nvm use "$NODE_VERSION"
-				  fi
-				  node --version | grep -qx "v$NODE_VERSION"
-
 				  git submodule update --init --depth=1 ToolJet
-
-				  echo "Node version required: $NODE_VERSION"
-				  node --version || true
-				  npm --version || true
-				  docker --version || true
-				  git --version
-				  git submodule status --recursive
 				'''
 			}
 		}
