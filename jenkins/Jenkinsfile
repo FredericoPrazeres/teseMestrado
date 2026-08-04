@@ -14,12 +14,7 @@ pipeline {
 				sh '''
 				  git submodule update --init --depth=1 ToolJet
 				'''
-			}
-		}
-
-		// Job 2: Cleanup previous deployment
-		stage('Cleanup') {
-			steps {
+				
 				sh '''
 				  docker stop tooljet 2>/dev/null || true
 				  docker rm tooljet 2>/dev/null || true
@@ -27,12 +22,7 @@ pipeline {
 				  docker volume prune -f
 				  docker network prune -f
 				'''
-			}
-		}
 
-		// Job 3: Install dependencies
-		stage('Install Dependencies') {
-			steps {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
@@ -45,12 +35,7 @@ pipeline {
 				  npm --prefix server install --production=false
 				  npm --prefix frontend install --production=false
 				'''
-			}
-		}
 
-		// Job 4: Lint & Code Quality
-		stage('Lint') {
-			steps {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
@@ -62,12 +47,7 @@ pipeline {
 				  npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
 				  npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
 				'''
-			}
-		}
 
-		// Job 5: Build application
-		stage('Build') {
-			steps {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
@@ -81,12 +61,7 @@ pipeline {
 				  NODE_ENV=production npm --prefix frontend run build
 				  npm --prefix server run build
 				'''
-			}
-		}
 
-		// Job 6: Run tests
-		stage('Test') {
-			steps {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR/server"
@@ -96,6 +71,7 @@ pipeline {
 				  npm install --save-dev jest-environment-jsdom || true
 				  npx jest --passWithNoTests --forceExit || echo "Frontend tests completed with failures"
 				'''
+
 			}
 		}
 	}
