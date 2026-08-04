@@ -36,7 +36,6 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
 				  nvm install "$NODE_VERSION"
 				  nvm use "$NODE_VERSION"
@@ -55,7 +54,6 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
 				  nvm install "$NODE_VERSION"
 				  nvm use "$NODE_VERSION"
@@ -73,7 +71,6 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
 				  nvm install "$NODE_VERSION"
 				  nvm use "$NODE_VERSION"
@@ -93,12 +90,7 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR/server"
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
-				  nvm install "$NODE_VERSION"
-				  nvm use "$NODE_VERSION"
-				  node -v
-				  npm -v
 				  NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
 				  cd ../frontend
 				  npm install --save-dev jest-environment-jsdom || true
