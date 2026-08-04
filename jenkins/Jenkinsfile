@@ -34,7 +34,7 @@ pipeline {
 			steps {
 				sh '''
 				  cd "$TOOLJET_DIR"
-				  nvm use $NODE_VERSION
+				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
 				  npm --prefix plugins install
 				  npm --prefix server install --production=false
 				  npm --prefix frontend install --production=false
@@ -47,7 +47,7 @@ pipeline {
 			steps {
 				sh '''
 				  cd "$TOOLJET_DIR"
-				  nvm use $NODE_VERSION
+				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
 				  npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
 				  npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
 				'''
@@ -59,7 +59,7 @@ pipeline {
 			steps {
 				sh '''
 				  cd "$TOOLJET_DIR"
-				  nvm use $NODE_VERSION
+				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
 				  export NODE_OPTIONS="--max-old-space-size=8192"
 				  NODE_ENV=production npm --prefix plugins run build
 				  NODE_ENV=production npm --prefix frontend run build
@@ -74,7 +74,7 @@ pipeline {
 			steps {
 				sh '''
 				  cd "$TOOLJET_DIR/server"
-				  nvm use $NODE_VERSION
+				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
 				  NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
 				  cd ../frontend
 				  npm install --save-dev jest-environment-jsdom || true
