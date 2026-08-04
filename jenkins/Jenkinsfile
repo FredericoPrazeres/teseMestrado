@@ -32,9 +32,19 @@ pipeline {
 		// Job 3: Install dependencies
 		stage('Install Dependencies') {
 			steps {
-				sh '''
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
+				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
+				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
+				    export NVM_DIR="$HOME/.nvm"
+				  fi
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  . "$NVM_DIR/nvm.sh"
+				  nvm install "$NODE_VERSION"
+				  nvm use "$NODE_VERSION"
+				  node -v
+				  npm -v
 				  npm --prefix plugins install
 				  npm --prefix server install --production=false
 				  npm --prefix frontend install --production=false
@@ -45,9 +55,19 @@ pipeline {
 		// Job 4: Lint & Code Quality
 		stage('Lint') {
 			steps {
-				sh '''
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
+				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
+				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
+				    export NVM_DIR="$HOME/.nvm"
+				  fi
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  . "$NVM_DIR/nvm.sh"
+				  nvm install "$NODE_VERSION"
+				  nvm use "$NODE_VERSION"
+				  node -v
+				  npm -v
 				  npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
 				  npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
 				'''
@@ -57,13 +77,22 @@ pipeline {
 		// Job 5: Build application
 		stage('Build') {
 			steps {
-				sh '''
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
+				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
+				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
+				    export NVM_DIR="$HOME/.nvm"
+				  fi
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  . "$NVM_DIR/nvm.sh"
+				  nvm install "$NODE_VERSION"
+				  nvm use "$NODE_VERSION"
+				  node -v
+				  npm -v
 				  export NODE_OPTIONS="--max-old-space-size=8192"
 				  NODE_ENV=production npm --prefix plugins run build
 				  NODE_ENV=production npm --prefix frontend run build
-				  npm install -g @nestjs/cli
 				  npm --prefix server run build
 				'''
 			}
@@ -72,9 +101,19 @@ pipeline {
 		// Job 6: Run tests
 		stage('Test') {
 			steps {
-				sh '''
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
 				  cd "$TOOLJET_DIR/server"
-				  . /home/fredericoprazeres/.nvm/nvm.sh use $NODE_VERSION
+				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
+				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
+				    export NVM_DIR="$HOME/.nvm"
+				  fi
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  . "$NVM_DIR/nvm.sh"
+				  nvm install "$NODE_VERSION"
+				  nvm use "$NODE_VERSION"
+				  node -v
+				  npm -v
 				  NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
 				  cd ../frontend
 				  npm install --save-dev jest-environment-jsdom || true
