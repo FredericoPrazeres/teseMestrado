@@ -3,6 +3,7 @@ pipeline {
 	environment {
 		NODE_VERSION = '22.15.1'
 		TOOLJET_DIR = 'ToolJet'
+		NVM_DIR = '/home/fredericoprazeres/.nvm'
 	}
 
 	stages {
@@ -35,11 +36,7 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
-				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
-				    export NVM_DIR="$HOME/.nvm"
-				  fi
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
 				  nvm install "$NODE_VERSION"
 				  nvm use "$NODE_VERSION"
@@ -58,11 +55,7 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
-				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
-				    export NVM_DIR="$HOME/.nvm"
-				  fi
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
 				  nvm install "$NODE_VERSION"
 				  nvm use "$NODE_VERSION"
@@ -80,11 +73,7 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR"
-				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
-				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
-				    export NVM_DIR="$HOME/.nvm"
-				  fi
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
 				  nvm install "$NODE_VERSION"
 				  nvm use "$NODE_VERSION"
@@ -104,11 +93,7 @@ pipeline {
 				sh '''#!/usr/bin/env bash
 				  set -euo pipefail
 				  cd "$TOOLJET_DIR/server"
-				  export NVM_DIR="${NVM_DIR:-/var/lib/jenkins/.nvm}"
-				  if [ ! -r "$NVM_DIR/nvm.sh" ] && [ -r "$HOME/.nvm/nvm.sh" ]; then
-				    export NVM_DIR="$HOME/.nvm"
-				  fi
-				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm not found/readable at $NVM_DIR/nvm.sh"; exit 1; }
+				  [ -r "$NVM_DIR/nvm.sh" ] || { echo "nvm.sh not readable at $NVM_DIR/nvm.sh"; exit 1; }
 				  . "$NVM_DIR/nvm.sh"
 				  nvm install "$NODE_VERSION"
 				  nvm use "$NODE_VERSION"
