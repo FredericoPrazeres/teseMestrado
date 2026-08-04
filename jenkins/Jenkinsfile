@@ -19,14 +19,6 @@ pipeline {
 		// Job 2: Cleanup previous deployment
 		stage('Cleanup') {
 			steps {
-				sh '''
-				  if [ -s "$HOME/.nvm/nvm.sh" ]; then
-				    . "$HOME/.nvm/nvm.sh"
-				    nvm install "$NODE_VERSION"
-				    nvm use "$NODE_VERSION"
-				  fi
-				  node --version | grep -qx "v$NODE_VERSION"
-
 				  docker stop tooljet 2>/dev/null || true
 				  docker rm tooljet 2>/dev/null || true
 				  docker image prune -f
@@ -40,13 +32,6 @@ pipeline {
 		stage('Install Dependencies') {
 			steps {
 				sh '''
-				  if [ -s "$HOME/.nvm/nvm.sh" ]; then
-				    . "$HOME/.nvm/nvm.sh"
-				    nvm install "$NODE_VERSION"
-				    nvm use "$NODE_VERSION"
-				  fi
-				  node --version | grep -qx "v$NODE_VERSION"
-
 				  cd "$TOOLJET_DIR"
 				  npm --prefix plugins install
 				  npm --prefix server install --production=false
@@ -59,13 +44,6 @@ pipeline {
 		stage('Lint') {
 			steps {
 				sh '''
-				  if [ -s "$HOME/.nvm/nvm.sh" ]; then
-				    . "$HOME/.nvm/nvm.sh"
-				    nvm install "$NODE_VERSION"
-				    nvm use "$NODE_VERSION"
-				  fi
-				  node --version | grep -qx "v$NODE_VERSION"
-
 				  cd "$TOOLJET_DIR"
 				  npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
 				  npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
@@ -77,13 +55,6 @@ pipeline {
 		stage('Build') {
 			steps {
 				sh '''
-				  if [ -s "$HOME/.nvm/nvm.sh" ]; then
-				    . "$HOME/.nvm/nvm.sh"
-				    nvm install "$NODE_VERSION"
-				    nvm use "$NODE_VERSION"
-				  fi
-				  node --version | grep -qx "v$NODE_VERSION"
-
 				  cd "$TOOLJET_DIR"
 				  export NODE_OPTIONS="--max-old-space-size=8192"
 				  NODE_ENV=production npm --prefix plugins run build
@@ -98,13 +69,6 @@ pipeline {
 		stage('Test') {
 			steps {
 				sh '''
-				  if [ -s "$HOME/.nvm/nvm.sh" ]; then
-				    . "$HOME/.nvm/nvm.sh"
-				    nvm install "$NODE_VERSION"
-				    nvm use "$NODE_VERSION"
-				  fi
-				  node --version | grep -qx "v$NODE_VERSION"
-
 				  cd "$TOOLJET_DIR/server"
 				  NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
 				  cd ../frontend
