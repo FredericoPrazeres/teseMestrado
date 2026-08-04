@@ -19,6 +19,7 @@ pipeline {
 		// Job 2: Cleanup previous deployment
 		stage('Cleanup') {
 			steps {
+				sh '''
 				  docker stop tooljet 2>/dev/null || true
 				  docker rm tooljet 2>/dev/null || true
 				  docker image prune -f
