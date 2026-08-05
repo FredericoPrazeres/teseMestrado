@@ -9,13 +9,17 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: HomeAssistant_CI
-    displayName: 'Home Assistant Core CI'
+  - job: Checkout
+    displayName: 'Checkout repository'
     steps:
       - checkout: self
         submodules: true
         displayName: 'Checkout repository with submodules'
 
+  - job: Install_Dependencies
+    displayName: 'Install dependencies'
+    dependsOn: Checkout
+    steps:
       - bash: |
           export PATH="$HOME/.local/bin:$PATH"
           cd home-assistant-core
@@ -25,12 +29,20 @@ jobs:
           uv pip install paho-mqtt
         displayName: 'Install dependencies'
 
+  - job: Lint
+    displayName: 'Lint with ruff'
+    dependsOn: Install_Dependencies
+    steps:
       - bash: |
           cd home-assistant-core
           source .venv/bin/activate
           python -m ruff check homeassistant
         displayName: 'Lint with ruff'
 
+  - job: Build
+    displayName: 'Build package'
+    dependsOn: Lint
+    steps:
       - bash: |
           export PATH="$HOME/.local/bin:$PATH"
           cd home-assistant-core
@@ -39,6 +51,10 @@ jobs:
           python -m build
         displayName: 'Build package'
 
+  - job: Test
+    displayName: 'Run tests'
+    dependsOn: Build
+    steps:
       - bash: |
           cd home-assistant-core
           source .venv/bin/activate
