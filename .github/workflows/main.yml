@@ -16,7 +16,7 @@ jobs:
 
       - name: Create virtual environment and install dependencies
         run: |
-          cd homeassistant
+          cd home-assistant-core
           export PATH="$HOME/.local/bin:$PATH"
           uv venv .venv --python 3.14 --clear
           source .venv/bin/activate
