@@ -25,11 +25,13 @@ jobs:
 
       - name: Lint with ruff
         run: |
+          cd home-assistant-core
           source .venv/bin/activate
           python -m ruff check homeassistant
 
       - name: Build package
         run: |
+          cd home-assistant-core
           export PATH="$HOME/.local/bin:$PATH"
           source .venv/bin/activate
           uv pip install build
@@ -37,6 +39,7 @@ jobs:
 
       - name: Run tests
         run: |
+          cd home-assistant-core
           source .venv/bin/activate
           python -m pytest tests/test_core.py tests/util/ tests/helpers/test_debounce.py tests/helpers/test_deprecation.py tests/helpers/test_collection.py -q --timeout=300 -k "not (test_eventbus_max_length_exceeded or test_serviceregistry_service_that_not_exists or test_services_call_return_response_requires_blocking or test_serviceregistry_return_response_invalid or test_serviceregistry_return_response_arguments)"
           
