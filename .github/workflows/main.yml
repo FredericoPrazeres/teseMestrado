@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Create virtual environment and install dependencies
         run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.local/bin:$PATH"
           uv venv .venv --python 3.14 --clear
           source .venv/bin/activate
           uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
@@ -50,6 +50,7 @@ jobs:
     steps:
       - name: Build package
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           source .venv/bin/activate
           uv pip install build
           python -m build
