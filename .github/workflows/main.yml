@@ -6,7 +6,7 @@ on:
       - applications/home-assistant-core
 
 jobs:
-  checkout:
+  pipeline:
     runs-on: self-hosted
     steps:
       - name: Checkout repository
@@ -14,13 +14,6 @@ jobs:
         with:
           submodules: true
 
-  install-dependencies:
-    runs-on: self-hosted
-    needs: checkout
-    defaults:
-      run:
-        working-directory: home-assistant-core
-    steps:
       - name: Create virtual environment and install dependencies
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -29,25 +22,11 @@ jobs:
           uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
           uv pip install paho-mqtt
 
-  lint:
-    runs-on: self-hosted
-    needs: install-dependencies
-    defaults:
-      run:
-        working-directory: home-assistant-core
-    steps:
       - name: Lint with ruff
         run: |
           source .venv/bin/activate
           python -m ruff check homeassistant
 
-  build:
-    runs-on: self-hosted
-    needs: lint
-    defaults:
-      run:
-        working-directory: home-assistant-core
-    steps:
       - name: Build package
         run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -55,13 +34,6 @@ jobs:
           uv pip install build
           python -m build
 
-  test:
-    runs-on: self-hosted
-    needs: build
-    defaults:
-      run:
-        working-directory: home-assistant-core
-    steps:
       - name: Run tests
         run: |
           source .venv/bin/activate
