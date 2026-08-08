@@ -31,6 +31,7 @@ pipeline {
 
                 sh '''
                     echo "=== Generating .env file ==="
+                    cd outline
                     cat > .env << 'ENVEOF'
                     NODE_ENV=development
                     URL=http://localhost:3000
@@ -58,6 +59,7 @@ pipeline {
                     '''
 
                 sh '''
+                    cd outline
                     echo "=== Cleaning previous build ==="
                     yarn clean || true
                     rm -rf node_modules/.cache
@@ -67,11 +69,13 @@ pipeline {
                     '''
 
                 sh '''
+                    cd outline
                     echo "=== Building Outline ==="
                     NODE_ENV=production yarn build
                 '''
 
                 sh '''
+                    cd outline
                     echo "=== Resetting database ==="
                     yarn db:reset || echo "Database reset via yarn failed, trying manually..."
                     PGPASSWORD=outline_pass dropdb -h 127.0.0.1 -U outline_user --if-exists outline \
@@ -80,6 +84,7 @@ pipeline {
                 '''
 
                 sh '''
+                    cd outline
                     echo "=== Running database migrations ==="
                     yarn db:create --env=production-ssl-disabled || echo "Database already exists"
                     yarn start &
@@ -91,6 +96,7 @@ pipeline {
                     '''
 
                     sh '''
+                        cd outline
                         echo "=== Verifying build ==="
                         test -f build/server/index.js && echo "✅ Server build OK" || (echo "❌ Server build missing" && exit 1)
                         test -d build/app && echo "✅ Client build OK" || (echo "❌ Client build missing" && exit 1)
@@ -98,6 +104,7 @@ pipeline {
                     '''
 
                     sh '''
+                        cd outline
                         echo "=== Starting Outline ==="
                         yarn start &
                         SERVER_PID=$!
