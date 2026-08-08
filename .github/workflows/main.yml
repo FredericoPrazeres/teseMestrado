@@ -80,7 +80,7 @@ jobs:
             || sudo -u postgres psql -c "CREATE USER outline_user WITH PASSWORD 'outline_pass';"
           sudo -u postgres psql -c "ALTER USER outline_user CREATEDB;"
           sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='outline'" | grep -q 1 \
-            || PGPASSWORD=outline_pass createdb -U outline_user outline
+            || PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline
 
   install-dependencies:
     name: Install Node.js dependencies
@@ -124,7 +124,7 @@ jobs:
         run: |
           echo "=== Resetting database ==="
           yarn db:reset || echo "Database reset via yarn failed, trying manually..."
-          PGPASSWORD=outline_pass dropdb -U outline_user --if-exists outline && PGPASSWORD=outline_pass createdb -U outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
+          PGPASSWORD=outline_pass dropdb -h 127.0.0.1 -U outline_user --if-exists outline && PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
 
   run-migrations:
     name: Run database migrations
