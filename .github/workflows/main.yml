@@ -6,23 +6,41 @@ on:
       - applications/outline
 
 jobs:
-  checkout:
-    name: Checkout code
+  build:
+    name: Outline Build Pipeline
     runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: outline
     steps:
       - name: Checkout code with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-  generate-env:
-    name: Generate .env file
-    runs-on: self-hosted
-    needs: checkout
-    defaults:
-      run:
-        working-directory: outline
-    steps:
+      - name: Verify dependencies
+        working-directory: .
+        run: |
+          echo "=== Verifying system dependencies ==="
+          node --version
+          yarn --version
+          pg_isready || echo "WARNING: PostgreSQL is not running"
+          redis-cli ping || echo "WARNING: Redis is not running"
+
+      - name: Start services
+        working-directory: .
+        run: |
+          echo "=== Starting PostgreSQL and Redis ==="
+          sudo systemctl start postgresql redis-server
+          sleep 3
+          pg_isready
+          redis-cli ping
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='outline_user'" | grep -q 1 \
+            || sudo -u postgres psql -c "CREATE USER outline_user WITH PASSWORD 'outline_pass';"
+          sudo -u postgres psql -c "ALTER USER outline_user CREATEDB;"
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='outline'" | grep -q 1 \
+            || PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline
+
       - name: Generate .env file
         run: |
           echo "=== Generating .env file ==="
@@ -51,45 +69,6 @@ jobs:
           echo "UTILS_SECRET=$UTILS_SECRET" >> .env
           echo "✅ .env file created"
 
-  verify-dependencies:
-    name: Verify dependencies
-    runs-on: self-hosted
-    needs: generate-env
-    steps:
-      - name: Verify dependencies
-        run: |
-          echo "=== Verifying system dependencies ==="
-          node --version
-          yarn --version
-          pg_isready || echo "WARNING: PostgreSQL is not running"
-          redis-cli ping || echo "WARNING: Redis is not running"
-
-  start-services:
-    name: Start services
-    runs-on: self-hosted
-    needs: verify-dependencies
-    steps:
-      - name: Start services
-        run: |
-          echo "=== Starting PostgreSQL and Redis ==="
-          sudo systemctl start postgresql redis-server
-          sleep 3
-          pg_isready
-          redis-cli ping
-          sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='outline_user'" | grep -q 1 \
-            || sudo -u postgres psql -c "CREATE USER outline_user WITH PASSWORD 'outline_pass';"
-          sudo -u postgres psql -c "ALTER USER outline_user CREATEDB;"
-          sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='outline'" | grep -q 1 \
-            || PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline
-
-  install-dependencies:
-    name: Install Node.js dependencies
-    runs-on: self-hosted
-    needs: start-services
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Install Node.js dependencies
         run: |
           echo "=== Cleaning previous build ==="
@@ -99,43 +78,17 @@ jobs:
           echo "=== Installing dependencies ==="
           NODE_ENV=development yarn install --immutable
 
-  build-outline:
-    name: Build Outline
-    runs-on: self-hosted
-    needs: install-dependencies
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Build Outline
         run: |
           echo "=== Building Outline ==="
           NODE_ENV=production yarn build
 
-  reset-database:
-    name: Reset database
-    runs-on: self-hosted
-    needs: build-outline
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Reset database
         run: |
           echo "=== Resetting database ==="
           yarn db:reset || echo "Database reset via yarn failed, trying manually..."
           PGPASSWORD=outline_pass dropdb -h 127.0.0.1 -U outline_user --if-exists outline && PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline && echo "✅ Database recreated" || echo "Database may not have existed"
 
-  run-migrations:
-    name: Run database migrations
-    runs-on: self-hosted
-    needs:
-      - build-outline
-      - reset-database
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Run database migrations
         run: |
           echo "=== Running database migrations ==="
@@ -147,14 +100,6 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
           echo "Migrations complete"
 
-  verify-build:
-    name: Verify build output
-    runs-on: self-hosted
-    needs: run-migrations
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Verify build output
         run: |
           echo "=== Verifying build ==="
@@ -162,14 +107,6 @@ jobs:
           test -d build/app && echo "✅ Client build OK" || (echo "❌ Client build missing" && exit 1)
           echo "🎉 Outline build completed successfully!"
 
-  start-outline:
-    name: Start Outline
-    runs-on: self-hosted
-    needs: verify-build
-    defaults:
-      run:
-        working-directory: outline
-    steps:
       - name: Start Outline
         run: |
           echo "=== Starting Outline ==="
