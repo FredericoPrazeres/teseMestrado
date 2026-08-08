@@ -2,15 +2,11 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout code') {
+        stage('Pipeline') {
             steps {
-                  checkout scm
-                  sh 'git submodule update --init --recursive'
-            }
-        }
+                checkout scm
+                sh 'git submodule update --init --recursive'
 
-        stage('Verify dependencies') {
-            steps {
                 sh '''
                     echo "=== Verifying system dependencies ==="
                     node --version
@@ -18,11 +14,7 @@ pipeline {
                     pg_isready || echo "WARNING: PostgreSQL is not running"
                     redis-cli ping || echo "WARNING: Redis is not running"
                 '''
-            }
-        }
 
-        stage('Start services') {
-            steps {
                 sh '''
                     echo "=== Starting PostgreSQL and Redis ==="
                     sudo systemctl start postgresql redis-server
@@ -35,116 +27,75 @@ pipeline {
                     sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname=\'outline\'" | grep -q 1 \
                       || PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline
                 '''
-            }
-        }
 
-        stage('Generate .env file') {
-            steps {
-                dir('outline') {
-                    sh '''
-                        echo "=== Generating .env file ==="
-                        cat > .env << 'ENVEOF'
-                        NODE_ENV=development
-                        URL=http://localhost:3000
-                        PORT=3000
-                        WEB_CONCURRENCY=1
-                        DEFAULT_LANGUAGE=en_US
-                        DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
-                        PGSSLMODE=disable
-                        REDIS_URL=redis://127.0.0.1:6379
-                        FILE_STORAGE=local
-                        FILE_STORAGE_LOCAL_ROOT_DIR=/tmp/outline-data
-                        FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
-                        FORCE_HTTPS=false
-                        RATE_LIMITER_ENABLED=false
-                        ENABLE_UPDATES=false
-                        DEBUG=http
-                        LOG_LEVEL=debug
-                        SMTP_FROM_EMAIL=hello@example.com
-ENVEOF
-                        SECRET_KEY=$(openssl rand -hex 32)
-                        UTILS_SECRET=$(openssl rand -hex 32)
-                        echo "SECRET_KEY=$SECRET_KEY" >> .env
-                        echo "UTILS_SECRET=$UTILS_SECRET" >> .env
-                        echo "✅ .env file created"
+                sh '''
+                    echo "=== Generating .env file ==="
+                    cat > .env << 'ENVEOF'
+                    NODE_ENV=development
+                    URL=http://localhost:3000
+                    PORT=3000
+                    WEB_CONCURRENCY=1
+                    DEFAULT_LANGUAGE=en_US
+                    DATABASE_URL=postgres://outline_user:outline_pass@127.0.0.1:5432/outline
+                    PGSSLMODE=disable
+                    REDIS_URL=redis://127.0.0.1:6379
+                    FILE_STORAGE=local
+                    FILE_STORAGE_LOCAL_ROOT_DIR=/tmp/outline-data
+                    FILE_STORAGE_UPLOAD_MAX_SIZE=262144000
+                    FORCE_HTTPS=false
+                    RATE_LIMITER_ENABLED=false
+                    ENABLE_UPDATES=false
+                    DEBUG=http
+                    LOG_LEVEL=debug
+                    SMTP_FROM_EMAIL=hello@example.com
+                    ENVEOF
+                    SECRET_KEY=$(openssl rand -hex 32)
+                    UTILS_SECRET=$(openssl rand -hex 32)
+                    echo "SECRET_KEY=$SECRET_KEY" >> .env
+                    echo "UTILS_SECRET=$UTILS_SECRET" >> .env
+                    echo "✅ .env file created"
                     '''
-                }
-            }
-        }
 
-        stage('Install Node.js dependencies') {
-            steps {
-                dir('outline') {
-                    sh '''
-                        echo "=== Cleaning previous build ==="
-                        yarn clean || true
-                        rm -rf node_modules/.cache
-                        rm -rf node_modules
-                        echo "=== Installing dependencies ==="
-                        NODE_ENV=development yarn install --immutable
+                sh '''
+                    echo "=== Cleaning previous build ==="
+                    yarn clean || true
+                    rm -rf node_modules/.cache
+                    rm -rf node_modules
+                    echo "=== Installing dependencies ==="
+                    NODE_ENV=development yarn install --immutable
                     '''
-                }
-            }
-        }
 
-        stage('Build Outline') {
-            steps {
-                dir('outline') {
-                    sh '''
-                        echo "=== Building Outline ==="
-                        NODE_ENV=production yarn build
-                    '''
-                }
-            }
-        }
+                sh '''
+                    echo "=== Building Outline ==="
+                    NODE_ENV=production yarn build
+                '''
 
-        stage('Reset database') {
-            steps {
-                dir('outline') {
-                    sh '''
-                        echo "=== Resetting database ==="
-                        yarn db:reset || echo "Database reset via yarn failed, trying manually..."
-                        PGPASSWORD=outline_pass dropdb -h 127.0.0.1 -U outline_user --if-exists outline \
-                          && PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline \
-                          && echo "✅ Database recreated" || echo "Database may not have existed"
-                    '''
-                }
-            }
-        }
+                sh '''
+                    echo "=== Resetting database ==="
+                    yarn db:reset || echo "Database reset via yarn failed, trying manually..."
+                    PGPASSWORD=outline_pass dropdb -h 127.0.0.1 -U outline_user --if-exists outline \
+                      && PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline \
+                    && echo "✅ Database recreated" || echo "Database may not have existed"
+                '''
 
-        stage('Run database migrations') {
-            steps {
-                dir('outline') {
-                    sh '''
-                        echo "=== Running database migrations ==="
-                        yarn db:create --env=production-ssl-disabled || echo "Database already exists"
-                        yarn start &
+                sh '''
+                    echo "=== Running database migrations ==="
+                    yarn db:create --env=production-ssl-disabled || echo "Database already exists"
+                    yarn start &
                         SERVER_PID=$!
                         echo "Waiting for server to start and run migrations..."
                         sleep 15
                         kill $SERVER_PID 2>/dev/null || true
                         echo "Migrations complete"
                     '''
-                }
-            }
-        }
 
-        stage('Verify build output') {
-            steps {
-                dir('outline') {
                     sh '''
                         echo "=== Verifying build ==="
                         test -f build/server/index.js && echo "✅ Server build OK" || (echo "❌ Server build missing" && exit 1)
                         test -d build/app && echo "✅ Client build OK" || (echo "❌ Client build missing" && exit 1)
                         echo "🎉 Outline build completed successfully!"
                     '''
-                }
-            }
-        }
 
-        stage('Start Outline') {
-            steps {
-                dir('outline') {
                     sh '''
                         echo "=== Starting Outline ==="
                         yarn start &
@@ -157,7 +108,7 @@ ENVEOF
                           || echo "⚠️ Server started but may still be initializing"
                     '''
                 }
-            }
-        }
+
     }
+}
 }
