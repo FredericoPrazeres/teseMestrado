@@ -90,6 +90,7 @@ jobs:
           echo "=== Cleaning previous build ==="
           yarn clean || true
           rm -rf node_modules/.cache
+          rm -rf node_modules
           echo "=== Installing dependencies ==="
           NODE_ENV=development yarn install --immutable
 
