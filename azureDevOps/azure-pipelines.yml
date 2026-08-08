@@ -3,7 +3,7 @@ name: Outline Build Pipeline
 trigger:
   branches:
     include:
-      - applications/outline
+      - applications/outlines
 
 pool:
   name: TeseMestradoPool
