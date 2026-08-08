@@ -9,18 +9,34 @@ pool:
   name: TeseMestradoPool
 
 jobs:
-  - job: Checkout
-    displayName: Checkout code
+  - job: Build
+    displayName: Outline Build Pipeline
     steps:
       - checkout: self
         submodules: true
         displayName: Checkout code with submodules
 
-  - job: GenerateEnv
-    displayName: Generate .env file
-    dependsOn: Checkout
-    steps:
-      - checkout: none
+      - bash: |
+          echo "=== Verifying system dependencies ==="
+          node --version
+          yarn --version
+          pg_isready || echo "WARNING: PostgreSQL is not running"
+          redis-cli ping || echo "WARNING: Redis is not running"
+        displayName: Verify dependencies
+
+      - bash: |
+          echo "=== Starting PostgreSQL and Redis ==="
+          sudo systemctl start postgresql redis-server
+          sleep 3
+          pg_isready
+          redis-cli ping
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='outline_user'" | grep -q 1 \
+            || sudo -u postgres psql -c "CREATE USER outline_user WITH PASSWORD 'outline_pass';"
+          sudo -u postgres psql -c "ALTER USER outline_user CREATEDB;"
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='outline'" | grep -q 1 \
+            || PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline
+        displayName: Start services
+
       - bash: |
           echo "=== Generating .env file ==="
           cat > .env << 'ENVEOF'
@@ -50,42 +66,6 @@ jobs:
         workingDirectory: $(Build.SourcesDirectory)/outline
         displayName: Generate .env file
 
-  - job: VerifyDependencies
-    displayName: Verify dependencies
-    dependsOn: GenerateEnv
-    steps:
-      - checkout: none
-      - bash: |
-          echo "=== Verifying system dependencies ==="
-          node --version
-          yarn --version
-          pg_isready || echo "WARNING: PostgreSQL is not running"
-          redis-cli ping || echo "WARNING: Redis is not running"
-        displayName: Verify dependencies
-
-  - job: StartServices
-    displayName: Start services
-    dependsOn: VerifyDependencies
-    steps:
-      - checkout: none
-      - bash: |
-          echo "=== Starting PostgreSQL and Redis ==="
-          sudo systemctl start postgresql redis-server
-          sleep 3
-          pg_isready
-          redis-cli ping
-          sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='outline_user'" | grep -q 1 \
-            || sudo -u postgres psql -c "CREATE USER outline_user WITH PASSWORD 'outline_pass';"
-          sudo -u postgres psql -c "ALTER USER outline_user CREATEDB;"
-          sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='outline'" | grep -q 1 \
-            || PGPASSWORD=outline_pass createdb -h 127.0.0.1 -U outline_user outline
-        displayName: Start services
-
-  - job: InstallDependencies
-    displayName: Install Node.js dependencies
-    dependsOn: StartServices
-    steps:
-      - checkout: none
       - bash: |
           echo "=== Cleaning previous build ==="
           yarn clean || true
@@ -96,22 +76,12 @@ jobs:
         workingDirectory: $(Build.SourcesDirectory)/outline
         displayName: Install Node.js dependencies
 
-  - job: BuildOutline
-    displayName: Build Outline
-    dependsOn: InstallDependencies
-    steps:
-      - checkout: none
       - bash: |
           echo "=== Building Outline ==="
           NODE_ENV=production yarn build
         workingDirectory: $(Build.SourcesDirectory)/outline
         displayName: Build Outline
 
-  - job: ResetDatabase
-    displayName: Reset database
-    dependsOn: BuildOutline
-    steps:
-      - checkout: none
       - bash: |
           echo "=== Resetting database ==="
           yarn db:reset || echo "Database reset via yarn failed, trying manually..."
@@ -119,13 +89,6 @@ jobs:
         workingDirectory: $(Build.SourcesDirectory)/outline
         displayName: Reset database
 
-  - job: RunMigrations
-    displayName: Run database migrations
-    dependsOn:
-      - BuildOutline
-      - ResetDatabase
-    steps:
-      - checkout: none
       - bash: |
           echo "=== Running database migrations ==="
           yarn db:create --env=production-ssl-disabled || echo "Database already exists"
@@ -138,11 +101,6 @@ jobs:
         workingDirectory: $(Build.SourcesDirectory)/outline
         displayName: Run database migrations
 
-  - job: VerifyBuild
-    displayName: Verify build output
-    dependsOn: RunMigrations
-    steps:
-      - checkout: none
       - bash: |
           echo "=== Verifying build ==="
           test -f build/server/index.js && echo "✅ Server build OK" || (echo "❌ Server build missing" && exit 1)
@@ -151,11 +109,6 @@ jobs:
         workingDirectory: $(Build.SourcesDirectory)/outline
         displayName: Verify build output
 
-  - job: StartOutline
-    displayName: Start Outline
-    dependsOn: VerifyBuild
-    steps:
-      - checkout: none
       - bash: |
           echo "=== Starting Outline ==="
           yarn start &
