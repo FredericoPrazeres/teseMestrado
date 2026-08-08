@@ -8,6 +8,7 @@ pipeline {
                 sh 'git submodule update --init --recursive'
 
                 sh '''
+                    cd outline
                     echo "=== Verifying system dependencies ==="
                     node --version
                     yarn --version
