@@ -54,7 +54,7 @@ jobs:
   verify-dependencies:
     name: Verify dependencies
     runs-on: self-hosted
-    needs: checkout
+    needs: generate-env
     steps:
       - name: Verify dependencies
         run: |
@@ -80,9 +80,7 @@ jobs:
   install-dependencies:
     name: Install Node.js dependencies
     runs-on: self-hosted
-    needs:
-      - generate-env
-      - start-services
+    needs: start-services
     defaults:
       run:
         working-directory: outline
@@ -111,7 +109,7 @@ jobs:
   reset-database:
     name: Reset database
     runs-on: self-hosted
-    needs: start-services
+    needs: build-outline
     defaults:
       run:
         working-directory: outline
