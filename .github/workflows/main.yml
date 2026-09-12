@@ -173,7 +173,7 @@ jobs:
 
   build-api-gateway:
     runs-on: self-hosted
-    needs: [detect-changes, setup-infrastructure, build-service-registry]
+    needs: build-service-registry
     if: needs.detect-changes.outputs.api-gateway == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
       - name: Clean workspace
@@ -227,7 +227,7 @@ jobs:
 
   build-product-service:
     runs-on: self-hosted
-    needs: [detect-changes, setup-infrastructure, build-service-registry]
+    needs: build-api-gateway
     if: needs.detect-changes.outputs.product-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
       - name: Clean workspace
@@ -302,7 +302,7 @@ jobs:
         
   build-offer-service:
     runs-on: self-hosted
-    needs: [detect-changes, setup-infrastructure, build-service-registry]
+    needs: build-product-service
     if: needs.detect-changes.outputs.offer-service == 'true' || needs.detect-changes.outputs.service-registry == 'true'
     steps:
       - name: Clean workspace
@@ -355,7 +355,7 @@ jobs:
           
   build-microservice-ui:
     runs-on: self-hosted
-    needs: [detect-changes, setup-infrastructure, build-service-registry, build-api-gateway, build-product-service, build-offer-service]
+    needs: build-offer-service
     if: needs.detect-changes.outputs.microservice-ui == 'true' || needs.detect-changes.outputs.api-gateway == 'true'
     steps:
       - name: Clean workspace
@@ -392,7 +392,7 @@ jobs:
           
   health-check:
     runs-on: self-hosted
-    needs: [build-service-registry, build-api-gateway, build-product-service, build-offer-service, build-microservice-ui]
+    needs: build-microservice-ui
     if: always()
     steps:
       - name: Health check services
@@ -463,7 +463,7 @@ jobs:
 
   deployment-status:
     runs-on: self-hosted
-    needs: [health-check]
+    needs: health-check
     if: always()
     steps:
       - name: Show deployment summary
