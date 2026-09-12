@@ -16,6 +16,9 @@ sudo chown -R runner:runner /home/runner/_work
   --housekeeping_interval=30s &
 
 
+# Clean up stale runner configuration to allow fresh setup on restart
+rm -rf .runner .credentials .credentials_rsaparams .runner
+
 # Configure and run the GitHub Actions runner
 ./config.sh --url "$REPO_URL" --token "$RUNNER_TOKEN" --unattended --replace
 ./run.sh
