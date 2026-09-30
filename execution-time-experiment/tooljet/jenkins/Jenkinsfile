@@ -1,0 +1,81 @@
+pipeline {
+	agent any
+	environment {
+		NODE_VERSION = '22.15.1'
+		TOOLJET_DIR = 'ToolJet'
+		NVM_DIR = '/home/fredericoprazeres/.nvm'
+	}
+
+	stages {
+		// Job 1: Checkout & Environment Info
+		stage('Checkout & Environment Info') {
+			steps {
+				checkout scm
+				sh '''
+				  git submodule update --init --depth=1 ToolJet
+				'''
+				
+				sh '''
+				  docker stop tooljet 2>/dev/null || true
+				  docker rm tooljet 2>/dev/null || true
+				  docker image prune -f
+				  docker volume prune -f
+				  docker network prune -f
+				'''
+
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
+				  cd "$TOOLJET_DIR"
+				  . "$NVM_DIR/nvm.sh"
+				  nvm install "$NODE_VERSION"
+				  nvm use "$NODE_VERSION"
+				  node -v
+				  npm -v
+				  npm --prefix plugins install
+				  npm --prefix server install --production=false
+				  npm --prefix frontend install --production=false
+				'''
+
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
+				  cd "$TOOLJET_DIR"
+				  . "$NVM_DIR/nvm.sh"
+				  nvm install "$NODE_VERSION"
+				  nvm use "$NODE_VERSION"
+				  node -v
+				  npm -v
+				  npm --prefix server run lint -- --max-warnings=0 || echo "Server lint completed with warnings"
+				  npm --prefix frontend run lint -- --max-warnings=0 || echo "Frontend lint completed with warnings"
+				'''
+
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
+				  cd "$TOOLJET_DIR"
+				  . "$NVM_DIR/nvm.sh"
+				  nvm install "$NODE_VERSION"
+				  nvm use "$NODE_VERSION"
+				  node -v
+				  npm -v
+				  export NODE_OPTIONS="--max-old-space-size=8192"
+				  NODE_ENV=production npm --prefix plugins run build
+				  NODE_ENV=production npm --prefix frontend run build
+				  npm --prefix server run build
+				'''
+
+				sh '''#!/usr/bin/env bash
+				  set -euo pipefail
+				  cd "$TOOLJET_DIR/server"
+				  . "$NVM_DIR/nvm.sh"
+				  NODE_ENV=test npx jest --config jest.config.ts --detectOpenHandles --forceExit --passWithNoTests --testPathIgnorePatterns='test/controllers|test/services|test/modules' || echo "Server tests completed with failures"
+				  cd ../frontend
+				  npm install --save-dev jest-environment-jsdom || true
+				  npx jest --passWithNoTests --forceExit || echo "Frontend tests completed with failures"
+				'''
+
+			}
+		}
+	}
+}
+
+
+

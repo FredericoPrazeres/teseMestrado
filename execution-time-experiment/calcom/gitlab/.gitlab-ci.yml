@@ -1,0 +1,153 @@
+﻿variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
+  DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
+  YARN_ENABLE_IMMUTABLE_INSTALLS: "false"
+  NODE_OPTIONS: "--max-old-space-size=6144"
+  SKIP_DB_MIGRATIONS: "1"
+
+default:
+  tags:
+    - windows
+    - shell
+
+"Cal.com Pipeline":
+  script:
+    - |
+      # Step 01 — Cleanup Previous Runs
+      $ErrorActionPreference = 'Continue'
+      $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+      $ids = docker ps -q
+      if ($ids) { docker stop $ids | Out-Null }
+      $ids = docker ps -aq
+      if ($ids) { docker rm $ids | Out-Null }
+      $ids = docker images -q
+      if ($ids) { docker rmi -f $ids | Out-Null }
+      docker system prune -af --volumes | Out-Null
+      $global:LASTEXITCODE = 0
+      $ErrorActionPreference = 'Stop'
+    - |
+      # Step 02 — Checkout (handled automatically by GitLab)
+      Write-Host "Checkout is handled automatically by GitLab"
+    - |
+      # Step 02b — Patch cal.diy ui build-icons script
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      $f = 'packages/ui/scripts/build-icons.mjs'
+      if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
+      $c = Get-Content $f -Raw
+      if ($c.Contains('--no-errors-on-unmatched')) {
+        Write-Host "$f already patched"
+      } else {
+        $old = 'format --write ${filepath}'
+        $new = 'format --write --no-errors-on-unmatched ${filepath}'
+        if (-not $c.Contains($old)) { Write-Error "patch anchor not found in $f"; exit 1 }
+        $c = $c.Replace($old, $new)
+        Set-Content -Path $f -Value $c -NoNewline -Encoding UTF8
+        Write-Host "Patched $f"
+      }
+    - |
+      # Step 03 — Node Setup
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      corepack enable
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - |
+      # Step 04 — Corepack Install
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      corepack enable
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      corepack install
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - |
+      # Step 05 — Yarn Install
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      yarn install
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - |
+      # Step 06 — Environment Setup
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      Copy-Item .env.example .env -Force
+      $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+      $b32 = New-Object byte[] 32; $rng.GetBytes($b32); $NEXTAUTH_SECRET = [Convert]::ToBase64String($b32)
+      $b24 = New-Object byte[] 24; $rng.GetBytes($b24); $CALENDSO_ENCRYPTION_KEY = [Convert]::ToBase64String($b24)
+      (Get-Content .env) | ForEach-Object {
+        if     ($_ -match '^NEXTAUTH_SECRET=')         { "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" }
+        elseif ($_ -match '^CALENDSO_ENCRYPTION_KEY=') { "CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY" }
+        else                                           { $_ }
+      } | Set-Content .env -Encoding UTF8
+      Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
+      Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
+      Copy-Item .env packages/prisma/.env -Force
+    - |
+      # Step 07 — Lint
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      yarn lint
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - |
+      # Step 08 — Type Check
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      yarn turbo run type-check --env-mode=loose
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - |
+      # Step 10 — Prisma Validate
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      yarn workspace @calcom/prisma prisma validate
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - |
+      # Steps 11-13 — Start DB, Build, Stop DB (DB stop runs even if build fails)
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+      $buildFailed = $false
+      try {
+        # Step 11 — Start Database
+        $ErrorActionPreference = 'Continue'
+        docker compose -f packages/prisma/docker-compose.yml up -d postgres
+        if ($LASTEXITCODE -ne 0) { throw "docker compose up failed" }
+        $cid = (docker compose -f packages/prisma/docker-compose.yml ps -q postgres).Trim()
+        if (-not $cid) { throw "postgres container id not found" }
+        $deadline = (Get-Date).AddMinutes(2)
+        while ($true) {
+          $status = (docker inspect -f '{{.State.Health.Status}}' $cid 2>$null).Trim()
+          Write-Host "postgres health: $status"
+          if ($status -eq 'healthy') { break }
+          if ((Get-Date) -gt $deadline) {
+            docker logs --tail 100 $cid
+            throw "postgres did not become healthy in time"
+          }
+          Start-Sleep -Seconds 2
+        }
+        $ErrorActionPreference = 'Stop'
+
+        # Step 12 — Build
+        yarn turbo run build --env-mode=loose --filter=!@calcom/base
+        if ($LASTEXITCODE -ne 0) { $buildFailed = $true; throw "build failed" }
+      }
+      finally {
+        # Step 13 — Stop Database (always runs)
+        $ErrorActionPreference = 'Continue'
+        docker compose -f packages/prisma/docker-compose.yml down
+        $global:LASTEXITCODE = 0
+        $ErrorActionPreference = 'Stop'
+      }
+      if ($buildFailed) { exit 1 }
+    - |
+      # Step 14 — Docker Build
+      Set-Location "$env:CI_PROJECT_DIR\cal.diy"
+      $ErrorActionPreference = 'Continue'
+      $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+      Get-ChildItem -Path . -Recurse -Include *.sh -File |
+        Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+        ForEach-Object {
+          $bytes = [IO.File]::ReadAllBytes($_.FullName)
+          if ($bytes -contains 13) {
+            $text = [Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n" -replace "`r", "`n"
+            [IO.File]::WriteAllBytes($_.FullName, [Text.Encoding]::UTF8.GetBytes($text))
+            Write-Host "Normalized LF: $($_.FullName)"
+          }
+        }
+      docker build -t cal-diy:bench -f Dockerfile .
+      $buildExit = $LASTEXITCODE
+      if ($buildExit -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+      $global:LASTEXITCODE = 0
+      if ($buildExit -ne 0) { exit $buildExit }
+  only:
+    - applications/calcom

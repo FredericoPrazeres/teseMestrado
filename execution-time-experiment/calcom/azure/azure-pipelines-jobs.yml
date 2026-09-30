@@ -1,0 +1,250 @@
+trigger:
+  branches:
+    include:
+      - applications/calcoms
+
+variables:
+  DATABASE_URL: "postgresql://postgres@localhost:5450/cal-saml"
+  DATABASE_DIRECT_URL: "postgresql://postgres@localhost:5450/cal-saml"
+
+pool:
+  name: TeseMestradoPool
+
+# Each job has a single step. Sequential execution is enforced via dependsOn.
+# No workspace.clean is set: the default behavior preserves the agent's working
+# tree across jobs of the same run, so node_modules and build artifacts from
+# earlier jobs remain visible to later jobs (which all use 'checkout: none').
+jobs:
+  - job: Job01_Cleanup
+    displayName: 'Step 01 — Cleanup Previous Runs'
+    steps:
+      - checkout: none
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          $ids = docker ps -q
+          if ($ids) { docker stop $ids | Out-Null }
+          $ids = docker ps -aq
+          if ($ids) { docker rm $ids | Out-Null }
+          $ids = docker images -q
+          if ($ids) { docker rmi -f $ids | Out-Null }
+          docker system prune -af --volumes | Out-Null
+          $global:LASTEXITCODE = 0
+        displayName: 'Cleanup'
+        errorActionPreference: continue
+
+  - job: Job02_Checkout
+    displayName: 'Step 02 — Checkout'
+    dependsOn: Job01_Cleanup
+    steps:
+      - checkout: self
+        submodules: true
+        displayName: 'Checkout'
+
+  - job: Job02b_Patch
+    displayName: 'Step 02b — Patch cal.diy ui build-icons script'
+    dependsOn: Job02_Checkout
+    steps:
+      - checkout: none
+      - powershell: |
+          $f = 'packages/ui/scripts/build-icons.mjs'
+          if (-not (Test-Path $f)) { Write-Error "missing $f"; exit 1 }
+          $c = Get-Content $f -Raw
+          if ($c.Contains('--no-errors-on-unmatched')) {
+            Write-Host "$f already patched"
+          } else {
+            $old = 'format --write ${filepath}'
+            $new = 'format --write --no-errors-on-unmatched ${filepath}'
+            if (-not $c.Contains($old)) { Write-Error "patch anchor not found in $f"; exit 1 }
+            $c = $c.Replace($old, $new)
+            Set-Content -Path $f -Value $c -NoNewline -Encoding UTF8
+            Write-Host "Patched $f"
+          }
+        displayName: 'Patch build-icons.mjs'
+        workingDirectory: cal.diy
+
+  - job: Job03_NodeSetup
+    displayName: 'Step 03 — Node Setup'
+    dependsOn: Job02b_Patch
+    steps:
+      - checkout: none
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '20.x'
+        displayName: 'Setup Node'
+
+  - job: Job04_Corepack
+    displayName: 'Step 04 — Corepack Enable'
+    dependsOn: Job03_NodeSetup
+    steps:
+      - checkout: none
+      - powershell: |
+          corepack enable
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          corepack install
+        displayName: 'Corepack'
+        workingDirectory: cal.diy
+
+  - job: Job04b_clean_deps
+    displayName: 'Step 04b — Wipe submodule node_modules / yarn cache'
+    dependsOn: Job03_NodeSetup
+    steps:
+      - checkout: none
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          $targets = @(
+            'node_modules',
+            '.yarn/cache',
+            '.yarn/install-state.gz',
+            '.yarn/unplugged',
+            '.yarn/build-state.yml',
+            '.next',
+            '.turbo'
+          )
+          foreach ($t in $targets) {
+            if (Test-Path $t) {
+              Write-Host "Removing $t"
+              Remove-Item -Recurse -Force $t -ErrorAction SilentlyContinue
+            }
+          }
+          # Also wipe nested workspace node_modules / .next / .turbo
+          Get-ChildItem -Path . -Directory -Recurse -Force `
+            -Include node_modules, .next, .turbo `
+            -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+            ForEach-Object {
+              Write-Host "Removing $($_.FullName)"
+              Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue
+            }
+          $global:LASTEXITCODE = 0
+        displayName: 'Clean dependencies'
+        workingDirectory: cal.diy
+
+  - job: Job05_Install
+    displayName: 'Step 05 — Yarn Install'
+    dependsOn: Job04b_clean_deps
+    steps:
+      - checkout: none
+      - powershell: yarn install
+        displayName: 'Yarn Install'
+        workingDirectory: cal.diy
+
+  - job: Job06_EnvSetup
+    displayName: 'Step 06 — Environment Setup'
+    dependsOn: Job05_Install
+    steps:
+      - checkout: none
+      - powershell: |
+          Copy-Item .env.example .env -Force
+          $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+          $b32 = New-Object byte[] 32; $rng.GetBytes($b32); $NEXTAUTH_SECRET = [Convert]::ToBase64String($b32)
+          $b24 = New-Object byte[] 24; $rng.GetBytes($b24); $CALENDSO_ENCRYPTION_KEY = [Convert]::ToBase64String($b24)
+          (Get-Content .env) | ForEach-Object {
+            if     ($_ -match '^NEXTAUTH_SECRET=')         { "NEXTAUTH_SECRET=$NEXTAUTH_SECRET" }
+            elseif ($_ -match '^CALENDSO_ENCRYPTION_KEY=') { "CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY" }
+            else                                           { $_ }
+          } | Set-Content .env -Encoding UTF8
+          Add-Content .env "DATABASE_URL=$env:DATABASE_URL"
+          Add-Content .env "DATABASE_DIRECT_URL=$env:DATABASE_DIRECT_URL"
+          Copy-Item .env packages/prisma/.env -Force
+        displayName: 'Generate .env'
+        workingDirectory: cal.diy
+        env:
+          DATABASE_URL: $(DATABASE_URL)
+          DATABASE_DIRECT_URL: $(DATABASE_DIRECT_URL)
+
+  - job: Job07_Lint
+    displayName: 'Step 07 — Lint'
+    dependsOn: Job06_EnvSetup
+    steps:
+      - checkout: none
+      - powershell: yarn lint
+        displayName: 'Lint'
+        workingDirectory: cal.diy
+
+  - job: Job08_TypeCheck
+    displayName: 'Step 08 — Type Check'
+    dependsOn: Job07_Lint
+    steps:
+      - checkout: none
+      - powershell: yarn turbo run type-check --env-mode=loose
+        displayName: 'Type Check'
+        workingDirectory: cal.diy
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+
+  - job: Job10_PrismaValidate
+    displayName: 'Step 10 — Prisma Validate'
+    dependsOn: Job08_TypeCheck
+    steps:
+      - checkout: none
+      - powershell: yarn workspace @calcom/prisma prisma validate
+        displayName: 'Prisma Validate'
+        workingDirectory: cal.diy
+
+  - job: Job11_DbStart
+    displayName: 'Step 11 — Start Database'
+    dependsOn: Job10_PrismaValidate
+    steps:
+      - checkout: none
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          docker compose -f packages/prisma/docker-compose.yml up -d
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Start-Sleep -Seconds 5
+        displayName: 'Compose Up'
+        workingDirectory: cal.diy
+        errorActionPreference: continue
+
+  - job: Job12_Build
+    displayName: 'Step 12 — Build'
+    dependsOn: Job11_DbStart
+    steps:
+      - checkout: none
+      - powershell: yarn turbo run build --env-mode=loose --filter=!@calcom/base
+        displayName: 'Build'
+        workingDirectory: cal.diy
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+
+  - job: Job13_DbStop
+    displayName: 'Step 13 — Stop Database'
+    dependsOn: Job12_Build
+    condition: always()
+    steps:
+      - checkout: none
+      - powershell: |
+          $ErrorActionPreference = 'Continue'
+          docker compose -f packages/prisma/docker-compose.yml down
+          $global:LASTEXITCODE = 0
+        displayName: 'Compose Down'
+        workingDirectory: cal.diy
+        errorActionPreference: continue
+
+  - job: Job14_DockerBuild
+    displayName: 'Step 14 — Docker Build'
+    dependsOn: Job13_DbStop
+    steps:
+      - checkout: none
+      - powershell: |
+                      Set-Location "$env:GITHUB_WORKSPACE\cal.diy"
+                      $ErrorActionPreference = 'Continue'
+                      $env:PATH = "C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+                      Get-ChildItem -Path . -Recurse -Include *.sh -File |
+                        Where-Object { $_.FullName -notmatch '\\node_modules\\' } |
+                        ForEach-Object {
+                          $bytes = [IO.File]::ReadAllBytes($_.FullName)
+                          if ($bytes -contains 13) {
+                            $text = [Text.Encoding]::UTF8.GetString($bytes) -replace "`r`n", "`n" -replace "`r", "`n"
+                            [IO.File]::WriteAllBytes($_.FullName, [Text.Encoding]::UTF8.GetBytes($text))
+                            Write-Host "Normalized LF: $($_.FullName)"
+                          }
+                        }
+                      docker build -t cal-diy:bench -f Dockerfile .
+                      $buildExit = $LASTEXITCODE
+                      if ($buildExit -eq 0) { docker rmi -f cal-diy:bench | Out-Null }
+                      $global:LASTEXITCODE = 0
+                      if ($buildExit -ne 0) { exit $buildExit }
+        displayName: 'Docker Build'
+        workingDirectory: cal.diy
+        errorActionPreference: continue
+

@@ -1,0 +1,104 @@
+pipeline {
+  agent any
+
+  environment {
+    DATABASE_URL = 'postgresql://postgres@localhost:5450/cal-saml'
+    DATABASE_DIRECT_URL = 'postgresql://postgres@localhost:5450/cal-saml'
+  }
+
+  stages {
+    stage('All Steps') {
+      steps {
+        script {
+          deleteDir()
+        }
+
+        sh '''
+          set +e
+          docker stop $(docker ps -q) 2>/dev/null || true
+          docker rm $(docker ps -aq) 2>/dev/null || true
+          docker rmi $(docker images -q) 2>/dev/null || true
+          docker system prune -af --volumes 2>/dev/null || true
+          exit 0
+        '''
+
+        checkout([
+          $class: 'GitSCM',
+          branches: scm.branches,
+          userRemoteConfigs: scm.userRemoteConfigs,
+          extensions: [[$class: 'SubmoduleOption', disableSubmodules: false, recursiveSubmodules: true]]
+        ])
+
+        sh 'node -v && npm -v && yarn -v'
+
+        dir('cal.diy') {
+          sh 'corepack enable && corepack install'
+        }
+
+        dir('cal.diy') {
+          sh 'yarn install'
+        }
+
+        dir('cal.diy') {
+          sh '''
+            cp .env.example .env
+            NEXTAUTH_SECRET=$(openssl rand -base64 32)
+            CALENDSO_ENCRYPTION_KEY=$(openssl rand -base64 24)
+            sed -i '' "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env 2>/dev/null || \
+              sed -i "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=$NEXTAUTH_SECRET|" .env
+            sed -i '' "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env 2>/dev/null || \
+              sed -i "s|CALENDSO_ENCRYPTION_KEY=.*|CALENDSO_ENCRYPTION_KEY=$CALENDSO_ENCRYPTION_KEY|" .env
+            echo "DATABASE_URL=$DATABASE_URL" >> .env
+            echo "DATABASE_DIRECT_URL=$DATABASE_DIRECT_URL" >> .env
+          '''
+        }
+
+        dir('cal.diy') {
+          sh 'yarn lint'
+        }
+
+        dir('cal.diy') {
+          withEnv(['NODE_OPTIONS=--max-old-space-size=8192']) {
+            sh 'yarn type-check'
+          }
+        }
+
+        dir('cal.diy') {
+          sh 'TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US yarn test --dangerouslyIgnoreUnhandledErrors --maxWorkers=1 --testTimeout=60000 --hookTimeout=60000'
+        }
+
+        dir('cal.diy') {
+          sh 'yarn workspace @calcom/prisma prisma validate'
+        }
+
+        dir('cal.diy') {
+          sh '''
+            set -e
+            echo "Checking Docker access..."
+            if ! docker info >/dev/null 2>&1; then
+              echo "ERROR: Jenkins cannot reach the Docker daemon."
+              echo "Ensure the Jenkins agent user is in the docker group or has access to /var/run/docker.sock."
+              exit 1
+            fi
+            docker compose -f packages/prisma/docker-compose.yml up -d
+            sleep 5
+          '''
+        }
+
+        dir('cal.diy') {
+          withEnv(['NODE_OPTIONS=--max-old-space-size=12288']) {
+            sh 'yarn build'
+          }
+        }
+
+        dir('cal.diy') {
+          sh 'docker compose -f packages/prisma/docker-compose.yml down || true'
+        }
+
+        dir('cal.diy') {
+          sh 'docker build -t cal-diy:bench -f Dockerfile . && docker rmi cal-diy:bench || true'
+        }
+      }
+    }
+  }
+}

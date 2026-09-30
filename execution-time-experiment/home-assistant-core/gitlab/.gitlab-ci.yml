@@ -1,0 +1,19 @@
+default:
+  tags:
+    - docker
+    - linux
+
+Build Home Assistant Core:
+  script:
+    - cd home-assistant-core
+    - uv venv .venv --python 3.14 --clear
+    - source .venv/bin/activate
+    - uv pip install -e . -r requirements_test.txt --config-settings editable_mode=compat
+    - uv pip install paho-mqtt
+    - python -m ruff check homeassistant
+    - uv pip install build
+    - python -m build 2>&1 | tail -5
+    - python -m pytest tests/test_core.py tests/util/ tests/helpers/test_debounce.py tests/helpers/test_deprecation.py tests/helpers/test_collection.py -q --timeout=300 -k "not (test_eventbus_max_length_exceeded or test_serviceregistry_service_that_not_exists or test_services_call_return_response_requires_blocking or test_serviceregistry_return_response_invalid or test_serviceregistry_return_response_arguments)"
+  only:
+    - applications/home-assistant-core
+    

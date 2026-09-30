@@ -1,0 +1,15 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+default:
+  tags:
+    - docker
+    - linux
+
+Build Directus:
+  script:
+    - npm install -g pnpm@10 --force 2>/dev/null
+    - cd directus && pnpm install --frozen-lockfile
+    - pnpm lint
+    - pnpm build
+  only:
+    - applications/directus

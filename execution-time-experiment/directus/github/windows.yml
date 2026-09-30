@@ -1,0 +1,99 @@
+﻿name: Directus CI Pipeline (Windows)
+
+on:
+  push:
+    branches:
+      - applicationz
+
+jobs:
+  checkout:
+    runs-on: [self-hosted, windows]
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File "{0}"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+  setup-node:
+    runs-on: [self-hosted, windows]
+    needs: checkout
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File "{0}"
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+  install-dependencies:
+    runs-on: [self-hosted, windows]
+    needs: setup-node
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File "{0}"
+        working-directory: directus
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+  lint:
+    runs-on: [self-hosted, windows]
+    needs: install-dependencies
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File "{0}"
+        working-directory: directus
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Lint
+        run: pnpm lint
+
+  build:
+    runs-on: [self-hosted, windows]
+    needs: lint
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File "{0}"
+        working-directory: directus
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build
+        run: pnpm build
+

@@ -1,0 +1,171 @@
+# Outline Build Pipeline (Windows) - GitLab CI
+stages:
+  - verify
+  - install
+  - clean
+  - build
+  - migrate
+  - status
+
+variables:
+  OUTLINE_DIR: "outline"
+
+default:
+  tags:
+    - windows
+
+before_script:
+  - Write-Host "Starting Outline build pipeline for commit $env:CI_COMMIT_SHORT_SHA"
+  - cd $env:OUTLINE_DIR
+
+# Stage 1: Verify system dependencies
+verify-dependencies:
+  stage: verify
+  script:
+    - Write-Host "=== Verifying system dependencies ==="
+    - node --version
+    - yarn --version
+    - 'cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul && echo PG_OK || echo PG_FAIL"'
+    - 'cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul && echo REDIS_OK || echo REDIS_FAIL"'
+  only:
+    - applications/outline
+
+# Stage 2: Start services and install dependencies
+start-services:
+  stage: install
+  script:
+    - Write-Host "=== Starting PostgreSQL and Redis ==="
+    - |
+      Write-Host "=== Starting PostgreSQL ==="
+      cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
+      if ($LASTEXITCODE -ne 0) {
+        cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
+      } else {
+        Write-Host "PostgreSQL is already running"
+      }
+      Write-Host "=== Starting Redis ==="
+      cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
+      if ($LASTEXITCODE -ne 0) {
+        cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
+      } else {
+        Write-Host "Redis is already running"
+      }
+      Start-Sleep -Seconds 3
+      Write-Host "=== Verifying services ==="
+      cmd /c "D:\tools\pgsql\bin\pg_isready.exe"
+      if ($LASTEXITCODE -eq 0) { Write-Host "PostgreSQL: OK" } else { Write-Host "PostgreSQL: FAILED"; exit 1 }
+      cmd /c "D:\tools\redis\redis-cli.exe ping"
+      if ($LASTEXITCODE -eq 0) { Write-Host "Redis: OK" } else { Write-Host "Redis: FAILED"; exit 1 }
+  only:
+    - applications/outline
+
+install-dependencies:
+  stage: install
+  script:
+    - Write-Host "=== Installing Node.js dependencies ==="
+    - $env:NODE_ENV = "development"
+    - yarn install --immutable
+  only:
+    - applications/outline
+
+# Stage 3: Clean previous build
+clean-build:
+  stage: clean
+  script:
+    - Write-Host "=== Cleaning previous build ==="
+    - yarn clean 2>$null; $true
+    - 'if (Test-Path "node_modules\.cache") { Remove-Item -Recurse -Force "node_modules\.cache" }'
+  only:
+    - applications/outline
+
+# Stage 4: Build Outline
+build-outline:
+  stage: build
+  script:
+    - Write-Host "=== Building Outline ==="
+    - $env:NODE_ENV = "production"
+    - yarn build
+    - Write-Host "Verifying build output..."
+    - 'if (Test-Path "build\server\index.js") { Write-Host "✅ Server build OK" } else { exit 1 }'
+    - 'if (Test-Path "build\app" -PathType Container) { Write-Host "✅ Client build OK" } else { exit 1 }'
+  only:
+    - applications/outline
+
+# Stage 5: Run database migrations
+run-migrations:
+  stage: migrate
+  script:
+    - |
+      Write-Host "=== Ensuring services are running ==="
+      cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
+      if ($LASTEXITCODE -ne 0) {
+        cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
+        Start-Sleep -Seconds 3
+      }
+      cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
+      if ($LASTEXITCODE -ne 0) {
+        cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
+        Start-Sleep -Seconds 2
+      }
+    - Write-Host "=== Running database migrations ==="
+    - |
+      $prevEAP = $ErrorActionPreference
+      $ErrorActionPreference = 'SilentlyContinue'
+      cmd /c "yarn db:create --env=production-ssl-disabled 2>&1"
+      $ErrorActionPreference = $prevEAP
+      Write-Host "Database create step done (may already exist)"
+    - |
+      $env:NODE_ENV = "development"
+      cmd /c "start /b node build\server\index.js > D:\tools\outline-migrations.log 2>&1"
+      Write-Host "Waiting for server to start and run migrations..."
+      Start-Sleep -Seconds 15
+      Write-Host "=== Migration log output ==="
+      if (Test-Path "D:\tools\outline-migrations.log") { Get-Content "D:\tools\outline-migrations.log" -Tail 30 }
+      cmd /c "taskkill /f /im node.exe 2>nul"
+      Write-Host "Migrations complete"
+  only:
+    - applications/outline
+
+# Stage 6: Show status
+show-status:
+  stage: status
+  script:
+    - Write-Host "=== BUILD COMPLETE ==="
+    - Write-Host "Build output:"
+    - Get-Item "build\server\index.js"
+    - Get-ChildItem "build\app\"
+    - Write-Host "🎉 Outline build completed successfully!"
+    - Write-Host "=== Starting Outline ==="
+    - |
+      Write-Host "=== Ensuring services are running ==="
+      cmd /c "D:\tools\pgsql\bin\pg_isready.exe 2>nul"
+      if ($LASTEXITCODE -ne 0) {
+        cmd /c "D:\tools\pgsql\bin\pg_ctl.exe start -D D:\tools\pgsql\data -l D:\tools\pgsql\log.txt"
+        Start-Sleep -Seconds 3
+      }
+      cmd /c "D:\tools\redis\redis-cli.exe ping 2>nul"
+      if ($LASTEXITCODE -ne 0) {
+        cmd /c "start /b D:\tools\redis\redis-server.exe D:\tools\redis\redis.windows.conf > D:\tools\redis\redis.log 2>&1"
+        Start-Sleep -Seconds 2
+      }
+    - |
+      $env:NODE_ENV = "development"
+      cmd /c "start /b node build\server\index.js > D:\tools\outline-server.log 2>&1"
+      Write-Host "Outline started"
+      Start-Sleep -Seconds 10
+      try {
+        $response = Invoke-WebRequest -Uri "http://localhost:3000" -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
+        if ($response.StatusCode -eq 200 -or $response.StatusCode -eq 302) {
+          Write-Host "✅ Outline is running at http://localhost:3000"
+        } else {
+          Write-Host "⚠️ Server started but may still be initializing"
+        }
+      } catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 302) {
+          Write-Host "✅ Outline is running at http://localhost:3000"
+        } else {
+          Write-Host "⚠️ Server started but may still be initializing"
+        }
+      }
+  only:
+    - applications/outline
